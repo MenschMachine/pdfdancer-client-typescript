@@ -220,6 +220,7 @@ export class ClientV1 {
     }
 
     const headers: Record<string, string> = {
+      'Authorization': `Bearer ${this._token}`,
       'X-Session-Id': this._sessionId,
       'Content-Type': 'application/json'
     };
@@ -551,6 +552,7 @@ export class ClientV1 {
       const response = await fetch(`${this._baseUrl}/font/register`, {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${this._token}`,
           'X-Session-Id': this._sessionId
         },
         body: formData,

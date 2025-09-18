@@ -7,6 +7,8 @@
   "scripts": {
     "build": "tsc",
     "test": "jest",
+    "test:unit": "jest --selectProjects unit",
+    "test:e2e": "jest --selectProjects e2e",
     "test:watch": "jest --watch",
     "lint": "eslint src/**/*.ts",
     "prepublishOnly": "npm run build"

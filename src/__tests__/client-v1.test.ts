@@ -20,7 +20,7 @@ describe('ClientV1', () => {
     test('should throw ValidationException for null PDF data', () => {
       expect(() => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        new ClientV1(mockToken, null as any);
+        new ClientV1(mockToken, (null as any));
       }).toThrow(ValidationException);
     });
 

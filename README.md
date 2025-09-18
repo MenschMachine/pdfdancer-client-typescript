@@ -218,12 +218,45 @@ npm install
 # Build the project
 npm run build
 
-# Run tests
+# Run all tests
 npm test
+
+# Run only unit tests
+npm run test:unit
+
+# Run only e2e tests (requires fixtures and server)
+npm run test:e2e
 
 # Run linter
 npm run lint
 ```
+
+### E2E Tests
+
+The project includes comprehensive end-to-end tests that mirror the Python client test suite. To run e2e tests:
+
+1. **Start PDFDancer server** at `http://localhost:8080` (or set `PDFDANCER_BASE_URL`)
+
+2. **Set authentication token**:
+   - Environment variable: `export PDFDANCER_TOKEN=your-token`
+   - Or place a `jwt-token-*.txt` file in the project root
+
+3. **Add test fixtures** in the `fixtures/` directory:
+   - `ObviouslyAwesome.pdf` - Main test document
+   - `mixed-form-types.pdf` - Document with form fields
+   - `basic-paths.pdf` - Document with vector paths
+   - `logo-80.png` - Test image file
+   - `DancingScript-Regular.ttf` - Test font file
+
+4. **Run e2e tests**: `npm run test:e2e`
+
+The e2e tests cover:
+- **Paragraph operations**: Find, add, modify, delete paragraphs with custom fonts
+- **Page operations**: Get pages, delete pages
+- **Text line operations**: Find, modify, move, delete text lines
+- **Image operations**: Find, add, move, delete images
+- **Form operations**: Find and delete form fields
+- **Path operations**: Find, move, delete vector paths
 
 ## Compatibility
 
