@@ -1,6 +1,7 @@
 # PDFDancer TypeScript Client
 
-A TypeScript client library for the PDFDancer PDF manipulation API. This client provides a clean, TypeScript interface for PDF operations that closely mirrors the Python client structure and functionality.
+A TypeScript client library for the PDFDancer PDF manipulation API. This client provides a clean, TypeScript interface
+for PDF operations that closely mirrors the Python client structure and functionality.
 
 ## Features
 
@@ -21,35 +22,35 @@ npm install pdfdancer-client-typescript
 ## Basic Usage
 
 ```typescript
-import { ClientV1, Position, Color, Font } from 'pdfdancer-client-typescript';
+import {ClientV1, Position, Color, Font} from 'pdfdancer-client-typescript';
 
 async function example() {
-  // Load PDF data (from file upload, fetch, etc.)
-  const pdfData = new Uint8Array(/* your PDF data */);
+    // Load PDF data (from file upload, fetch, etc.)
+    const pdfData = new Uint8Array(/* your PDF data */);
 
-  // Create client with authentication token
-  const client = new ClientV1('your-auth-token', pdfData);
+    // Create client with authentication token
+    const client = new ClientV1('your-auth-token', pdfData);
 
-  // Initialize session (required before using the client)
-  await client.init();
+    // Initialize session (required before using the client)
+    await client.init();
 
-  // Find all paragraphs on page 1
-  const paragraphs = await client.findParagraphs(Position.fromPageIndex(1));
+    // Find all paragraphs on page 1
+    const paragraphs = await client.findParagraphs(Position.atPage(1));
 
-  // Add a new paragraph
-  const newParagraph = client.paragraphBuilder()
-    .fromString('Hello, PDFDancer!', new Color(255, 0, 0))
-    .withFont(new Font('Arial', 12))
-    .withPosition(Position.onPageCoordinates(1, 100, 200))
-    .build();
+    // Add a new paragraph
+    const newParagraph = client.paragraphBuilder()
+        .fromString('Hello, PDFDancer!', new Color(255, 0, 0))
+        .withFont(new Font('Arial', 12))
+        .withPosition(Position.onPageCoordinates(1, 100, 200))
+        .build();
 
-  await client.addParagraph(newParagraph);
+    await client.addParagraph(newParagraph);
 
-  // Get the modified PDF
-  const modifiedPdf = await client.getPdfFile();
+    // Get the modified PDF
+    const modifiedPdf = await client.getPdfFile();
 
-  // Save PDF (browser environment)
-  await client.savePdf('modified-document.pdf');
+    // Save PDF (browser environment)
+    await client.savePdf('modified-document.pdf');
 }
 ```
 
@@ -59,10 +60,10 @@ async function example() {
 
 ```typescript
 const client = new ClientV1(
-  token,        // Authentication token
-  pdfData,      // PDF data as Uint8Array, File, or ArrayBuffer
-  baseUrl,      // Optional: API server URL (default: http://localhost:8080)
-  readTimeout   // Optional: Request timeout in ms (default: 30000)
+    token,        // Authentication token
+    pdfData,      // PDF data as Uint8Array, File, or ArrayBuffer
+    baseUrl,      // Optional: API server URL (default: http://localhost:8080)
+    readTimeout   // Optional: Request timeout in ms (default: 30000)
 );
 
 await client.init(); // Required before using the client
@@ -90,7 +91,7 @@ const page = await client.getPage(1); // 1-based index
 
 ```typescript
 // Page-based position
-const pagePosition = Position.fromPageIndex(1);
+const pagePosition = Position.atPage(1);
 
 // Coordinate-based position
 const coordPosition = Position.onPageCoordinates(1, 100, 200);
@@ -104,12 +105,12 @@ const movedPosition = coordPosition.copy().moveX(50).moveY(30);
 ```typescript
 // Add paragraph using builder pattern
 const paragraph = client.paragraphBuilder()
-  .fromString('Your text here')
-  .withFont(new Font('Arial', 12))
-  .withColor(new Color(0, 0, 0))
-  .withPosition(Position.onPageCoordinates(1, 100, 200))
-  .withLineSpacing(1.2)
-  .build();
+    .fromString('Your text here')
+    .withFont(new Font('Arial', 12))
+    .withColor(new Color(0, 0, 0))
+    .withPosition(Position.onPageCoordinates(1, 100, 200))
+    .withLineSpacing(1.2)
+    .build();
 
 await client.addParagraph(paragraph);
 
@@ -167,31 +168,32 @@ The client provides specific exception types for different error scenarios:
 
 ```typescript
 import {
-  ValidationException,
-  HttpClientException,
-  SessionException,
-  FontNotFoundException,
-  PdfDancerException
+    ValidationException,
+    HttpClientException,
+    SessionException,
+    FontNotFoundException,
+    PdfDancerException
 } from 'pdfdancer-client-typescript';
 
 try {
-  await client.addParagraph(paragraph);
+    await client.addParagraph(paragraph);
 } catch (error) {
-  if (error instanceof ValidationException) {
-    console.error('Invalid input:', error.message);
-  } else if (error instanceof HttpClientException) {
-    console.error('API error:', error.message, 'Status:', error.statusCode);
-  } else if (error instanceof FontNotFoundException) {
-    console.error('Font not found:', error.message);
-  } else if (error instanceof SessionException) {
-    console.error('Session error:', error.message);
-  }
+    if (error instanceof ValidationException) {
+        console.error('Invalid input:', error.message);
+    } else if (error instanceof HttpClientException) {
+        console.error('API error:', error.message, 'Status:', error.statusCode);
+    } else if (error instanceof FontNotFoundException) {
+        console.error('Font not found:', error.message);
+    } else if (error instanceof SessionException) {
+        console.error('Session error:', error.message);
+    }
 }
 ```
 
 ## Types and Enums
 
 ### ObjectType
+
 - `IMAGE` - Image objects
 - `FORM` - Form field objects
 - `PATH` - Vector path objects
@@ -200,10 +202,12 @@ try {
 - `PAGE` - Page objects
 
 ### PositionMode
+
 - `INTERSECT` - Objects that intersect with the specified area
 - `CONTAINS` - Objects completely contained within the specified area
 
 ### ShapeType
+
 - `POINT` - Single point coordinate
 - `LINE` - Linear shape between two points
 - `CIRCLE` - Circular area with radius
@@ -238,29 +242,26 @@ The project includes comprehensive end-to-end tests that mirror the Python clien
 1. **Start PDFDancer server** at `http://localhost:8080` (or set `PDFDANCER_BASE_URL`)
 
 2. **Set authentication token**:
-   - Environment variable: `export PDFDANCER_TOKEN=your-token`
-   - Or place a `jwt-token-*.txt` file in the project root
+    - Environment variable: `export PDFDANCER_TOKEN=your-token`
+    - Or place a `jwt-token-*.txt` file in the project root
 
 3. **Add test fixtures** in the `fixtures/` directory:
-   - `ObviouslyAwesome.pdf` - Main test document
-   - `mixed-form-types.pdf` - Document with form fields
-   - `basic-paths.pdf` - Document with vector paths
-   - `logo-80.png` - Test image file
-   - `DancingScript-Regular.ttf` - Test font file
+    - `ObviouslyAwesome.pdf` - Main test document
+    - `mixed-form-types.pdf` - Document with form fields
+    - `basic-paths.pdf` - Document with vector paths
+    - `logo-80.png` - Test image file
+    - `DancingScript-Regular.ttf` - Test font file
 
 4. **Run e2e tests**: `npm run test:e2e`
 
 The e2e tests cover:
+
 - **Paragraph operations**: Find, add, modify, delete paragraphs with custom fonts
 - **Page operations**: Get pages, delete pages
 - **Text line operations**: Find, modify, move, delete text lines
 - **Image operations**: Find, add, move, delete images
 - **Form operations**: Find and delete form fields
 - **Path operations**: Find, move, delete vector paths
-
-## Compatibility
-
-This TypeScript client is designed to be functionally equivalent to the PDFDancer Python client, providing the same API patterns and capabilities with TypeScript type safety and modern JavaScript features.
 
 ## License
 

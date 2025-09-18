@@ -80,7 +80,6 @@ export class ClientV1 {
 
   /**
    * Process PDF data from various input types with strict validation.
-   * Equivalent to readFile() method in Python client.
    */
   private _processPdfData(pdfData: Uint8Array | File | ArrayBuffer): Uint8Array {
     if (!pdfData) {
@@ -158,7 +157,6 @@ export class ClientV1 {
 
   /**
    * Creates a new PDF processing session by uploading the PDF data.
-   * Equivalent to createSession() method in Python client.
    */
   private async _createSession(): Promise<string> {
     try {
@@ -204,7 +202,6 @@ export class ClientV1 {
 
   /**
    * Make HTTP request with session headers and error handling.
-   * Equivalent to retrieve() method pattern in Python client.
    */
   private async _makeRequest(
     method: string,
@@ -280,7 +277,6 @@ export class ClientV1 {
 
   /**
    * Searches for paragraph objects at the specified position.
-   * Equivalent to findParagraphs() in Python client.
    */
   async findParagraphs(position?: Position): Promise<ObjectRef[]> {
     return this.find(ObjectType.PARAGRAPH, position);
@@ -288,7 +284,6 @@ export class ClientV1 {
 
   /**
    * Searches for image objects at the specified position.
-   * Equivalent to findImages() in Python client.
    */
   async findImages(position?: Position): Promise<ObjectRef[]> {
     return this.find(ObjectType.IMAGE, position);
@@ -296,7 +291,6 @@ export class ClientV1 {
 
   /**
    * Searches for form field objects at the specified position.
-   * Equivalent to findForms() in Python client.
    */
   async findForms(position?: Position): Promise<ObjectRef[]> {
     return this.find(ObjectType.FORM, position);
@@ -304,7 +298,6 @@ export class ClientV1 {
 
   /**
    * Searches for vector path objects at the specified position.
-   * Equivalent to findPaths() in Python client.
    */
   async findPaths(position?: Position): Promise<ObjectRef[]> {
     return this.find(ObjectType.PATH, position);
@@ -312,7 +305,6 @@ export class ClientV1 {
 
   /**
    * Searches for text line objects at the specified position.
-   * Equivalent to findTextLines() in Python client.
    */
   async findTextLines(position?: Position): Promise<ObjectRef[]> {
     return this.find(ObjectType.TEXT_LINE, position);
@@ -322,7 +314,6 @@ export class ClientV1 {
 
   /**
    * Retrieves references to all pages in the PDF document.
-   * Equivalent to getPages() in Python client.
    */
   async getPages(): Promise<ObjectRef[]> {
     const response = await this._makeRequest('POST', '/pdf/page/find');
@@ -332,7 +323,6 @@ export class ClientV1 {
 
   /**
    * Retrieves a reference to a specific page by its page index.
-   * Equivalent to getPage() in Python client.
    */
   async getPage(pageIndex: number): Promise<ObjectRef | null> {
     if (pageIndex < 0) {
@@ -352,7 +342,6 @@ export class ClientV1 {
 
   /**
    * Deletes a page from the PDF document.
-   * Equivalent to deletePage() in Python client.
    */
   async deletePage(pageRef: ObjectRef): Promise<boolean> {
     if (!pageRef) {
@@ -368,7 +357,6 @@ export class ClientV1 {
 
   /**
    * Deletes the specified PDF object from the document.
-   * Equivalent to delete() in Python client.
    */
   async delete(objectRef: ObjectRef): Promise<boolean> {
     if (!objectRef) {
@@ -382,7 +370,6 @@ export class ClientV1 {
 
   /**
    * Moves a PDF object to a new position within the document.
-   * Equivalent to move() in Python client.
    */
   async move(objectRef: ObjectRef, position: Position): Promise<boolean> {
     if (!objectRef) {
@@ -401,7 +388,6 @@ export class ClientV1 {
 
   /**
    * Adds an image to the PDF document.
-   * Equivalent to addImage() methods in Python client.
    */
   async addImage(image: Image, position?: Position): Promise<boolean> {
     if (!image) {
@@ -421,7 +407,6 @@ export class ClientV1 {
 
   /**
    * Adds a paragraph to the PDF document.
-   * Equivalent to addParagraph() in Python client with validation.
    */
   async addParagraph(paragraph: Paragraph): Promise<boolean> {
     if (!paragraph) {
@@ -442,7 +427,6 @@ export class ClientV1 {
 
   /**
    * Internal method to add any PDF object.
-   * Equivalent to addObject() in Python client.
    */
   private async _addObject(pdfObject: Image | Paragraph): Promise<boolean> {
     const requestData = new AddRequest(pdfObject).toDict();
@@ -454,7 +438,6 @@ export class ClientV1 {
 
   /**
    * Modifies a paragraph object or its text content.
-   * Equivalent to modifyParagraph() methods in Python client.
    */
   async modifyParagraph(objectRef: ObjectRef, newParagraph: Paragraph | string): Promise<boolean> {
     if (!objectRef) {
@@ -479,7 +462,6 @@ export class ClientV1 {
 
   /**
    * Modifies a text line object.
-   * Equivalent to modifyTextLine() in Python client.
    */
   async modifyTextLine(objectRef: ObjectRef, newText: string): Promise<boolean> {
     if (!objectRef) {
@@ -498,7 +480,6 @@ export class ClientV1 {
 
   /**
    * Finds available fonts matching the specified name and size.
-   * Equivalent to findFonts() in Python client.
    */
   async findFonts(fontName: string, fontSize: number): Promise<Font[]> {
     if (!fontName || !fontName.trim()) {
@@ -517,7 +498,6 @@ export class ClientV1 {
 
   /**
    * Registers a custom font for use in PDF operations.
-   * Equivalent to registerFont() in Python client.
    */
   async registerFont(ttfFile: Uint8Array | File): Promise<string> {
     if (!ttfFile) {
@@ -578,7 +558,6 @@ export class ClientV1 {
 
   /**
    * Downloads the current state of the PDF document with all modifications applied.
-   * Equivalent to getPDFFile() in Python client.
    */
   async getPdfFile(): Promise<Uint8Array> {
     const response = await this._makeRequest('GET', `/session/${this._sessionId}/pdf`);
@@ -665,7 +644,6 @@ export class ClientV1 {
 
   /**
    * Creates a new ParagraphBuilder for fluent paragraph construction.
-   * Equivalent to paragraphBuilder() in Python client.
    */
   paragraphBuilder(): ParagraphBuilder {
     return new ParagraphBuilder(this);

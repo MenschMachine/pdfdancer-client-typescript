@@ -28,7 +28,6 @@ export class ParagraphBuilder {
 
   /**
    * Set the text content for the paragraph.
-   * Equivalent to fromString() methods in Python ParagraphBuilder.
    */
   fromString(text: string, color?: Color): ParagraphBuilder {
     if (text === null || text === undefined) {
@@ -48,7 +47,6 @@ export class ParagraphBuilder {
 
   /**
    * Set the font for the paragraph using an existing Font object.
-   * Equivalent to withFont(Font) in Python ParagraphBuilder.
    */
   withFont(font: Font): ParagraphBuilder {
     if (!font) {
@@ -61,7 +59,6 @@ export class ParagraphBuilder {
 
   /**
    * Set the font for the paragraph using a TTF file.
-   * Equivalent to withFont(File, double) in Python ParagraphBuilder.
    */
   async withFontFile(ttfFile: Uint8Array | File, fontSize: number): Promise<ParagraphBuilder> {
     if (!ttfFile) {
@@ -78,7 +75,6 @@ export class ParagraphBuilder {
 
   /**
    * Set the line spacing for the paragraph.
-   * Equivalent to withLineSpacing() in Python ParagraphBuilder.
    */
   withLineSpacing(spacing: number): ParagraphBuilder {
     if (spacing <= 0) {
@@ -91,7 +87,6 @@ export class ParagraphBuilder {
 
   /**
    * Set the text color for the paragraph.
-   * Equivalent to withColor() in Python ParagraphBuilder.
    */
   withColor(color: Color): ParagraphBuilder {
     if (!color) {
@@ -104,7 +99,6 @@ export class ParagraphBuilder {
 
   /**
    * Set the position for the paragraph.
-   * Equivalent to withPosition() in Python ParagraphBuilder.
    */
   withPosition(position: Position): ParagraphBuilder {
     if (!position) {
@@ -117,7 +111,6 @@ export class ParagraphBuilder {
 
   /**
    * Build and return the final Paragraph object.
-   * Equivalent to build() in Python ParagraphBuilder.
    */
   build(): Paragraph {
     // Validate required fields
@@ -144,7 +137,6 @@ export class ParagraphBuilder {
 
   /**
    * Register a TTF font with the client and return a Font object.
-   * Equivalent to registerTTF() private method in Python ParagraphBuilder.
    */
   private async _registerTtf(ttfFile: Uint8Array | File, fontSize: number): Promise<Font> {
     try {

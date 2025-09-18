@@ -48,7 +48,7 @@ describe('ClientV1', () => {
 
 describe('Position', () => {
   test('should create position from page index', () => {
-    const position = Position.fromPageIndex(1);
+    const position = Position.atPage(1);
     expect(position.pageIndex).toBe(1);
   });
 
@@ -97,14 +97,14 @@ describe('Font', () => {
 
 describe('Paragraph', () => {
   test('should create paragraph with position', () => {
-    const position = Position.fromPageIndex(1);
+    const position = Position.atPage(1);
     const paragraph = new Paragraph(position);
     expect(paragraph.getPosition()).toBe(position);
   });
 
   test('should set position', () => {
     const paragraph = new Paragraph();
-    const position = Position.fromPageIndex(2);
+    const position = Position.atPage(2);
     paragraph.setPosition(position);
     expect(paragraph.getPosition()).toBe(position);
   });

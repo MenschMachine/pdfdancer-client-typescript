@@ -26,7 +26,7 @@ async function exampleUsage() {
     await client.init();
 
     // Example 1: Find all paragraphs on page 1
-    const page1Position = Position.fromPageIndex(1);
+    const page1Position = Position.atPage(1);
     const paragraphs = await client.findParagraphs(page1Position);
     console.log(`Found ${paragraphs.length} paragraphs on page 1`);
 
