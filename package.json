@@ -1,6 +1,6 @@
 {
   "name": "pdfdancer-client",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A TypeScript client library for the PDFDancer PDF manipulation API",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -16,7 +16,12 @@
     "release:skip-tests": "node scripts/release.js --skip-tests",
     "release:test": "node scripts/test-release.js"
   },
-  "keywords": ["pdf", "manipulation", "typescript", "client"],
+  "keywords": [
+    "pdf",
+    "manipulation",
+    "typescript",
+    "client"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
