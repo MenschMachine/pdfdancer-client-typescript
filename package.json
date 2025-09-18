@@ -11,7 +11,10 @@
     "test:e2e": "jest --selectProjects e2e",
     "test:watch": "jest --watch",
     "lint": "eslint src/**/*.ts",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "release": "node scripts/release.js",
+    "release:skip-tests": "node scripts/release.js --skip-tests",
+    "release:test": "node scripts/test-release.js"
   },
   "keywords": ["pdf", "manipulation", "typescript", "client"],
   "author": "",
