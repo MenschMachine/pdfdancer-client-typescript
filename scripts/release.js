@@ -81,7 +81,7 @@ function main() {
   run('git push --tags', 'Pushing tags to git');
 
   console.log(`\n🎉 Release ${newVersion} completed successfully!`);
-  console.log(`Package is now available at: https://www.npmjs.com/package/pdfdancer-client`);
+  console.log(`Package is now available at: https://www.npmjs.com/package/pdfdancer-client-typescript`);
 }
 
 if (require.main === module) {

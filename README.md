@@ -15,13 +15,13 @@ A TypeScript client library for the PDFDancer PDF manipulation API. This client 
 ## Installation
 
 ```bash
-npm install pdfdancer-client
+npm install pdfdancer-client-typescript
 ```
 
 ## Basic Usage
 
 ```typescript
-import { ClientV1, Position, Color, Font } from 'pdfdancer-client';
+import { ClientV1, Position, Color, Font } from 'pdfdancer-client-typescript';
 
 async function example() {
   // Load PDF data (from file upload, fetch, etc.)
@@ -172,7 +172,7 @@ import {
   SessionException,
   FontNotFoundException,
   PdfDancerException
-} from 'pdfdancer-client';
+} from 'pdfdancer-client-typescript';
 
 try {
   await client.addParagraph(paragraph);

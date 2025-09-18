@@ -1,5 +1,5 @@
 {
-  "name": "pdfdancer-client",
+  "name": "pdfdancer-client-typescript",
   "version": "1.0.1",
   "description": "A TypeScript client library for the PDFDancer PDF manipulation API",
   "main": "dist/index.js",
