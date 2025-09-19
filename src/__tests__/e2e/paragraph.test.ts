@@ -36,8 +36,7 @@ describe('Paragraph E2E Tests', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
-        const pos = Position.atPage(0);
-        pos.textStartsWith = 'The Complete';
+        const pos = Position.atPage(0).withTextStarts('The Complete');
         const paras = await client.findParagraphs(pos);
         expect(paras).toHaveLength(1);
 
@@ -52,13 +51,11 @@ describe('Paragraph E2E Tests', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
-        const posDel = Position.atPage(0);
-        posDel.textStartsWith = 'The Complete';
+        const posDel = Position.atPage(0).withTextStarts('The Complete');
         const ref = (await client.findParagraphs(posDel))[0];
         expect(await client.delete(ref)).toBe(true);
 
-        const posDel2 = Position.atPage(0);
-        posDel2.textStartsWith = 'The Complete';
+        const posDel2 = Position.atPage(0).withTextStarts('The Complete');
         expect(await client.findParagraphs(posDel2)).toHaveLength(0);
     });
 
@@ -66,8 +63,7 @@ describe('Paragraph E2E Tests', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
-        const posMove = Position.atPage(0);
-        posMove.textStartsWith = 'The Complete';
+        const posMove = Position.atPage(0).withTextStarts('The Complete');
         const ref = (await client.findParagraphs(posMove))[0];
         const newPos = Position.atPageCoordinates(0, 0.1, 300);
         expect(await client.move(ref, newPos)).toBe(true);
@@ -78,8 +74,7 @@ describe('Paragraph E2E Tests', () => {
 
     async function assertNewParagraphExists(client: ClientV1): Promise<void> {
         // Validate via find_text_lines for text starting with 'Awesomely'
-        const pos = Position.atPage(0);
-        pos.textStartsWith = 'Awesomely';
+        const pos = Position.atPage(0).withTextStarts('Awesomely');
         const lines = await client.findTextLines(pos);
         expect(lines.length).toBeGreaterThanOrEqual(1);
     }
@@ -88,8 +83,7 @@ describe('Paragraph E2E Tests', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
-        const posMod = Position.atPage(0);
-        posMod.textStartsWith = 'The Complete';
+        const posMod = Position.atPage(0).withTextStarts('The Complete');
         const ref = (await client.findParagraphs(posMod))[0];
 
         const newParagraph = client.paragraphBuilder()
@@ -107,8 +101,7 @@ describe('Paragraph E2E Tests', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
-        const posMod2 = Position.atPage(0);
-        posMod2.textStartsWith = 'The Complete';
+        const posMod2 = Position.atPage(0).withTextStarts('The Complete');
         const ref = (await client.findParagraphs(posMod2))[0];
         expect(await client.modifyParagraph(ref, 'Awesomely\\nObvious!')).toBe(true);
         await assertNewParagraphExists(client);

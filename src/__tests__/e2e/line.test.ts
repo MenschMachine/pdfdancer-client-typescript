@@ -34,8 +34,7 @@ describe('Line E2E Tests', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
-        const pos = Position.atPage(0);
-        pos.textStartsWith = 'the complete';
+        const pos = Position.atPage(0).withTextStarts("the complete");
         const lines = await client.findTextLines(pos);
         expect(lines).toHaveLength(1);
 
@@ -50,13 +49,11 @@ describe('Line E2E Tests', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
-        const pos = Position.atPage(0);
-        pos.textStartsWith = 'The Complete';
+        const pos = Position.atPage(0).withTextStarts('The Complete');
         const ref = (await client.findTextLines(pos))[0];
         expect(await client.delete(ref)).toBe(true);
 
-        const pos2 = Position.atPage(0);
-        pos2.textStartsWith = 'The Complete';
+        const pos2 = Position.atPage(0).withTextStarts('The Complete');
         expect(await client.findTextLines(pos2)).toHaveLength(0);
 
         // Save PDF to verify operation (Node.js environment)
@@ -74,8 +71,7 @@ describe('Line E2E Tests', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
-        const pos3 = Position.atPage(0);
-        pos3.textStartsWith = 'The Complete';
+        const pos3 = Position.atPage(0).withTextStarts('The Complete');
         const ref = (await client.findTextLines(pos3))[0];
         const newPos = ref.position.copy();
         newPos.moveX(100);
@@ -99,8 +95,7 @@ describe('Line E2E Tests', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
-        const pos4 = Position.atPage(0);
-        pos4.textStartsWith = 'The Complete';
+        const pos4 = Position.atPage(0).withTextStarts('The Complete');
         const ref = (await client.findTextLines(pos4))[0];
         expect(await client.modifyTextLine(ref, ' replaced ')).toBe(true);
 
@@ -112,16 +107,13 @@ describe('Line E2E Tests', () => {
         expect(fs.statSync(outPath).size).toBeGreaterThan(0);
 
         // Verify the text was replaced
-        const pos5 = Position.atPage(0);
-        pos5.textStartsWith = 'The Complete';
+        const pos5 = Position.atPage(0).withTextStarts('The Complete');
         expect(await client.findTextLines(pos5)).toHaveLength(0);
 
-        const pos6 = Position.atPage(0);
-        pos6.textStartsWith = ' replaced ';
+        const pos6 = Position.atPage(0).withTextStarts(' replaced ');
         expect(await client.findTextLines(pos6)).not.toHaveLength(0);
 
-        const pos7 = Position.atPage(0);
-        pos7.textStartsWith = ' replaced ';
+        const pos7 = Position.atPage(0).withTextStarts(' replaced ');
         expect(await client.findParagraphs(pos7)).not.toHaveLength(0);
 
         // Cleanup

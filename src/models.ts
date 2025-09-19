@@ -71,6 +71,13 @@ export class BoundingRect {
     }
 }
 
+class PositioningError extends Error {
+    constructor(msg: string) {
+        super(msg);
+        this.name = "PositioningException";
+    }
+}
+
 /**
  * Represents spatial positioning and location information for PDF objects.
  * Closely mirrors the Python Position class with TypeScript conventions.
@@ -96,18 +103,26 @@ export class Position {
      * Creates a position specification for specific coordinates on a page.
      */
     static atPageCoordinates(pageIndex: number, x: number, y: number): Position {
-        const position = Position.atPage(pageIndex);
-        position.setPoint({x, y});
-        return position;
+        return Position.atPage(pageIndex).atCoordinates({x, y});
+    }
+
+    static atPageWithText(pageIndex: number, text: string) {
+        return Position.atPage(pageIndex).withTextStarts(text);
     }
 
     /**
      * Sets the position to a specific point location.
      */
-    setPoint(point: Point): void {
+    atCoordinates(point: Point): this {
         this.mode = PositionMode.CONTAINS;
         this.shape = ShapeType.POINT;
         this.boundingRect = new BoundingRect(point.x, point.y, 0, 0);
+        return this;
+    }
+
+    withTextStarts(text: string) {
+        this.textStartsWith = text;
+        return this;
     }
 
     /**
@@ -115,7 +130,9 @@ export class Position {
      */
     moveX(xOffset: number): Position {
         if (this.boundingRect) {
-            this.setPoint({x: this.getX()! + xOffset, y: this.getY()!});
+            this.atCoordinates({x: this.getX()! + xOffset, y: this.getY()!});
+        } else {
+            throw new PositioningError("Cannot move since no initial position exists");
         }
         return this;
     }
@@ -125,7 +142,9 @@ export class Position {
      */
     moveY(yOffset: number): Position {
         if (this.boundingRect) {
-            this.setPoint({x: this.getX()!, y: this.getY()! + yOffset});
+            this.atCoordinates({x: this.getX()!, y: this.getY()! + yOffset});
+        } else {
+            throw new PositioningError("Cannot move since no initial position exists");
         }
         return this;
     }
