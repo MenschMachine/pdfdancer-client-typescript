@@ -79,7 +79,7 @@ export class ClientV1 {
         return this;
     }
 
-    static async create(token: string, pdfData: Uint8Array, baseUrl: string, timeout: number): Promise<ClientV1> {
+    static async create(token: string, pdfData: Uint8Array, baseUrl: string, timeout: number = 0): Promise<ClientV1> {
         const client = new ClientV1(token, pdfData, baseUrl, timeout);
         return await client.init();
     }
@@ -299,7 +299,7 @@ export class ClientV1 {
      * Searches for form field objects at the specified position.
      */
     async findForms(position?: Position): Promise<ObjectRef[]> {
-        return this.find(ObjectType.FORM, position);
+        return this.find(ObjectType.FORM_X_OBJECT, position);
     }
 
     /**

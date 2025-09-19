@@ -190,7 +190,7 @@ try {
 ### ObjectType
 
 - `IMAGE` - Image objects
-- `FORM` - Form field objects
+- `FORM_X_OBJECT` - Form field objects
 - `PATH` - Vector path objects
 - `PARAGRAPH` - Paragraph objects
 - `TEXT_LINE` - Text line objects

@@ -3,47 +3,47 @@
  */
 
 import * as fs from 'fs';
-import { ClientV1, Position, ObjectType } from '../../index';
-import { requireEnvAndFixture, createTempPath } from './test-helpers';
+import {ClientV1, ObjectType, Position} from '../../index';
+import {createTempPath, requireEnvAndFixture} from './test-helpers';
 
 describe('Form E2E Tests', () => {
-  // Tests should fail properly if environment is not configured
+    // Tests should fail properly if environment is not configured
 
-  test('delete forms', async () => {
-    const [baseUrl, token, pdfData] = await requireEnvAndFixture('mixed-form-types.pdf');
-    const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
+    test('delete forms', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('form-xobject-example.pdf');
+        const client = await ClientV1.create(token, pdfData, baseUrl);
 
-    const forms = await client.findForms();
-    expect(forms).toHaveLength(79);
-    expect(forms[0].type).toBe(ObjectType.FORM);
+        const forms = await client.findForms();
+        expect(forms).toHaveLength(17);
+        expect(forms[0].type).toBe(ObjectType.FORM_X_OBJECT);
 
-    // Delete all forms
-    for (const f of forms) {
-      expect(await client.delete(f)).toBe(true);
-    }
+        // Delete all forms
+        for (const f of forms) {
+            expect(await client.delete(f)).toBe(true);
+        }
 
-    expect(await client.findForms()).toHaveLength(0);
+        expect(await client.findForms()).toHaveLength(0);
 
-    // Save PDF to verify operation
-    const outPath = createTempPath('forms-after-delete.pdf');
-    const outputPdfData = await client.getPdfFile();
-    fs.writeFileSync(outPath, outputPdfData);
-    expect(fs.existsSync(outPath)).toBe(true);
-    expect(fs.statSync(outPath).size).toBeGreaterThan(0);
+        // Save PDF to verify operation
+        const outPath = createTempPath('forms-after-delete.pdf');
+        const outputPdfData = await client.getPdfFile();
+        fs.writeFileSync(outPath, outputPdfData);
+        expect(fs.existsSync(outPath)).toBe(true);
+        expect(fs.statSync(outPath).size).toBeGreaterThan(0);
 
-    // Cleanup
-    fs.unlinkSync(outPath);
-  });
+        // Cleanup
+        fs.unlinkSync(outPath);
+    });
 
-  test('find form by position', async () => {
-    const [baseUrl, token, pdfData] = await requireEnvAndFixture('mixed-form-types.pdf');
-    const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
+    test('find form by position', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('form-xobject-example.pdf');
+        const client = await ClientV1.create(token, pdfData, baseUrl);
 
-    let forms = await client.findForms(Position.atPageCoordinates(0, 0, 0));
-    expect(forms).toHaveLength(0);
+        let forms = await client.findForms(Position.atPageCoordinates(0, 0, 0));
+        expect(forms).toHaveLength(0);
 
-    forms = await client.findForms(Position.atPageCoordinates(0, 17, 447));
-    expect(forms).toHaveLength(1);
-    expect(forms[0].internalId).toBe('FORM_000001');
-  });
+        forms = await client.findForms(Position.atPageCoordinates(0, 321, 601));
+        expect(forms).toHaveLength(1);
+        expect(forms[0].internalId).toBe('FORM_000005');
+    });
 });
