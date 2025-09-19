@@ -20,10 +20,7 @@ async function exampleUsage() {
     ]);
 
     // Initialize the client with authentication token and PDF data
-    const client = new ClientV1('your-auth-token', pdfData, 'http://localhost:8080');
-
-    // Initialize the session (must be called before using the client)
-    await client.init();
+    const client = await ClientV1.create('your-auth-token', pdfData, 'http://localhost:8080', 30000);
 
     // Example 1: Find all paragraphs on page 1
     const page1Position = Position.atPage(1);
@@ -70,8 +67,7 @@ async function exampleUsage() {
 async function exampleWithCustomFont() {
   try {
     const pdfData = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
-    const client = new ClientV1('your-auth-token', pdfData);
-    await client.init();
+    const client = await ClientV1.create('your-auth-token', pdfData, undefined, 30000);
 
     // Register a custom font (example with dummy TTF data)
     const customFontData = new Uint8Array([/* TTF font data here */]);

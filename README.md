@@ -29,10 +29,7 @@ async function example() {
     const pdfData = new Uint8Array(/* your PDF data */);
 
     // Create client with authentication token
-    const client = new ClientV1('your-auth-token', pdfData);
-
-    // Initialize session (required before using the client)
-    await client.init();
+    const client = await ClientV1.create('your-auth-token', pdfData, undefined, 30000);
 
     // Find all paragraphs on page 1
     const paragraphs = await client.findParagraphs(Position.atPage(1));
@@ -59,14 +56,12 @@ async function example() {
 ### Client Initialization
 
 ```typescript
-const client = new ClientV1(
+const client = await ClientV1.create(
     token,        // Authentication token
     pdfData,      // PDF data as Uint8Array, File, or ArrayBuffer
     baseUrl,      // Optional: API server URL (default: http://localhost:8080)
     readTimeout   // Optional: Request timeout in ms (default: 30000)
 );
-
-await client.init(); // Required before using the client
 ```
 
 ### Search Operations

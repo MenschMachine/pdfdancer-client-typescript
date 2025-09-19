@@ -12,8 +12,7 @@ describe('Line E2E Tests', () => {
 
     test('find lines by position', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = new ClientV1(token, pdfData, baseUrl, 30000);
-        await client.init();
+        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
         const lines = await client.findTextLines();
         expect(lines).toHaveLength(340);
@@ -33,8 +32,7 @@ describe('Line E2E Tests', () => {
 
     test('find lines by text', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = new ClientV1(token, pdfData, baseUrl, 30000);
-        await client.init();
+        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
         const pos = Position.atPage(0);
         pos.textStartsWith = 'the complete';
@@ -50,8 +48,7 @@ describe('Line E2E Tests', () => {
 
     test('delete line', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = new ClientV1(token, pdfData, baseUrl, 30000);
-        await client.init();
+        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
         const pos = Position.atPage(0);
         pos.textStartsWith = 'The Complete';
@@ -75,8 +72,7 @@ describe('Line E2E Tests', () => {
 
     test('move line', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = new ClientV1(token, pdfData, baseUrl, 30000);
-        await client.init();
+        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
         const pos3 = Position.atPage(0);
         pos3.textStartsWith = 'The Complete';
@@ -101,8 +97,7 @@ describe('Line E2E Tests', () => {
 
     test('modify line', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = new ClientV1(token, pdfData, baseUrl, 30000);
-        await client.init();
+        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
         const pos4 = Position.atPage(0);
         pos4.textStartsWith = 'The Complete';

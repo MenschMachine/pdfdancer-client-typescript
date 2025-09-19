@@ -12,8 +12,7 @@ describe('Image E2E Tests', () => {
 
     test('find images', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = new ClientV1(token, pdfData, baseUrl, 30000);
-        await client.init();
+        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
         const images = await client.findImages();
         expect(images).toHaveLength(3);
@@ -25,8 +24,7 @@ describe('Image E2E Tests', () => {
 
     test('delete images', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = new ClientV1(token, pdfData, baseUrl, 30000);
-        await client.init();
+        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
         const images = await client.findImages();
         for (const obj of images) {
@@ -47,8 +45,7 @@ describe('Image E2E Tests', () => {
 
     test('move image', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = new ClientV1(token, pdfData, baseUrl, 30000);
-        await client.init();
+        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
         let images = await client.findImages();
         const imageRef = images[2];
@@ -67,8 +64,7 @@ describe('Image E2E Tests', () => {
 
     test('find image by position', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = new ClientV1(token, pdfData, baseUrl, 30000);
-        await client.init();
+        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
         let images = await client.findImages(Position.onPageCoordinates(11, 0, 0));
         expect(images).toHaveLength(0);
@@ -80,8 +76,7 @@ describe('Image E2E Tests', () => {
 
     test('add image', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = new ClientV1(token, pdfData, baseUrl, 30000);
-        await client.init();
+        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
         let images = await client.findImages();
         expect(images).toHaveLength(3);

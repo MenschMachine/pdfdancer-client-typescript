@@ -11,8 +11,7 @@ describe('Paragraph E2E Tests', () => {
 
     test('find paragraphs by position', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = new ClientV1(token, pdfData, baseUrl, 30000);
-        await client.init();
+        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
         const paras = await client.findParagraphs();
         expect(paras).toHaveLength(172);
@@ -35,8 +34,7 @@ describe('Paragraph E2E Tests', () => {
 
     test('find paragraphs by text', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = new ClientV1(token, pdfData, baseUrl, 30000);
-        await client.init();
+        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
         const pos = Position.atPage(0);
         pos.textStartsWith = 'The Complete';
@@ -52,8 +50,7 @@ describe('Paragraph E2E Tests', () => {
 
     test('delete paragraph', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = new ClientV1(token, pdfData, baseUrl, 30000);
-        await client.init();
+        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
         const posDel = Position.atPage(0);
         posDel.textStartsWith = 'The Complete';
@@ -67,8 +64,7 @@ describe('Paragraph E2E Tests', () => {
 
     test('move paragraph', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = new ClientV1(token, pdfData, baseUrl, 30000);
-        await client.init();
+        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
         const posMove = Position.atPage(0);
         posMove.textStartsWith = 'The Complete';
@@ -90,8 +86,7 @@ describe('Paragraph E2E Tests', () => {
 
     test('modify paragraph', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = new ClientV1(token, pdfData, baseUrl, 30000);
-        await client.init();
+        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
         const posMod = Position.atPage(0);
         posMod.textStartsWith = 'The Complete';
@@ -110,8 +105,7 @@ describe('Paragraph E2E Tests', () => {
 
     test('modify paragraph simple', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = new ClientV1(token, pdfData, baseUrl, 30000);
-        await client.init();
+        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
         const posMod2 = Position.atPage(0);
         posMod2.textStartsWith = 'The Complete';
@@ -122,8 +116,7 @@ describe('Paragraph E2E Tests', () => {
 
     test('add paragraph with custom font - expect not found', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = new ClientV1(token, pdfData, baseUrl, 30000);
-        await client.init();
+        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
         const pb = client.paragraphBuilder()
             .fromString('Awesomely\\nObvious!')
@@ -136,8 +129,7 @@ describe('Paragraph E2E Tests', () => {
 
     test('add paragraph with custom font - Roboto-Regular', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = new ClientV1(token, pdfData, baseUrl, 30000);
-        await client.init();
+        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
         const pb = client.paragraphBuilder()
             .fromString('Awesomely\\nObvious!')
@@ -151,8 +143,7 @@ describe('Paragraph E2E Tests', () => {
 
     test('add paragraph with found font', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = new ClientV1(token, pdfData, baseUrl, 30000);
-        await client.init();
+        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
         const fonts = await client.findFonts('Roboto', 14);
         expect(fonts.length).toBeGreaterThan(0);
@@ -171,8 +162,7 @@ describe('Paragraph E2E Tests', () => {
 
     test('add paragraph with Asimovian font', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = new ClientV1(token, pdfData, baseUrl, 30000);
-        await client.init();
+        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
         const fonts = await client.findFonts('Asimovian', 14);
         expect(fonts.length).toBeGreaterThan(0);
@@ -191,8 +181,7 @@ describe('Paragraph E2E Tests', () => {
 
     test('add paragraph with custom TTF font', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = new ClientV1(token, pdfData, baseUrl, 30000);
-        await client.init();
+        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
         // Use DancingScript-Regular.ttf from fixtures directory
         const ttfData = readFontFixture('DancingScript-Regular.ttf');

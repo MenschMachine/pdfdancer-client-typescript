@@ -10,8 +10,7 @@ describe('Path E2E Tests', () => {
 
   test('find paths', async () => {
     const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
-    const client = new ClientV1(token, pdfData, baseUrl, 30000);
-    await client.init();
+    const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
     const paths = await client.findPaths();
     expect(paths).toHaveLength(9);
@@ -26,8 +25,7 @@ describe('Path E2E Tests', () => {
 
   test('find paths by position', async () => {
     const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
-    const client = new ClientV1(token, pdfData, baseUrl, 30000);
-    await client.init();
+    const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
     const paths = await client.findPaths(Position.onPageCoordinates(0, 80, 720));
     expect(paths).toHaveLength(1);
@@ -36,8 +34,7 @@ describe('Path E2E Tests', () => {
 
   test('delete path', async () => {
     const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
-    const client = new ClientV1(token, pdfData, baseUrl, 30000);
-    await client.init();
+    const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
     let paths = await client.findPaths(Position.onPageCoordinates(0, 80, 720));
     expect(paths).toHaveLength(1);
@@ -50,8 +47,7 @@ describe('Path E2E Tests', () => {
 
   test('move path', async () => {
     const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
-    const client = new ClientV1(token, pdfData, baseUrl, 30000);
-    await client.init();
+    const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
     let paths = await client.findPaths(Position.onPageCoordinates(0, 80, 720));
     const ref = paths[0];

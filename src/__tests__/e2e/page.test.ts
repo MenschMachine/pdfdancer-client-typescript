@@ -10,8 +10,7 @@ describe('Page E2E Tests', () => {
 
   test('get pages', async () => {
     const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-    const client = new ClientV1(token, pdfData, baseUrl, 30000);
-    await client.init();
+    const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
     const pages = await client.getPages();
     expect(pages).toBeDefined();
@@ -21,8 +20,7 @@ describe('Page E2E Tests', () => {
 
   test('get page', async () => {
     const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-    const client = new ClientV1(token, pdfData, baseUrl, 30000);
-    await client.init();
+    const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
     const page = await client.getPage(2);
     expect(page).toBeDefined();
@@ -32,8 +30,7 @@ describe('Page E2E Tests', () => {
 
   test('delete page', async () => {
     const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-    const client = new ClientV1(token, pdfData, baseUrl, 30000);
-    await client.init();
+    const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
     const page3 = await client.getPage(3);
     expect(page3).toBeDefined();

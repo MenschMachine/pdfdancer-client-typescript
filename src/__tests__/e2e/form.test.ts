@@ -11,8 +11,7 @@ describe('Form E2E Tests', () => {
 
   test('delete forms', async () => {
     const [baseUrl, token, pdfData] = await requireEnvAndFixture('mixed-form-types.pdf');
-    const client = new ClientV1(token, pdfData, baseUrl, 30000);
-    await client.init();
+    const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
     const forms = await client.findForms();
     expect(forms).toHaveLength(79);
@@ -38,8 +37,7 @@ describe('Form E2E Tests', () => {
 
   test('find form by position', async () => {
     const [baseUrl, token, pdfData] = await requireEnvAndFixture('mixed-form-types.pdf');
-    const client = new ClientV1(token, pdfData, baseUrl, 30000);
-    await client.init();
+    const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
     let forms = await client.findForms(Position.onPageCoordinates(0, 0, 0));
     expect(forms).toHaveLength(0);
