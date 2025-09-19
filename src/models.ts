@@ -12,7 +12,11 @@ export enum ObjectType {
     PATH = "PATH",
     PARAGRAPH = "PARAGRAPH",
     TEXT_LINE = "TEXT_LINE",
-    PAGE = "PAGE"
+    PAGE = "PAGE",
+    FORM_FIELD = "FORM_FIELD",
+    TEXT_FIELD = "TEXT_FIELD",
+    CHECK_BOX = "CHECK_BOX",
+    RADIO_BUTTON = "RADIO_BUTTON"
 }
 
 /**
@@ -83,6 +87,8 @@ class PositioningError extends Error {
  * Closely mirrors the Python Position class with TypeScript conventions.
  */
 export class Position {
+    public name?: string;
+
     constructor(
         public pageIndex?: number,
         public shape?: ShapeType,
@@ -108,6 +114,15 @@ export class Position {
 
     static atPageWithText(pageIndex: number, text: string) {
         return Position.atPage(pageIndex).withTextStarts(text);
+    }
+
+    /**
+     * Creates a position specification for finding objects by name.
+     */
+    static byName(name: string): Position {
+        const position = new Position();
+        position.name = name;
+        return position;
     }
 
     /**
@@ -192,6 +207,9 @@ export class Position {
  * Mirrors the Python ObjectRef class exactly.
  */
 export class ObjectRef {
+    public name?: string;
+    public value?: string | null;
+
     constructor(
         public internalId: string,
         public position: Position,
@@ -221,6 +239,22 @@ export class ObjectRef {
             position: positionToDict(this.position),
             type: this.type
         };
+    }
+}
+
+/**
+ * Represents a form field reference with name and value properties.
+ * Extends ObjectRef to include form-specific properties.
+ */
+export class FormFieldRef extends ObjectRef {
+    constructor(
+        internalId: string,
+        position: Position,
+        type: ObjectType,
+        public name?: string,
+        public value?: string | null
+    ) {
+        super(internalId, position, type);
     }
 }
 
@@ -477,11 +511,31 @@ export class ModifyTextRequest {
     }
 }
 
+export class ChangeFormFieldRequest {
+    constructor(
+        public formFieldRef: FormFieldRef,
+        public newValue: string
+    ) {
+    }
+
+    toDict(): Record<string, any> {
+        return {
+            ref: {
+                internalId: this.formFieldRef.internalId,
+                position: positionToDict(this.formFieldRef.position),
+                type: this.formFieldRef.type
+            },
+            value: this.newValue
+        };
+    }
+}
+
 // Helper function to convert Position to dictionary for JSON serialization
 function positionToDict(position: Position): Record<string, any> {
     const result: Record<string, any> = {
         pageIndex: position.pageIndex,
-        textStartsWith: position.textStartsWith
+        textStartsWith: position.textStartsWith,
+        name: position.name
     };
 
     if (position.shape) {

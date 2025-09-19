@@ -19,6 +19,7 @@ export {
 
 export {
   ObjectRef,
+  FormFieldRef,
   Position,
   ObjectType,
   Font,

@@ -15,9 +15,11 @@ import {
 import {
     AddRequest,
     BoundingRect,
+    ChangeFormFieldRequest,
     DeleteRequest,
     FindRequest,
     Font,
+    FormFieldRef,
     Image,
     ModifyRequest,
     ModifyTextRequest,
@@ -296,7 +298,7 @@ export class ClientV1 {
     }
 
     /**
-     * Searches for form field objects at the specified position.
+     * Searches for form X objects at the specified position.
      */
     async findFormXObjects(position?: Position): Promise<ObjectRef[]> {
         return this.find(ObjectType.FORM_X_OBJECT, position);
@@ -314,6 +316,18 @@ export class ClientV1 {
      */
     async findTextLines(position?: Position): Promise<ObjectRef[]> {
         return this.find(ObjectType.TEXT_LINE, position);
+    }
+
+    /**
+     * Searches for form fields at the specified position.
+     * Returns FormFieldRef objects with name and value properties.
+     */
+    async findFormFields(position?: Position): Promise<FormFieldRef[]> {
+        const requestData = new FindRequest(ObjectType.FORM_FIELD, position).toDict();
+        const response = await this._makeRequest('POST', '/pdf/find', requestData);
+
+        const objectsData = await response.json() as any[];
+        return objectsData.map((objData: any) => this._parseFormFieldRef(objData));
     }
 
     // Page Operations
@@ -387,6 +401,19 @@ export class ClientV1 {
 
         const requestData = new MoveRequest(objectRef, position).toDict();
         const response = await this._makeRequest('PUT', '/pdf/move', requestData);
+        return await response.json() as boolean;
+    }
+
+    /**
+     * Changes the value of a form field.
+     */
+    async changeFormField(formFieldRef: FormFieldRef, newValue: string): Promise<boolean> {
+        if (!formFieldRef) {
+            throw new ValidationException("Form field reference cannot be null");
+        }
+
+        const requestData = new ChangeFormFieldRequest(formFieldRef, newValue).toDict();
+        const response = await this._makeRequest('PUT', '/pdf/modify/formField', requestData);
         return await response.json() as boolean;
     }
 
@@ -609,12 +636,27 @@ export class ClientV1 {
         const positionData = objData.position || {};
         const position = positionData ? this._parsePosition(positionData) : new Position();
 
-        const objectType = ObjectType[objData.type as keyof typeof ObjectType];
+        const objectType = objData.type as ObjectType;
 
         return new ObjectRef(
             objData.internalId,
             position,
             objectType
+        );
+    }
+
+    private _parseFormFieldRef(objData: any): FormFieldRef {
+        const positionData = objData.position || {};
+        const position = positionData ? this._parsePosition(positionData) : new Position();
+
+        const objectType = objData.type as ObjectType;
+
+        return new FormFieldRef(
+            objData.internalId,
+            position,
+            objectType,
+            objData.name || undefined,
+            objData.value !== undefined ? objData.value : null
         );
     }
 
