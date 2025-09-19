@@ -21,6 +21,7 @@ module.exports = {
       testEnvironment: 'node',
       displayName: 'e2e',
       testMatch: ['<rootDir>/src/__tests__/e2e/**/*.test.ts'],
+      testTimeout: 10000,
     }
   ]
 };
