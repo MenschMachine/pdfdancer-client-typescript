@@ -73,7 +73,7 @@ const objects = await client.find(ObjectType.PARAGRAPH, position);
 // Convenience methods for specific object types
 const paragraphs = await client.findParagraphs(position);
 const images = await client.findImages(position);
-const forms = await client.findForms(position);
+const forms = await client.findFormXObjects(position);
 const paths = await client.findPaths(position);
 const textLines = await client.findTextLines(position);
 

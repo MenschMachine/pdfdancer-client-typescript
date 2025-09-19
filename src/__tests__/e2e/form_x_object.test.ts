@@ -13,7 +13,7 @@ describe('Form E2E Tests', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('form-xobject-example.pdf');
         const client = await ClientV1.create(token, pdfData, baseUrl);
 
-        const forms = await client.findForms();
+        const forms = await client.findFormXObjects();
         expect(forms).toHaveLength(17);
         expect(forms[0].type).toBe(ObjectType.FORM_X_OBJECT);
 
@@ -22,7 +22,7 @@ describe('Form E2E Tests', () => {
             expect(await client.delete(f)).toBe(true);
         }
 
-        expect(await client.findForms()).toHaveLength(0);
+        expect(await client.findFormXObjects()).toHaveLength(0);
 
         // Save PDF to verify operation
         const outPath = createTempPath('forms-after-delete.pdf');
@@ -39,10 +39,10 @@ describe('Form E2E Tests', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('form-xobject-example.pdf');
         const client = await ClientV1.create(token, pdfData, baseUrl);
 
-        let forms = await client.findForms(Position.atPageCoordinates(0, 0, 0));
+        let forms = await client.findFormXObjects(Position.atPageCoordinates(0, 0, 0));
         expect(forms).toHaveLength(0);
 
-        forms = await client.findForms(Position.atPageCoordinates(0, 321, 601));
+        forms = await client.findFormXObjects(Position.atPageCoordinates(0, 321, 601));
         expect(forms).toHaveLength(1);
         expect(forms[0].internalId).toBe('FORM_000005');
     });

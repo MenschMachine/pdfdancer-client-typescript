@@ -298,7 +298,7 @@ export class ClientV1 {
     /**
      * Searches for form field objects at the specified position.
      */
-    async findForms(position?: Position): Promise<ObjectRef[]> {
+    async findFormXObjects(position?: Position): Promise<ObjectRef[]> {
         return this.find(ObjectType.FORM_X_OBJECT, position);
     }
 
