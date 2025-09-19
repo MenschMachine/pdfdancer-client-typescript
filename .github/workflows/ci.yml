@@ -19,7 +19,14 @@ jobs:
         node-version: [ 18.x, 20.x, 22.x, 24.x ]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code (with submodules and LFS)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}            # ensure it fetches the correct branch/PR
+          submodules: recursive
+          token: ${{ secrets.PUBLISH_TOKEN }}
+          lfs: true
+          fetch-depth: 0                     # fetch full history to avoid shallow fetch issues
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
