@@ -25,7 +25,6 @@ jobs:
           ref: ${{ github.ref }}            # ensure it fetches the correct branch/PR
           submodules: recursive
           token: ${{ secrets.PUBLISH_TOKEN }}
-          lfs: true
           fetch-depth: 0                     # fetch full history to avoid shallow fetch issues
 
       - name: Use Node.js ${{ matrix.node-version }}
