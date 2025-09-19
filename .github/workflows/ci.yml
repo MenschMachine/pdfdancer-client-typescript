@@ -10,22 +10,12 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: write
-      packages: write
-
     strategy:
       matrix:
         node-version: [ 18.x, 20.x, 22.x, 24.x ]
 
     steps:
-      - name: Checkout code (with submodules and LFS)
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.ref }}            # ensure it fetches the correct branch/PR
-          submodules: recursive
-          token: ${{ secrets.PUBLISH_TOKEN }}
-          fetch-depth: 0                     # fetch full history to avoid shallow fetch issues
+      - uses: actions/checkout@v4
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
@@ -45,26 +35,3 @@ jobs:
       - name: Run tests
         run: npm run test:unit
 
-  tag:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging')
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Generate tag
-        id: tag
-        run: |
-          BRANCH=${GITHUB_REF#refs/heads/}
-          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-          COMMIT_SHORT=${GITHUB_SHA:0:7}
-          TAG="build-${BRANCH}-${TIMESTAMP}-${COMMIT_SHORT}"
-          echo "tag=${TAG}" >> $GITHUB_OUTPUT
-
-      - name: Create and push tag
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag ${{ steps.tag.outputs.tag }}
-          git push origin ${{ steps.tag.outputs.tag }}
