@@ -53,7 +53,7 @@ describe('Image E2E Tests', () => {
         expectWithin(position.boundingRect?.x, 54, 0.5);
         expectWithin(position.boundingRect?.y, 300, 1);
 
-        expect(await client.move(imageRef, Position.onPageCoordinates(11, 50.1, 100.0))).toBe(true);
+        expect(await client.move(imageRef, Position.atPageCoordinates(11, 50.1, 100.0))).toBe(true);
 
         images = await client.findImages();
         const movedImageRef = images[2];
@@ -66,10 +66,10 @@ describe('Image E2E Tests', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
-        let images = await client.findImages(Position.onPageCoordinates(11, 0, 0));
+        let images = await client.findImages(Position.atPageCoordinates(11, 0, 0));
         expect(images).toHaveLength(0);
 
-        images = await client.findImages(Position.onPageCoordinates(11, 55, 310));
+        images = await client.findImages(Position.atPageCoordinates(11, 55, 310));
         expect(images).toHaveLength(1);
         expect(images[0].internalId).toBe('IMAGE_000003');
     });
@@ -85,7 +85,7 @@ describe('Image E2E Tests', () => {
         const imageData = readImageFixture('logo-80.png');
         const image = new Image();
         image.data = imageData;
-        const pos = Position.onPageCoordinates(6, 50.1, 98.0);
+        const pos = Position.atPageCoordinates(6, 50.1, 98.0);
 
         expect(await client.addImage(image, pos)).toBe(true);
 

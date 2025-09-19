@@ -38,7 +38,7 @@ async function example() {
     const newParagraph = client.paragraphBuilder()
         .fromString('Hello, PDFDancer!', new Color(255, 0, 0))
         .withFont(new Font('Arial', 12))
-        .withPosition(Position.onPageCoordinates(1, 100, 200))
+        .withPosition(Position.atPageCoordinates(1, 100, 200))
         .build();
 
     await client.addParagraph(newParagraph);
@@ -89,7 +89,7 @@ const page = await client.getPage(1); // 1-based index
 const pagePosition = Position.atPage(1);
 
 // Coordinate-based position
-const coordPosition = Position.onPageCoordinates(1, 100, 200);
+const coordPosition = Position.atPageCoordinates(1, 100, 200);
 
 // Position with movement
 const movedPosition = coordPosition.copy().moveX(50).moveY(30);
@@ -103,7 +103,7 @@ const paragraph = client.paragraphBuilder()
     .fromString('Your text here')
     .withFont(new Font('Arial', 12))
     .withColor(new Color(0, 0, 0))
-    .withPosition(Position.onPageCoordinates(1, 100, 200))
+    .withPosition(Position.atPageCoordinates(1, 100, 200))
     .withLineSpacing(1.2)
     .build();
 

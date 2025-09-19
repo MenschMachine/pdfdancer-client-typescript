@@ -27,7 +27,7 @@ describe('Path E2E Tests', () => {
     const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
     const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
-    const paths = await client.findPaths(Position.onPageCoordinates(0, 80, 720));
+    const paths = await client.findPaths(Position.atPageCoordinates(0, 80, 720));
     expect(paths).toHaveLength(1);
     expect(paths[0].internalId).toBe('PATH_000001');
   });
@@ -36,12 +36,12 @@ describe('Path E2E Tests', () => {
     const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
     const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
-    let paths = await client.findPaths(Position.onPageCoordinates(0, 80, 720));
+    let paths = await client.findPaths(Position.atPageCoordinates(0, 80, 720));
     expect(paths).toHaveLength(1);
     expect(paths[0].internalId).toBe('PATH_000001');
     expect(await client.delete(paths[0])).toBe(true);
 
-    expect(await client.findPaths(Position.onPageCoordinates(0, 80, 720))).toHaveLength(0);
+    expect(await client.findPaths(Position.atPageCoordinates(0, 80, 720))).toHaveLength(0);
     expect(await client.findPaths()).toHaveLength(8);
   });
 
@@ -49,17 +49,17 @@ describe('Path E2E Tests', () => {
     const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
     const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
-    let paths = await client.findPaths(Position.onPageCoordinates(0, 80, 720));
+    let paths = await client.findPaths(Position.atPageCoordinates(0, 80, 720));
     const ref = paths[0];
     const pos = ref.position;
     expect(pos.boundingRect?.x).toBeCloseTo(80, 1);
     expect(pos.boundingRect?.y).toBeCloseTo(720, 1);
 
-    expect(await client.move(ref, Position.onPageCoordinates(0, 50.1, 100))).toBe(true);
+    expect(await client.move(ref, Position.atPageCoordinates(0, 50.1, 100))).toBe(true);
 
-    expect(await client.findPaths(Position.onPageCoordinates(0, 80, 720))).toHaveLength(0);
+    expect(await client.findPaths(Position.atPageCoordinates(0, 80, 720))).toHaveLength(0);
 
-    paths = await client.findPaths(Position.onPageCoordinates(0, 50.1, 100));
+    paths = await client.findPaths(Position.atPageCoordinates(0, 50.1, 100));
     const movedRef = paths[0];
     const newPos = movedRef.position;
     expect(newPos.boundingRect?.x).toBeCloseTo(50.1, 0.05);

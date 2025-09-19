@@ -53,14 +53,14 @@ describe('Position', () => {
   });
 
   test('should create position with coordinates', () => {
-    const position = Position.onPageCoordinates(1, 100, 200);
+    const position = Position.atPageCoordinates(1, 100, 200);
     expect(position.pageIndex).toBe(1);
     expect(position.getX()).toBe(100);
     expect(position.getY()).toBe(200);
   });
 
   test('should move position', () => {
-    const position = Position.onPageCoordinates(1, 100, 200);
+    const position = Position.atPageCoordinates(1, 100, 200);
     position.moveX(50).moveY(30);
     expect(position.getX()).toBe(150);
     expect(position.getY()).toBe(230);

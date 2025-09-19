@@ -95,7 +95,7 @@ export class Position {
     /**
      * Creates a position specification for specific coordinates on a page.
      */
-    static onPageCoordinates(pageIndex: number, x: number, y: number): Position {
+    static atPageCoordinates(pageIndex: number, x: number, y: number): Position {
         const position = Position.atPage(pageIndex);
         position.setPoint({x, y});
         return position;

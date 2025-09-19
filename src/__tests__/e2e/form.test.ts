@@ -39,10 +39,10 @@ describe('Form E2E Tests', () => {
     const [baseUrl, token, pdfData] = await requireEnvAndFixture('mixed-form-types.pdf');
     const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
 
-    let forms = await client.findForms(Position.onPageCoordinates(0, 0, 0));
+    let forms = await client.findForms(Position.atPageCoordinates(0, 0, 0));
     expect(forms).toHaveLength(0);
 
-    forms = await client.findForms(Position.onPageCoordinates(0, 17, 447));
+    forms = await client.findForms(Position.atPageCoordinates(0, 17, 447));
     expect(forms).toHaveLength(1);
     expect(forms[0].internalId).toBe('FORM_000001');
   });

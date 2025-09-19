@@ -69,7 +69,7 @@ describe('Paragraph E2E Tests', () => {
         const posMove = Position.atPage(0);
         posMove.textStartsWith = 'The Complete';
         const ref = (await client.findParagraphs(posMove))[0];
-        const newPos = Position.onPageCoordinates(0, 0.1, 300);
+        const newPos = Position.atPageCoordinates(0, 0.1, 300);
         expect(await client.move(ref, newPos)).toBe(true);
 
         const ref2 = (await client.findParagraphs(newPos))[0];
@@ -96,7 +96,7 @@ describe('Paragraph E2E Tests', () => {
             .fromString('Awesomely\\nObvious!')
             .withFont(new Font('Helvetica', 14))
             .withLineSpacing(0.7)
-            .withPosition(Position.onPageCoordinates(0, 300.1, 500))
+            .withPosition(Position.atPageCoordinates(0, 300.1, 500))
             .build();
 
         expect(await client.modifyParagraph(ref, newParagraph)).toBe(true);
@@ -122,7 +122,7 @@ describe('Paragraph E2E Tests', () => {
             .fromString('Awesomely\\nObvious!')
             .withFont(new Font('Roboto', 14))
             .withLineSpacing(0.7)
-            .withPosition(Position.onPageCoordinates(0, 300.1, 500));
+            .withPosition(Position.atPageCoordinates(0, 300.1, 500));
 
         await expect(client.addParagraph(pb.build())).rejects.toThrow('Font not found');
     });
@@ -135,7 +135,7 @@ describe('Paragraph E2E Tests', () => {
             .fromString('Awesomely\\nObvious!')
             .withFont(new Font('Roboto-Regular', 14))
             .withLineSpacing(0.7)
-            .withPosition(Position.onPageCoordinates(0, 300.1, 500));
+            .withPosition(Position.atPageCoordinates(0, 300.1, 500));
 
         expect(await client.addParagraph(pb.build())).toBe(true);
         await assertNewParagraphExists(client);
@@ -154,7 +154,7 @@ describe('Paragraph E2E Tests', () => {
             .fromString('Awesomely\\nObvious!')
             .withFont(roboto)
             .withLineSpacing(0.7)
-            .withPosition(Position.onPageCoordinates(0, 300.1, 500));
+            .withPosition(Position.atPageCoordinates(0, 300.1, 500));
 
         expect(await client.addParagraph(pb.build())).toBe(true);
         await assertNewParagraphExists(client);
@@ -173,7 +173,7 @@ describe('Paragraph E2E Tests', () => {
             .fromString('Awesomely\\nObvious!')
             .withFont(asimovian)
             .withLineSpacing(0.7)
-            .withPosition(Position.onPageCoordinates(0, 300.1, 500));
+            .withPosition(Position.atPageCoordinates(0, 300.1, 500));
 
         expect(await client.addParagraph(pb.build())).toBe(true);
         await assertNewParagraphExists(client);
@@ -190,7 +190,7 @@ describe('Paragraph E2E Tests', () => {
             .fromString('Awesomely\\nObvious!')
             .withLineSpacing(1.8)
             .withColor(new Color(0, 0, 255))
-            .withPosition(Position.onPageCoordinates(0, 300.1, 500));
+            .withPosition(Position.atPageCoordinates(0, 300.1, 500));
 
         await pb.withFontFile(ttfData, 24);
 

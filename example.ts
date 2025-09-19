@@ -31,7 +31,7 @@ async function exampleUsage() {
     const newParagraph = client.paragraphBuilder()
       .fromString('Hello, PDFDancer!', new Color(255, 0, 0)) // Red text
       .withFont(new Font('Arial', 12))
-      .withPosition(Position.onPageCoordinates(1, 100, 200))
+      .withPosition(Position.atPageCoordinates(1, 100, 200))
       .withLineSpacing(1.5)
       .build();
 
@@ -78,7 +78,7 @@ async function exampleWithCustomFont() {
     const paragraph = client.paragraphBuilder()
       .fromString('Text with custom font')
       .withFont(new Font(fontName, 14))
-      .withPosition(Position.onPageCoordinates(1, 50, 300))
+      .withPosition(Position.atPageCoordinates(1, 50, 300))
       .build();
 
     await client.addParagraph(paragraph);
