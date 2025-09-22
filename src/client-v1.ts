@@ -596,7 +596,7 @@ export class ClientV1 {
 
     async getXmlFile(): Promise<String> {
         const response = await fetch(`${this._baseUrl}/xml`, {
-            method: 'POST',
+            method: 'GET',
             headers: {
                 'Authorization': `Bearer ${this._token}`,
                 'X-Session-Id': this._sessionId
