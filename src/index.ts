@@ -2,8 +2,6 @@
  * PDFDancer TypeScript Client
  *
  * A TypeScript client library for the PDFDancer PDF manipulation API.
- * Provides a clean, TypeScript interface for PDF operations that closely
- * mirrors the Python client structure and functionality.
  */
 
 export { ClientV1 } from './client-v1';

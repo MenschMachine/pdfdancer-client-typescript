@@ -1,7 +1,6 @@
 # PDFDancer TypeScript Client
 
-A TypeScript client library for the PDFDancer PDF manipulation API. This client provides a clean, TypeScript interface
-for PDF operations that closely mirrors the Python client structure and functionality.
+A TypeScript client library for the PDFDancer PDF manipulation API.
 
 ## Features
 
@@ -232,7 +231,7 @@ npm run lint
 
 ### E2E Tests
 
-The project includes comprehensive end-to-end tests that mirror the Python client test suite. To run e2e tests:
+The project includes comprehensive end-to-end tests. To run e2e tests:
 
 1. **Start PDFDancer server** at `http://localhost:8080` (or set `PDFDANCER_BASE_URL`)
 

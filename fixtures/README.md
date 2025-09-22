@@ -10,8 +10,6 @@ For the e2e tests to run, you need to place the following files here:
 - `logo-80.png` - Small PNG image for image tests
 - `DancingScript-Regular.ttf` - TTF font file for custom font tests
 
-These files should match the fixtures used by the Python client tests.
-
 The e2e tests will be skipped if these files are not present or if the required environment variables are not set:
 
 - `PDFDANCER_TOKEN` - Authentication token for the PDFDancer API

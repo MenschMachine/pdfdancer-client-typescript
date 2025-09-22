@@ -1,5 +1,5 @@
 /**
- * E2E tests for AcroForm field operations - replicating Python test
+ * E2E tests for AcroForm field operations
  */
 
 import * as fs from 'fs';

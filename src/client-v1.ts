@@ -1,8 +1,7 @@
 /**
  * PDFDancer TypeScript Client V1
  *
- * A TypeScript client that closely mirrors the Python Client class structure and functionality.
- * Provides session-based PDF manipulation operations with strict validation.
+ * A TypeScript client that provides session-based PDF manipulation operations with strict validation.
  */
 
 import {
@@ -39,7 +38,6 @@ import {ParagraphBuilder} from './paragraph-builder';
  * including session management, object searching, manipulation, and retrieval.
  * Handles authentication, session lifecycle, and HTTP communication transparently.
  *
- * Mirrors the Python Client class functionality exactly.
  */
 export class ClientV1 {
     private _token: string;
@@ -59,7 +57,6 @@ export class ClientV1 {
         baseUrl: string = "http://localhost:8080",
         readTimeout: number = 30000
     ) {
-        // Strict validation like Python client
         if (!token || !token.trim()) {
             throw new ValidationException("Authentication token cannot be null or empty");
         }
@@ -238,7 +235,7 @@ export class ClientV1 {
                 signal: this._readTimeout > 0 ? AbortSignal.timeout(this._readTimeout) : undefined
             });
 
-            // Handle FontNotFoundException specifically like Python client
+            // Handle FontNotFoundException
             if (response.status === 404) {
                 try {
                     const errorData = await response.json() as any;
@@ -268,7 +265,7 @@ export class ClientV1 {
         }
     }
 
-    // Search Operations - matching Python client exactly
+    // Search Operations
 
     /**
      * Searches for PDF objects matching the specified criteria.

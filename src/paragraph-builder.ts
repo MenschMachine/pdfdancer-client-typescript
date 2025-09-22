@@ -1,6 +1,5 @@
 /**
  * ParagraphBuilder for the PDFDancer TypeScript client.
- * Closely mirrors the Python ParagraphBuilder class with TypeScript conventions.
  */
 
 import { ValidationException } from './exceptions';
@@ -9,7 +8,6 @@ import type { ClientV1 } from './client-v1';
 
 /**
  * Builder class for constructing Paragraph objects with fluent interface.
- * Mirrors the Python ParagraphBuilder class exactly.
  */
 export class ParagraphBuilder {
   private _paragraph: Paragraph;

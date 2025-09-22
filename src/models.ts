@@ -1,11 +1,7 @@
 /**
  * Model classes for the PDFDancer TypeScript client.
- * Closely mirrors the Python model classes with TypeScript conventions.
  */
 
-/**
- * Object type enumeration matching the Python ObjectType.
- */
 export enum ObjectType {
     IMAGE = "IMAGE",
     FORM_X_OBJECT = "FORM_X_OBJECT",
@@ -47,7 +43,6 @@ export interface Point {
 
 /**
  * Represents a bounding rectangle with position and dimensions.
- * Matches the Python BoundingRect class.
  */
 export class BoundingRect {
     constructor(
@@ -84,7 +79,6 @@ class PositioningError extends Error {
 
 /**
  * Represents spatial positioning and location information for PDF objects.
- * Closely mirrors the Python Position class with TypeScript conventions.
  */
 export class Position {
     public name?: string;
@@ -204,7 +198,6 @@ export class Position {
 
 /**
  * Lightweight reference to a PDF object providing identity and type information.
- * Mirrors the Python ObjectRef class exactly.
  */
 export class ObjectRef {
     public name?: string;
@@ -268,7 +261,6 @@ export class Color {
         public b: number,
         public a: number = 255 // Alpha channel, default fully opaque
     ) {
-        // Validation similar to Python client
         for (const component of [this.r, this.g, this.b, this.a]) {
             if (component < 0 || component > 255) {
                 throw new Error(`Color component must be between 0 and 255, got ${component}`);
@@ -293,7 +285,6 @@ export class Font {
 
 /**
  * Represents an image object in a PDF document.
- * Matches the Python Image class structure.
  */
 export class Image {
     constructor(
@@ -316,7 +307,6 @@ export class Image {
 
 /**
  * Represents a paragraph of text in a PDF document.
- * Structure mirrors the Python Paragraph class.
  */
 export class Paragraph {
     constructor(

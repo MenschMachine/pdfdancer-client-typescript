@@ -1,6 +1,5 @@
 /**
  * Exception classes for the PDFDancer TypeScript client.
- * Mirrors the Python client exception hierarchy.
  */
 
 /**
