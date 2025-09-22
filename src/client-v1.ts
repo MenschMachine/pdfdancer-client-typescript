@@ -597,6 +597,18 @@ export class ClientV1 {
         return new Uint8Array(await response.arrayBuffer());
     }
 
+    async getXmlFile(): Promise<Uint8Array> {
+        const response = await fetch(`${this._baseUrl}/xml`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${this._token}`,
+                'X-Session-Id': this._sessionId
+            },
+            signal: AbortSignal.timeout(30000)
+        });
+        return response.text()
+    }
+
     /**
      * Saves the current PDF to a file (browser environment).
      * Downloads the PDF in the browser.
