@@ -597,7 +597,7 @@ export class ClientV1 {
         return new Uint8Array(await response.arrayBuffer());
     }
 
-    async getXmlFile(): Promise<Uint8Array> {
+    async getXmlFile(): Promise<String> {
         const response = await fetch(`${this._baseUrl}/xml`, {
             method: 'POST',
             headers: {
