@@ -2,8 +2,7 @@
  * E2E tests for AcroForm field operations
  */
 
-import * as fs from 'fs';
-import {ClientV1, FormFieldRef, ObjectType, Position} from '../../index';
+import {ClientV1, ObjectType, Position} from '../../index';
 import {requireEnvAndFixture} from './test-helpers';
 
 describe('AcroForm Fields E2E Tests', () => {

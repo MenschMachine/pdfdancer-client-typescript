@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>User Documentation Playbook – pdfdancer</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/styles/github.min.css" />
+  <style>
+    :root { --text: #111827; --muted: #6b7280; --bg: #ffffff; --border: #e5e7eb; --link: #2563eb; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+    header { border-bottom: 1px solid var(--border); padding: 16px; position: sticky; top: 0; background: var(--bg); z-index: 10; }
+    header .container { max-width: 960px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+    header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+    header a { color: var(--link); text-decoration: none; }
+    main { max-width: 960px; margin: 24px auto 64px; padding: 0 16px; }
+    .content :is(h1,h2,h3,h4) { scroll-margin-top: 72px; }
+    .content h1 { font-size: 28px; margin-top: 0; }
+    .content h2 { font-size: 22px; margin-top: 28px; border-top: 1px solid var(--border); padding-top: 16px; }
+    .content h3 { font-size: 18px; margin-top: 20px; }
+    .content p, .content li { line-height: 1.6; }
+    pre { background: #0b1021; color: #e5e7eb; padding: 16px; border-radius: 8px; overflow: auto; border: 1px solid #111827; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 13px; }
+    .muted { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>User Documentation Playbook</h1>
+      <nav>
+        <a href="user-docs-playbook.md" target="_blank" rel="noopener">View Markdown</a>
+      </nav>
+    </div>
+  </header>
+  <main>
+    <div id="content" class="content">
+      <p class="muted">Loading documentation…</p>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/languages/typescript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/languages/shell.min.js"></script>
+  <script>
+    (function () {
+      const mdPath = 'user-docs-playbook.md';
+
+      function slugify(text) {
+        return text
+          .toLowerCase()
+          .replace(/[^a-z0-9\s-]/g, '')
+          .trim()
+          .replace(/\s+/g, '-');
+      }
+
+      function applyHeadingIds(container) {
+        const headings = container.querySelectorAll('h1, h2, h3, h4');
+        for (const h of headings) {
+          if (!h.id) h.id = slugify(h.textContent || '');
+        }
+      }
+
+      async function render() {
+        try {
+          const res = await fetch(mdPath, { cache: 'no-cache' });
+          if (!res.ok) throw new Error('Failed to load markdown: ' + res.status);
+          const md = await res.text();
+
+          marked.setOptions({ mangle: false, headerIds: false, breaks: true });
+          const html = marked.parse(md);
+
+          const content = document.getElementById('content');
+          content.innerHTML = html;
+
+          applyHeadingIds(content);
+
+          document.querySelectorAll('pre code').forEach((el) => {
+            try { hljs.highlightElement(el); } catch (e) { /* ignore */ }
+          });
+
+          const h1 = content.querySelector('h1');
+          if (h1 && h1.textContent) document.title = h1.textContent + ' – pdfdancer';
+        } catch (err) {
+          const content = document.getElementById('content');
+          content.innerHTML = '<p style="color:#b91c1c">' + String(err) + '</p>';
+        }
+      }
+
+      render();
+    })();
+  </script>
+</body>
+</html>

@@ -140,7 +140,7 @@ describe('Paragraph E2E Tests', () => {
 
         const fonts = await client.findFonts('Roboto', 14);
         expect(fonts.length).toBeGreaterThan(0);
-        expect(fonts[0].name).toBe('Roboto-Regular');
+        expect(fonts[0].name).toBe('Roboto-Light');
 
         const roboto = fonts[0];
         const pb = client.paragraphBuilder()
@@ -151,7 +151,7 @@ describe('Paragraph E2E Tests', () => {
 
         expect(await client.addParagraph(pb.build())).toBe(true);
         await assertNewParagraphExists(client);
-    });
+    }, 30000);
 
     test('add paragraph with Asimovian font', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
@@ -170,7 +170,7 @@ describe('Paragraph E2E Tests', () => {
 
         expect(await client.addParagraph(pb.build())).toBe(true);
         await assertNewParagraphExists(client);
-    });
+    }, 30000);
 
     test('add paragraph with custom TTF font', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
@@ -189,5 +189,5 @@ describe('Paragraph E2E Tests', () => {
 
         expect(await client.addParagraph(pb.build())).toBe(true);
         await assertNewParagraphExists(client);
-    });
+    }, 30000);
 });

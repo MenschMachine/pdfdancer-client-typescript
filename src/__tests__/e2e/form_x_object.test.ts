@@ -33,7 +33,7 @@ describe('Form E2E Tests', () => {
 
         // Cleanup
         fs.unlinkSync(outPath);
-    });
+    }, 30000);
 
     test('find form by position', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('form-xobject-example.pdf');

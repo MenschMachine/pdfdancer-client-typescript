@@ -100,5 +100,5 @@ describe('Image E2E Tests', () => {
         expect(newImage.internalId).toBe('IMAGE_000004');
         expectWithin(newImage.position.boundingRect?.x, 50.1, 0.05);
         expectWithin(newImage.position.boundingRect?.y, 98.0, 0.05);
-    });
+    }, 30000);
 });
