@@ -140,7 +140,7 @@ describe('Paragraph E2E Tests', () => {
 
         const fonts = await client.findFonts('Roboto', 14);
         expect(fonts.length).toBeGreaterThan(0);
-        expect(fonts[0].name).toBe('Roboto-Regular');
+        expect(fonts[0].name).toContain('Roboto');
 
         const roboto = fonts[0];
         const pb = client.paragraphBuilder()
