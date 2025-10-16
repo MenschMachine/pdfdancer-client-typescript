@@ -89,4 +89,31 @@ export class TextLineObject extends BaseObject {
     static fromRef(_client: PDFDancer, objectRef: ObjectRef) {
         return new TextLineObject(_client, objectRef.internalId, objectRef.type, objectRef.position);
     }
+
+    edit() {
+        return new TextLineBuilder(this._client, this.ref());
+    }
+}
+
+
+class TextLineBuilder {
+
+    private _text: string | undefined;
+    private _objectRef: ObjectRef;
+    private _client: PDFDancer
+
+    constructor(client: PDFDancer, objectRef: ObjectRef) {
+        this._objectRef = objectRef;
+        this._client = client;
+
+    }
+
+    text(newText: string) {
+        this._text = newText;
+        return this;
+    }
+
+    async apply() {
+        return await this._client.modifyTextLine(this._objectRef, this._text!);
+    }
 }

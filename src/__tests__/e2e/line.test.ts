@@ -1,26 +1,25 @@
 /**
- * E2E tests for text line operations
+ * E2E tests for text line operations — new PDFDancer API
  */
 
 import * as fs from 'fs';
-import {PDFDancer, Position} from '../../index';
+import {PDFDancer} from '../../index';
 import {createTempPath, requireEnvAndFixture} from './test-helpers';
-import {expectWithin} from "../assertions";
+import {expectWithin} from '../assertions';
 
-describe('Line E2E Tests', () => {
-    // Tests should fail properly if environment is not configured
+describe('Text Line E2E Tests (v2 API)', () => {
 
     test('find lines by position', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const lines = await client.findTextLines();
+        const lines = await pdf.selectLines();
         expect(lines).toHaveLength(340);
 
         const first = lines[0];
         expect(first.internalId).toBe('LINE_000001');
         expect(first.position).toBeDefined();
-        expectWithin(first.position.boundingRect?.x, 326, 1.0);
+        expectWithin(first.position.boundingRect?.x, 326, 1);
         expectWithin(first.position.boundingRect?.y, 706, 1);
 
         const last = lines[lines.length - 1];
@@ -30,12 +29,23 @@ describe('Line E2E Tests', () => {
         expectWithin(last.position.boundingRect?.y, 35, 1);
     });
 
+    test('find lines on page', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const lines = await pdf.page(1).selectTextLines();
+        expect(lines).toHaveLength(26);
+
+        const line = lines[0];
+        expect(line.internalId).toBe('LINE_000005');
+        expect(line.position).toBeDefined();
+    });
+
     test('find lines by text', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const pos = Position.atPage(0).withTextStarts("the complete");
-        const lines = await client.findTextLines(pos);
+        const lines = await pdf.page(0).selectTextLinesStartingWith('the complete');
         expect(lines).toHaveLength(1);
 
         const line = lines[0];
@@ -47,76 +57,65 @@ describe('Line E2E Tests', () => {
 
     test('delete line', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const pos = Position.atPage(0).withTextStarts('The Complete');
-        const ref = (await client.findTextLines(pos))[0];
-        expect(await client.delete(ref)).toBe(true);
+        const [line] = await pdf.page(0).selectTextLinesStartingWith('The Complete');
+        await line.delete();
 
-        const pos2 = Position.atPage(0).withTextStarts('The Complete');
-        expect(await client.findTextLines(pos2)).toHaveLength(0);
+        const remaining = await pdf.page(0).selectTextLinesStartingWith('The Complete');
+        expect(remaining).toHaveLength(0);
 
-        // Save PDF to verify operation (Node.js environment)
+        // Save PDF to verify operation
         const outPath = createTempPath('deleteLine.pdf');
-        const outputPdfData = await client.getPdfFile();
-        fs.writeFileSync(outPath, outputPdfData);
+        const data = await pdf.getPdfFile();
+        fs.writeFileSync(outPath, data);
         expect(fs.existsSync(outPath)).toBe(true);
         expect(fs.statSync(outPath).size).toBeGreaterThan(0);
 
-        // Cleanup
         fs.unlinkSync(outPath);
     });
 
     test('move line', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const pos3 = Position.atPage(0).withTextStarts('The Complete');
-        const ref = (await client.findTextLines(pos3))[0];
-        const newPos = ref.position.copy();
-        newPos.moveX(100);
-        expect(await client.move(ref, newPos)).toBe(true);
+        const [line] = await pdf.page(0).selectTextLinesStartingWith('The Complete');
+        let newX = line.position!.getX()! + 100;
+        let newY = line.position!.getY()!;
+        await line.moveTo(newX, newY);
 
-        const ref2 = (await client.findParagraphs(newPos))[0];
-        expect(ref2).toBeDefined();
+        const movedPara = await pdf.page(0).selectParagraphsAt(newX, newY);
+        expect(movedPara.length).toBeGreaterThan(0);
 
-        // Save PDF to verify operation
         const outPath = createTempPath('moveLine.pdf');
-        const outputPdfData = await client.getPdfFile();
-        fs.writeFileSync(outPath, outputPdfData);
+        await pdf.save(outPath);
         expect(fs.existsSync(outPath)).toBe(true);
         expect(fs.statSync(outPath).size).toBeGreaterThan(0);
 
-        // Cleanup
         fs.unlinkSync(outPath);
     });
 
     test('modify line', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const pos4 = Position.atPage(0).withTextStarts('The Complete');
-        const ref = (await client.findTextLines(pos4))[0];
-        expect(await client.modifyTextLine(ref, ' replaced ')).toBe(true);
+        const [line] = await pdf.page(0).selectTextLinesStartingWith('The Complete');
+        await line.edit().text(' replaced ').apply();
 
-        // Save PDF to verify operation
         const outPath = createTempPath('modifyLine.pdf');
-        const outputPdfData = await client.getPdfFile();
-        fs.writeFileSync(outPath, outputPdfData);
+        await pdf.save(outPath);
         expect(fs.existsSync(outPath)).toBe(true);
         expect(fs.statSync(outPath).size).toBeGreaterThan(0);
 
-        // Verify the text was replaced
-        const pos5 = Position.atPage(0).withTextStarts('The Complete');
-        expect(await client.findTextLines(pos5)).toHaveLength(0);
+        const stillOld = await pdf.page(0).selectParagraphsStartingWith('The Complete');
+        expect(stillOld).toHaveLength(0);
 
-        const pos6 = Position.atPage(0).withTextStarts(' replaced ');
-        expect(await client.findTextLines(pos6)).not.toHaveLength(0);
+        const replaced = await pdf.page(0).selectParagraphsStartingWith(' replaced ');
+        expect(replaced.length).toBeGreaterThan(0);
 
-        const pos7 = Position.atPage(0).withTextStarts(' replaced ');
-        expect(await client.findParagraphs(pos7)).not.toHaveLength(0);
+        const containingParas = await pdf.page(0).selectParagraphsStartingWith(' replaced ');
+        expect(containingParas.length).toBeGreaterThan(0);
 
-        // Cleanup
         fs.unlinkSync(outPath);
     });
 });

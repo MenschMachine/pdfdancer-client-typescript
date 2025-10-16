@@ -126,6 +126,20 @@ class PageClient {
     newParagraph(): ParagraphBuilder {
         return new ParagraphBuilder(this._client, this.position.pageIndex);
     }
+
+    async selectTextLines() {
+        return this._client.toTextLineObjects(await this._client.findTextLines(Position.atPage(this._pageIndex)));
+    }
+
+    async selectTextLinesMatching(pattern: string) {
+        let pos = Position.atPage(this._pageIndex);
+        pos.textPattern = pattern;
+        return this._client.toTextLineObjects(await this._client.findTextLines(pos));
+    }
+
+    async selectTextLinesAt(x: number, y: number) {
+        return this._client.toTextLineObjects(await this._client.findTextLines(Position.atPageCoordinates(this._pageIndex, x, y)));
+    }
 }
 
 /**
@@ -845,5 +859,9 @@ export class PDFDancer {
 
     toTextLineObjects(objectRefs: ObjectRef[]) {
         return objectRefs.map(ref => TextLineObject.fromRef(this, ref));
+    }
+
+    async selectLines() {
+        return this.toTextLineObjects(await this.findTextLines());
     }
 }
