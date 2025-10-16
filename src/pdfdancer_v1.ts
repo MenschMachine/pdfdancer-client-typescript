@@ -31,6 +31,31 @@ import {
     ShapeType
 } from './models';
 import {ParagraphBuilder} from './paragraph-builder';
+import {ImageObject, PathObject} from "./types";
+import {ImageBuilder} from "./image-builder";
+
+class PageClient {
+    private _pageIndex: number;
+    private _client: PDFDancer;
+
+    constructor(client: PDFDancer, pageIndex: number) {
+        this._client = client;
+        this._pageIndex = pageIndex;
+
+    }
+
+    async selectPathsAt(x: number, y: number) {
+        return this._client.toPathObjects(await this._client.findPaths(Position.atPageCoordinates(this._pageIndex, x, y)));
+    }
+
+    async selectImages() {
+        return this._client.toImageObjects(await this._client._findImages(Position.atPage(this._pageIndex)));
+    }
+
+    async selectImagesAt(x: number, y: number) {
+        return this._client.toImageObjects(await this._client._findImages(Position.atPageCoordinates(this._pageIndex, x, y)));
+    }
+}
 
 /**
  * REST API client for interacting with the PDFDancer PDF manipulation service.
@@ -39,7 +64,7 @@ import {ParagraphBuilder} from './paragraph-builder';
  * Handles authentication, session lifecycle, and HTTP communication transparently.
  *
  */
-export class ClientV1 {
+export class PDFDancer {
     private _token: string;
     private _baseUrl: string;
     private _readTimeout: number;
@@ -48,7 +73,7 @@ export class ClientV1 {
 
     /**
      * Creates a new client with PDF data.
-     * This constructor initializes the client, uploads the PDF data to create
+     * This constructor initializes the client, uploads the PDF data to open
      * a new session, and prepares the client for PDF manipulation operations.
      */
     constructor(
@@ -78,8 +103,8 @@ export class ClientV1 {
         return this;
     }
 
-    static async create(token: string, pdfData: Uint8Array, baseUrl: string, timeout: number = 0): Promise<ClientV1> {
-        const client = new ClientV1(token, pdfData, baseUrl, timeout);
+    static async open(pdfData: Uint8Array, token: string, baseUrl: string, timeout: number = 0): Promise<PDFDancer> {
+        const client = new PDFDancer(token, pdfData, baseUrl, timeout);
         return await client.init();
     }
 
@@ -290,8 +315,12 @@ export class ClientV1 {
     /**
      * Searches for image objects at the specified position.
      */
-    async findImages(position?: Position): Promise<ObjectRef[]> {
+    async _findImages(position?: Position): Promise<ObjectRef[]> {
         return this.find(ObjectType.IMAGE, position);
+    }
+
+    async selectImages(): Promise<ImageObject[]> {
+        return this.toImageObjects(await this.find(ObjectType.IMAGE));
     }
 
     /**
@@ -306,6 +335,10 @@ export class ClientV1 {
      */
     async findPaths(position?: Position): Promise<ObjectRef[]> {
         return this.find(ObjectType.PATH, position);
+    }
+
+    async selectPaths() {
+        return this.toPathObjects(await this.find(ObjectType.PATH));
     }
 
     /**
@@ -610,7 +643,7 @@ export class ClientV1 {
      * Saves the current PDF to a file (browser environment).
      * Downloads the PDF in the browser.
      */
-    async savePdf(filename: string = 'document.pdf'): Promise<void> {
+    async save(filename: string = 'document.pdf'): Promise<void> {
         if (!filename) {
             throw new ValidationException("Filename cannot be null or empty");
         }
@@ -704,5 +737,21 @@ export class ClientV1 {
      */
     paragraphBuilder(): ParagraphBuilder {
         return new ParagraphBuilder(this);
+    }
+
+    page(number: number) {
+        return new PageClient(this, number);
+    }
+
+    toPathObjects(objectRefs: ObjectRef[]) {
+        return objectRefs.map(ref => PathObject.fromRef(this, ref));
+    }
+
+    toImageObjects(objectRefs: ObjectRef[]) {
+        return objectRefs.map(ref => ImageObject.fromRef(this, ref));
+    }
+
+    newImage() {
+        return new ImageBuilder(this);
     }
 }

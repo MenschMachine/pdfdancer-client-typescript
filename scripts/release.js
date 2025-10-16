@@ -73,7 +73,7 @@ function main() {
   // Publish to npm
   run('npm publish', 'Publishing to npm');
 
-  // Bump version and create git tag
+  // Bump version and open git tag
   const newVersion = bumpVersion();
 
   // Push changes and tags to git

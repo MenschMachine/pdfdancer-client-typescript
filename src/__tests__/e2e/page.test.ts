@@ -2,7 +2,7 @@
  * E2E tests for page operations
  */
 
-import { ClientV1, ObjectType } from '../../index';
+import { PDFDancer, ObjectType } from '../../index';
 import { requireEnvAndFixture } from './test-helpers';
 
 describe('Page E2E Tests', () => {
@@ -10,7 +10,7 @@ describe('Page E2E Tests', () => {
 
   test('get pages', async () => {
     const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-    const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
+    const client = await PDFDancer.open(token, pdfData, baseUrl, 30000);
 
     const pages = await client.getPages();
     expect(pages).toBeDefined();
@@ -20,7 +20,7 @@ describe('Page E2E Tests', () => {
 
   test('get page', async () => {
     const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-    const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
+    const client = await PDFDancer.open(token, pdfData, baseUrl, 30000);
 
     const page = await client.getPage(2);
     expect(page).toBeDefined();
@@ -30,7 +30,7 @@ describe('Page E2E Tests', () => {
 
   test('delete page', async () => {
     const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-    const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
+    const client = await PDFDancer.open(token, pdfData, baseUrl, 30000);
 
     const page3 = await client.getPage(3);
     expect(page3).toBeDefined();

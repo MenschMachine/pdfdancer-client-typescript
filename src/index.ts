@@ -4,7 +4,7 @@
  * A TypeScript client library for the PDFDancer PDF manipulation API.
  */
 
-export { ClientV1 } from './client-v1';
+export { PDFDancer } from './pdfdancer_v1';
 export { ParagraphBuilder } from './paragraph-builder';
 
 export {

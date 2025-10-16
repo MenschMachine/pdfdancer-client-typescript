@@ -3,7 +3,7 @@
  */
 
 import * as fs from 'fs';
-import {ClientV1, Position} from '../../index';
+import {PDFDancer, Position} from '../../index';
 import {createTempPath, requireEnvAndFixture} from './test-helpers';
 import {expectWithin} from "../assertions";
 
@@ -12,7 +12,7 @@ describe('Line E2E Tests', () => {
 
     test('find lines by position', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
+        const client = await PDFDancer.open(token, pdfData, baseUrl, 30000);
 
         const lines = await client.findTextLines();
         expect(lines).toHaveLength(340);
@@ -32,7 +32,7 @@ describe('Line E2E Tests', () => {
 
     test('find lines by text', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
+        const client = await PDFDancer.open(token, pdfData, baseUrl, 30000);
 
         const pos = Position.atPage(0).withTextStarts("the complete");
         const lines = await client.findTextLines(pos);
@@ -47,7 +47,7 @@ describe('Line E2E Tests', () => {
 
     test('delete line', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
+        const client = await PDFDancer.open(token, pdfData, baseUrl, 30000);
 
         const pos = Position.atPage(0).withTextStarts('The Complete');
         const ref = (await client.findTextLines(pos))[0];
@@ -69,7 +69,7 @@ describe('Line E2E Tests', () => {
 
     test('move line', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
+        const client = await PDFDancer.open(token, pdfData, baseUrl, 30000);
 
         const pos3 = Position.atPage(0).withTextStarts('The Complete');
         const ref = (await client.findTextLines(pos3))[0];
@@ -93,7 +93,7 @@ describe('Line E2E Tests', () => {
 
     test('modify line', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await ClientV1.create(token, pdfData, baseUrl, 30000);
+        const client = await PDFDancer.open(token, pdfData, baseUrl, 30000);
 
         const pos4 = Position.atPage(0).withTextStarts('The Complete');
         const ref = (await client.findTextLines(pos4))[0];

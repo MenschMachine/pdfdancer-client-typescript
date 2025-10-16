@@ -4,7 +4,7 @@
 
 import { ValidationException } from './exceptions';
 import { Paragraph, Font, Color, Position } from './models';
-import type { ClientV1 } from './client-v1';
+import {PDFDancer} from "./pdfdancer_v1";
 
 /**
  * Builder class for constructing Paragraph objects with fluent interface.
@@ -16,7 +16,7 @@ export class ParagraphBuilder {
   private _text?: string;
   private _font?: Font;
 
-  constructor(private _client: ClientV1) {
+  constructor(private _client: PDFDancer) {
     if (!_client) {
       throw new ValidationException("Client cannot be null");
     }
@@ -66,7 +66,7 @@ export class ParagraphBuilder {
       throw new ValidationException(`Font size must be positive, got ${fontSize}`);
     }
 
-    // Register font and create Font object
+    // Register font and open Font object
     this._font = await this._registerTtf(ttfFile, fontSize);
     return this;
   }

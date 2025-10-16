@@ -21,14 +21,14 @@ npm install pdfdancer-client-typescript
 ## Basic Usage
 
 ```typescript
-import {ClientV1, Position, Color, Font} from 'pdfdancer-client-typescript';
+import {PDFDancer, Position, Color, Font} from 'pdfdancer-client-typescript';
 
 async function example() {
     // Load PDF data (from file upload, fetch, etc.)
     const pdfData = new Uint8Array(/* your PDF data */);
 
     // Create client with authentication token
-    const client = await ClientV1.create('your-auth-token', pdfData, undefined, 30000);
+    const client = await PDFDancer.open('your-auth-token', pdfData, undefined, 30000);
 
     // Find all paragraphs on page 1
     const paragraphs = await client.findParagraphs(Position.atPage(1));
@@ -55,7 +55,7 @@ async function example() {
 ### Client Initialization
 
 ```typescript
-const client = await ClientV1.create(
+const client = await PDFDancer.open(
     token,        // Authentication token
     pdfData,      // PDF data as Uint8Array, File, or ArrayBuffer
     baseUrl,      // Optional: API server URL (default: http://localhost:8080)
