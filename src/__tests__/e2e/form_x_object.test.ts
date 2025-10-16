@@ -1,33 +1,32 @@
 /**
- * E2E tests for form operations
+ * E2E tests for form operations — new PDFDancer API
  */
 
 import * as fs from 'fs';
-import {ObjectType, PDFDancer, Position} from '../../index';
+import {PDFDancer} from '../../index';
 import {createTempPath, requireEnvAndFixture} from './test-helpers';
 
-describe('Form E2E Tests', () => {
-    // Tests should fail properly if environment is not configured
+describe('Form E2E Tests (v2 API)', () => {
 
     test('delete forms', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('form-xobject-example.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const forms = await client.findFormXObjects();
+        const forms = await pdf.selectForms();
         expect(forms).toHaveLength(17);
-        expect(forms[0].type).toBe(ObjectType.FORM_X_OBJECT);
+        expect(forms[0].type).toBe('FORM_X_OBJECT');
 
-        // Delete all forms
-        for (const f of forms) {
-            expect(await client.delete(f)).toBe(true);
+        // Delete all forms directly through their reference
+        for (const form of forms) {
+            await form.delete();
         }
 
-        expect(await client.findFormXObjects()).toHaveLength(0);
+        const remaining = await pdf.selectForms();
+        expect(remaining).toHaveLength(0);
 
         // Save PDF to verify operation
         const outPath = createTempPath('forms-after-delete.pdf');
-        const outputPdfData = await client.getPdfFile();
-        fs.writeFileSync(outPath, outputPdfData);
+        await pdf.save(outPath);
         expect(fs.existsSync(outPath)).toBe(true);
         expect(fs.statSync(outPath).size).toBeGreaterThan(0);
 
@@ -37,12 +36,14 @@ describe('Form E2E Tests', () => {
 
     test('find form by position', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('form-xobject-example.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        let forms = await client.findFormXObjects(Position.atPageCoordinates(0, 0, 0));
+        // Page 0, position (0,0) — expect no forms
+        let forms = await pdf.page(0).selectFormsAt(0, 0);
         expect(forms).toHaveLength(0);
 
-        forms = await client.findFormXObjects(Position.atPageCoordinates(0, 321, 601));
+        // Page 0, position (321,601) — expect a form
+        forms = await pdf.page(0).selectFormsAt(321, 601);
         expect(forms).toHaveLength(1);
         expect(forms[0].internalId).toBe('FORM_000005');
     });

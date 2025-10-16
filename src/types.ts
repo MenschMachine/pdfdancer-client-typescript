@@ -40,3 +40,6 @@ export class PathObject extends BaseObject {
 export class ImageObject extends BaseObject {
 
 }
+export class FormXObject extends BaseObject {
+
+}

@@ -31,8 +31,9 @@ import {
     ShapeType
 } from './models';
 import {ParagraphBuilder} from './paragraph-builder';
-import {ImageObject, PathObject} from "./types";
+import {FormXObject, ImageObject, PathObject} from "./types";
 import {ImageBuilder} from "./image-builder";
+import fs from "fs";
 
 class PageClient {
 
@@ -67,6 +68,14 @@ class PageClient {
 
     private ref() {
         return new ObjectRef(this.internalId, this.position, this.type);
+    }
+
+    async selectForms() {
+        return this._client.toFormXObjects(await this._client.findFormXObjects(Position.atPage(this._pageIndex)));
+    }
+
+    async selectFormsAt(x: number, y: number) {
+        return this._client.toFormXObjects(await this._client.findFormXObjects(Position.atPageCoordinates(this._pageIndex, x, y)));
     }
 }
 
@@ -352,6 +361,10 @@ export class PDFDancer {
 
     async selectPaths() {
         return this.toPathObjects(await this.find(ObjectType.PATH));
+    }
+
+    async selectForms() {
+        return this.toFormXObjects(await this.find(ObjectType.FORM_X_OBJECT));
     }
 
     /**
@@ -640,42 +653,18 @@ export class PDFDancer {
         return new Uint8Array(await response.arrayBuffer());
     }
 
-    async getXmlFile(): Promise<String> {
-        const response = await fetch(`${this._baseUrl}/xml`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${this._token}`,
-                'X-Session-Id': this._sessionId
-            },
-            signal: AbortSignal.timeout(30000)
-        });
-        return response.text()
-    }
-
     /**
      * Saves the current PDF to a file (browser environment).
      * Downloads the PDF in the browser.
      */
-    async save(filename: string = 'document.pdf'): Promise<void> {
+    async save(filename: string): Promise<void> {
         if (!filename) {
             throw new ValidationException("Filename cannot be null or empty");
         }
 
         try {
             const pdfData = await this.getPdfFile();
-
-            // Create blob and download link
-            const blob = new Blob([pdfData.buffer as ArrayBuffer], {type: 'application/pdf'});
-            const url = URL.createObjectURL(blob);
-
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            URL.revokeObjectURL(url);
+            fs.writeFileSync(filename, pdfData);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             throw new PdfDancerException(`Failed to save PDF file: ${errorMessage}`, error as Error);
@@ -755,6 +744,11 @@ export class PDFDancer {
     toPathObjects(objectRefs: ObjectRef[]) {
         return objectRefs.map(ref => PathObject.fromRef(this, ref));
     }
+
+    toFormXObjects(objectRefs: ObjectRef[]) {
+        return objectRefs.map(ref => FormXObject.fromRef(this, ref));
+    }
+
 
     toImageObjects(objectRefs: ObjectRef[]) {
         return objectRefs.map(ref => ImageObject.fromRef(this, ref));
