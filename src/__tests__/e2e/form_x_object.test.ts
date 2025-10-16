@@ -3,7 +3,7 @@
  */
 
 import * as fs from 'fs';
-import {PDFDancer, ObjectType, Position} from '../../index';
+import {ObjectType, PDFDancer, Position} from '../../index';
 import {createTempPath, requireEnvAndFixture} from './test-helpers';
 
 describe('Form E2E Tests', () => {
@@ -11,7 +11,7 @@ describe('Form E2E Tests', () => {
 
     test('delete forms', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('form-xobject-example.pdf');
-        const client = await PDFDancer.open(token, pdfData, baseUrl);
+        const client = await PDFDancer.open(pdfData, token, baseUrl);
 
         const forms = await client.findFormXObjects();
         expect(forms).toHaveLength(17);
@@ -37,7 +37,7 @@ describe('Form E2E Tests', () => {
 
     test('find form by position', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('form-xobject-example.pdf');
-        const client = await PDFDancer.open(token, pdfData, baseUrl);
+        const client = await PDFDancer.open(pdfData, token, baseUrl);
 
         let forms = await client.findFormXObjects(Position.atPageCoordinates(0, 0, 0));
         expect(forms).toHaveLength(0);

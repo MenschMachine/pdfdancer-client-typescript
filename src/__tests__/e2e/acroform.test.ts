@@ -2,14 +2,13 @@
  * E2E tests for AcroForm field operations
  */
 
-import * as fs from 'fs';
-import {PDFDancer, FormFieldRef, ObjectType, Position} from '../../index';
+import {ObjectType, PDFDancer, Position} from '../../index';
 import {requireEnvAndFixture} from './test-helpers';
 
 describe('AcroForm Fields E2E Tests', () => {
     test('find form fields', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('mixed-form-types.pdf');
-        const client = await PDFDancer.open(token, pdfData, baseUrl);
+        const client = await PDFDancer.open(pdfData, token, baseUrl);
 
         const formFields = await client.findFormFields();
         expect(formFields).toHaveLength(10);
@@ -37,7 +36,7 @@ describe('AcroForm Fields E2E Tests', () => {
 
     test('delete form fields', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('mixed-form-types.pdf');
-        const client = await PDFDancer.open(token, pdfData, baseUrl);
+        const client = await PDFDancer.open(pdfData, token, baseUrl);
 
         const formFields = await client.findFormFields();
         expect(formFields).toHaveLength(10);
@@ -52,7 +51,7 @@ describe('AcroForm Fields E2E Tests', () => {
 
     test('move form field', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('mixed-form-types.pdf');
-        const client = await PDFDancer.open(token, pdfData, baseUrl);
+        const client = await PDFDancer.open(pdfData, token, baseUrl);
 
         let formFields = await client.findFormFields(Position.atPageCoordinates(0, 290, 460));
         expect(formFields).toHaveLength(1);
@@ -72,7 +71,7 @@ describe('AcroForm Fields E2E Tests', () => {
 
     test('edit form fields', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('mixed-form-types.pdf');
-        const client = await PDFDancer.open(token, pdfData, baseUrl);
+        const client = await PDFDancer.open(pdfData, token, baseUrl);
 
         let formFields = await client.findFormFields(Position.byName("firstName"));
         expect(formFields).toHaveLength(1);
