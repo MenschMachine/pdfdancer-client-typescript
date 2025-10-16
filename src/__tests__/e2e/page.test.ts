@@ -22,7 +22,7 @@ describe('Page E2E Tests', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const client = await PDFDancer.open(pdfData, token, baseUrl, 30000);
 
-        const page = await client.page(2);
+        const page = client.page(2);
         expect(page).toBeDefined();
         expect(page!.position.pageIndex).toBe(2);
         expect(page!.internalId).toBeDefined();

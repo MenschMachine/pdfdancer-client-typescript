@@ -3,7 +3,7 @@
  */
 
 import {Color, PDFDancer} from '../../index';
-import {readFontFixture, requireEnvAndFixture} from './test-helpers';
+import {getFontPath, readFontFixture, requireEnvAndFixture} from './test-helpers';
 import {expectWithin} from '../assertions';
 
 describe('Paragraph E2E Tests (v2 API)', () => {
@@ -188,6 +188,24 @@ describe('Paragraph E2E Tests (v2 API)', () => {
         const success = await pdf.page(0).newParagraph()
             .text('Awesomely\nObvious!')
             .fontFile(ttf, 24)
+            .lineSpacing(1.8)
+            .color(new Color(0, 0, 255))
+            .at(300.1, 500)
+            .apply();
+
+        expect(success).toBe(true);
+        await assertNewParagraphExists(pdf);
+    });
+
+    test('add paragraph with custom TTF font from filename', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const pathToFontFile = getFontPath('DancingScript-Regular.ttf');
+
+        const success = await pdf.page(0).newParagraph()
+            .text('Awesomely\nObvious!')
+            .fontFile(pathToFontFile, 24)
             .lineSpacing(1.8)
             .color(new Color(0, 0, 255))
             .at(300.1, 500)

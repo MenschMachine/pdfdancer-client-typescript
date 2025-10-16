@@ -82,7 +82,7 @@ export class ParagraphBuilder {
     /**
      * Set the font for the paragraph using a TTF file.
      */
-    fontFile(ttfFile: Uint8Array | File, fontSize: number): this {
+    fontFile(ttfFile: Uint8Array | File | string, fontSize: number): this {
         if (!ttfFile) throw new ValidationException("TTF file cannot be null");
         if (fontSize <= 0) {
             throw new ValidationException(`Font size must be positive, got ${fontSize}`);
@@ -155,7 +155,7 @@ export class ParagraphBuilder {
     /**
      * Register a TTF font with the client and return a Font object.
      */
-    private async _registerTtf(ttfFile: Uint8Array | File, fontSize: number): Promise<Font> {
+    private async _registerTtf(ttfFile: Uint8Array | File | string, fontSize: number): Promise<Font> {
         try {
             const fontName = await this._client.registerFont(ttfFile);
             return new Font(fontName, fontSize);

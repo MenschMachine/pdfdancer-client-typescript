@@ -120,12 +120,17 @@ export function getImagePath(filename: string): string {
     return path.join(fixturesDir, filename);
 }
 
+export function getFontPath(filename: string) {
+    const fixturesDir = path.resolve(__dirname, '../../../fixtures');
+    const fontPath = path.join(fixturesDir, filename);
+    return fontPath;
+}
+
 /**
  * Helper to read font file for tests
  */
 export function readFontFixture(filename: string): Uint8Array {
-    const fixturesDir = path.resolve(__dirname, '../../../fixtures');
-    const fontPath = path.join(fixturesDir, filename);
+    const fontPath = getFontPath(filename);
 
     if (!fs.existsSync(fontPath)) {
         throw new Error(`Font fixture not found: ${filename}`);

@@ -34,6 +34,7 @@ import {ParagraphBuilder} from './paragraph-builder';
 import {FormFieldObject, FormXObject, ImageObject, ParagraphObject, PathObject, TextLineObject} from "./types";
 import {ImageBuilder} from "./image-builder";
 import fs from "fs";
+import path from "node:path";
 
 // 👇 Internal view of PDFDancer methods, not exported
 interface PDFDancerInternals {
@@ -249,7 +250,7 @@ export class PDFDancer {
         }
 
         try {
-            if (pdfData instanceof Uint8Array) {
+            if (pdfData && pdfData.constructor === Uint8Array) {
                 if (pdfData.length === 0) {
                     throw new ValidationException("PDF data cannot be empty");
                 }
@@ -706,7 +707,7 @@ export class PDFDancer {
     /**
      * Registers a custom font for use in PDF operations.
      */
-    async registerFont(ttfFile: Uint8Array | File): Promise<string> {
+    async registerFont(ttfFile: Uint8Array | File | string): Promise<string> {
         if (!ttfFile) {
             throw new ValidationException("TTF file cannot be null");
         }
@@ -715,7 +716,7 @@ export class PDFDancer {
             let fontData: Uint8Array;
             let filename: string;
 
-            if (ttfFile instanceof Uint8Array) {
+            if (ttfFile && ttfFile.constructor === Uint8Array) {
                 if (ttfFile.length === 0) {
                     throw new ValidationException("Font data cannot be empty");
                 }
@@ -727,6 +728,12 @@ export class PDFDancer {
                 }
                 fontData = new Uint8Array(await ttfFile.arrayBuffer());
                 filename = ttfFile.name;
+            } else if (typeof ttfFile === 'string') {
+                if (!fs.existsSync(ttfFile)) {
+                    throw new Error(`Font file not found: ${ttfFile}`);
+                }
+                fontData = new Uint8Array(fs.readFileSync(ttfFile));
+                filename = path.basename(ttfFile);
             } else {
                 throw new ValidationException(`Unsupported font file type: ${typeof ttfFile}`);
             }
