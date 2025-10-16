@@ -200,30 +200,12 @@ export class Position {
  * Lightweight reference to a PDF object providing identity and type information.
  */
 export class ObjectRef {
-    public name?: string;
-    public value?: string | null;
 
     constructor(
         public internalId: string,
         public position: Position,
         public type: ObjectType
     ) {
-    }
-
-    getInternalId(): string {
-        return this.internalId;
-    }
-
-    getPosition(): Position {
-        return this.position;
-    }
-
-    setPosition(position: Position): void {
-        this.position = position;
-    }
-
-    getType(): ObjectType {
-        return this.type;
     }
 
     toDict(): Record<string, any> {
@@ -244,8 +226,8 @@ export class FormFieldRef extends ObjectRef {
         internalId: string,
         position: Position,
         type: ObjectType,
-        public name?: string,
-        public value?: string | null
+        public name: string,
+        public value: string | null
     ) {
         super(internalId, position, type);
     }

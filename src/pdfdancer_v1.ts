@@ -31,7 +31,7 @@ import {
     ShapeType
 } from './models';
 import {ParagraphBuilder} from './paragraph-builder';
-import {FormXObject, ImageObject, PathObject} from "./types";
+import {FormFieldObject, FormXObject, ImageObject, PathObject} from "./types";
 import {ImageBuilder} from "./image-builder";
 import fs from "fs";
 
@@ -76,6 +76,20 @@ class PageClient {
 
     async selectFormsAt(x: number, y: number) {
         return this._client.toFormXObjects(await this._client.findFormXObjects(Position.atPageCoordinates(this._pageIndex, x, y)));
+    }
+
+    async selectFormFields() {
+        return this._client.toFormFields(await this._client.findFormFields(Position.atPage(this._pageIndex)));
+    }
+
+    async selectFormFieldsAt(x: number, y: number) {
+        return this._client.toFormFields(await this._client.findFormFields(Position.atPageCoordinates(this._pageIndex, x, y)));
+    }
+
+    async selectFormFieldsByName(fieldName: string) {
+        let pos = Position.atPage(this._pageIndex);
+        pos.name = fieldName;
+        return this._client.toFormFields(await this._client.findFormFields(pos));
     }
 }
 
@@ -125,8 +139,19 @@ export class PDFDancer {
         return this;
     }
 
-    static async open(pdfData: Uint8Array, token: string, baseUrl: string, timeout: number = 0): Promise<PDFDancer> {
-        const client = new PDFDancer(token, pdfData, baseUrl, timeout);
+    static async open(pdfData: Uint8Array, token?: string, baseUrl?: string, timeout?: number): Promise<PDFDancer> {
+        const resolvedToken = token ?? process.env.PDFDANCER_TOKEN;
+        const resolvedBaseUrl =
+            baseUrl ??
+            process.env.PDFDANCER_BASE_URL ??
+            "https://api.pdfdancer.com";
+        const resolvedTimeout = timeout ?? 30000;
+
+        if (!resolvedToken) {
+            throw new Error("Missing PDFDancer token (pass it explicitly or set PDFDANCER_TOKEN in environment).");
+        }
+
+        const client = new PDFDancer(resolvedToken, pdfData, resolvedBaseUrl, resolvedTimeout);
         return await client.init();
     }
 
@@ -367,6 +392,14 @@ export class PDFDancer {
         return this.toFormXObjects(await this.find(ObjectType.FORM_X_OBJECT));
     }
 
+    async selectFormFields() {
+        return this.toFormFields(await this.findFormFields());
+    }
+
+    async selectFieldsByName(fieldName: string) {
+        return this.toFormFields(await this.findFormFields(Position.byName(fieldName)));
+    }
+
     /**
      * Searches for text line objects at the specified position.
      */
@@ -400,7 +433,7 @@ export class PDFDancer {
     /**
      * Retrieves a reference to a specific page by its page index.
      */
-    async getPage(pageIndex: number): Promise<ObjectRef | null> {
+    private async _getPage(pageIndex: number): Promise<ObjectRef | null> {
         if (pageIndex < 0) {
             throw new ValidationException(`Page index must be >= 0, got ${pageIndex}`);
         }
@@ -749,7 +782,6 @@ export class PDFDancer {
         return objectRefs.map(ref => FormXObject.fromRef(this, ref));
     }
 
-
     toImageObjects(objectRefs: ObjectRef[]) {
         return objectRefs.map(ref => ImageObject.fromRef(this, ref));
     }
@@ -768,5 +800,9 @@ export class PDFDancer {
     async pages() {
         let pageRefs = await this.getPages();
         return pageRefs.map((_, pageIndex) => new PageClient(this, pageIndex));
+    }
+
+    toFormFields(objectRefs: FormFieldRef[]) {
+        return objectRefs.map(ref => FormFieldObject.fromRef(this, ref));
     }
 }

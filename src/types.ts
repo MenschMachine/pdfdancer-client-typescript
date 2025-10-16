@@ -1,7 +1,7 @@
-import {ObjectRef, ObjectType, Position} from "./models";
+import {FormFieldRef, ObjectRef, ObjectType, Position} from "./models";
 import {PDFDancer} from "./pdfdancer_v1";
 
-export class BaseObject {
+export class BaseObject<TRef extends ObjectRef = ObjectRef> {
 
     _client: PDFDancer;
 
@@ -16,16 +16,12 @@ export class BaseObject {
         this._client = client;
     }
 
-    static fromRef(_client: PDFDancer, objectRef: ObjectRef) {
-        return new PathObject(_client, objectRef.internalId, objectRef.type, objectRef.position);
-    }
-
     async delete() {
         return this._client.delete(this.ref());
     }
 
-    private ref() {
-        return new ObjectRef(this.internalId, this.position, this.type);
+    protected ref(): TRef {
+        return new ObjectRef(this.internalId, this.position, this.type) as TRef;
     }
 
     async moveTo(x: number, y: number) {
@@ -35,11 +31,45 @@ export class BaseObject {
 
 export class PathObject extends BaseObject {
 
+    static fromRef(_client: PDFDancer, objectRef: ObjectRef) {
+        return new PathObject(_client, objectRef.internalId, objectRef.type, objectRef.position);
+    }
 }
 
 export class ImageObject extends BaseObject {
 
+    static fromRef(_client: PDFDancer, objectRef: ObjectRef) {
+        return new ImageObject(_client, objectRef.internalId, objectRef.type, objectRef.position);
+    }
 }
+
 export class FormXObject extends BaseObject {
 
+    static fromRef(_client: PDFDancer, objectRef: ObjectRef) {
+        return new FormXObject(_client, objectRef.internalId, objectRef.type, objectRef.position);
+    }
 }
+
+export class FormFieldObject extends BaseObject<FormFieldRef> {
+    name: string;
+    value: string | null;
+
+    constructor(client: PDFDancer, internalId: string, type: ObjectType, position: Position, name: string, value: string | null) {
+        super(client, internalId, type, position);
+        this.name = name;
+        this.value = value;
+    }
+
+    async fill(value: string) {
+        return await this._client.changeFormField(this.ref(), value);
+    }
+
+    protected ref() {
+        return new FormFieldRef(this.internalId, this.position, this.type, this.name, this.value);
+    }
+
+    static fromRef(_client: PDFDancer, objectRef: FormFieldRef) {
+        return new FormFieldObject(_client, objectRef.internalId, objectRef.type, objectRef.position, objectRef.name, objectRef.value);
+    }
+}
+
