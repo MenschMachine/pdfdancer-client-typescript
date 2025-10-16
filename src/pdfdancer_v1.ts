@@ -35,13 +35,18 @@ import {ImageObject, PathObject} from "./types";
 import {ImageBuilder} from "./image-builder";
 
 class PageClient {
+
     private _pageIndex: number;
     private _client: PDFDancer;
+    type: ObjectType = ObjectType.PAGE;
+    position: Position;
+    internalId: string;
 
     constructor(client: PDFDancer, pageIndex: number) {
         this._client = client;
         this._pageIndex = pageIndex;
-
+        this.internalId = `PAGE-${this._pageIndex}`;
+        this.position = Position.atPage(this._pageIndex);
     }
 
     async selectPathsAt(x: number, y: number) {
@@ -54,6 +59,14 @@ class PageClient {
 
     async selectImagesAt(x: number, y: number) {
         return this._client.toImageObjects(await this._client._findImages(Position.atPageCoordinates(this._pageIndex, x, y)));
+    }
+
+    async delete() {
+        return this._client.deletePage(this.ref());
+    }
+
+    private ref() {
+        return new ObjectRef(this.internalId, this.position, this.type);
     }
 }
 
@@ -739,10 +752,6 @@ export class PDFDancer {
         return new ParagraphBuilder(this);
     }
 
-    page(number: number) {
-        return new PageClient(this, number);
-    }
-
     toPathObjects(objectRefs: ObjectRef[]) {
         return objectRefs.map(ref => PathObject.fromRef(this, ref));
     }
@@ -753,5 +762,17 @@ export class PDFDancer {
 
     newImage() {
         return new ImageBuilder(this);
+    }
+
+    page(pageIndex: number) {
+        if (pageIndex < 0) {
+            throw new ValidationException(`Page index must be >= 0, got ${pageIndex}`);
+        }
+        return new PageClient(this, pageIndex);
+    }
+
+    async pages() {
+        let pageRefs = await this.getPages();
+        return pageRefs.map((_, pageIndex) => new PageClient(this, pageIndex));
     }
 }
