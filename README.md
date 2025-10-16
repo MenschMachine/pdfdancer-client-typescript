@@ -4,13 +4,13 @@ A TypeScript client library for the PDFDancer PDF manipulation API.
 
 ## Features
 
-- **Session-based PDF manipulation** - Upload PDF, perform operations, download modified PDF
-- **Type-safe API** - Full TypeScript support with proper types and interfaces
-- **Fluent Builder Pattern** - Easy paragraph construction with method chaining
-- **Comprehensive Search** - Find PDF objects by type, position, and other criteria
-- **Custom Font Support** - Register and use custom TTF fonts
-- **Error Handling** - Detailed exceptions for different error scenarios
-- **Browser Compatible** - Works in both Node.js and browser environments
+- Session-based PDF manipulation with automatic session creation
+- Type-safe models and fluent builders for paragraphs and images
+- Page-scoped selectors for paragraphs, text lines, images, forms, and paths
+- Form filling helpers with field-name lookup
+- Custom font registration with on-the-fly TTF uploads
+- Detailed exceptions for validation, HTTP, and session errors
+- Works in both Node.js and browser environments
 
 ## Installation
 
@@ -18,169 +18,179 @@ A TypeScript client library for the PDFDancer PDF manipulation API.
 npm install pdfdancer-client-typescript
 ```
 
-## Basic Usage
+## Quick Start
 
 ```typescript
-import {PDFDancer, Position, Color, Font} from 'pdfdancer-client-typescript';
+import { PDFDancer, Color } from 'pdfdancer-client-typescript';
+import { promises as fs } from 'node:fs';
 
-async function example() {
-    // Load PDF data (from file upload, fetch, etc.)
-    const pdfData = new Uint8Array(/* your PDF data */);
+async function run() {
+  const pdfBytes = await fs.readFile('input.pdf');
 
-    // Create client with authentication token
-    const client = await PDFDancer.open('your-auth-token', pdfData, undefined, 30000);
+  // Token defaults to PDFDANCER_TOKEN when omitted.
+  const pdf = await PDFDancer.open(pdfBytes, 'your-auth-token');
 
-    // Find all paragraphs on page 1
-    const paragraphs = await client.findParagraphs(Position.atPage(1));
+  const page0 = pdf.page(0); // Page indexes are zero-based
 
-    // Add a new paragraph
-    const newParagraph = client.newParagraph()
-        .fromString('Hello, PDFDancer!', new Color(255, 0, 0))
-        .withFont(new Font('Arial', 12))
-        .withPosition(Position.atPageCoordinates(1, 100, 200))
-        .build();
+  await page0.newParagraph()
+    .text('Hello, PDFDancer!')
+    .font('Roboto-Regular', 14)
+    .color(new Color(255, 64, 64))
+    .lineSpacing(1.1)
+    .at(100, 200)
+    .apply();
 
-    await client.addParagraph(newParagraph);
-
-    // Get the modified PDF
-    const modifiedPdf = await client.getPdfFile();
-
-    // Save PDF (browser environment)
-    await client.savePdf('modified-document.pdf');
+  const updated = await pdf.getPdfFile();
+  await fs.writeFile('output.pdf', updated);
 }
+
+run().catch(console.error);
 ```
 
-## API Overview
-
-### Client Initialization
+## Authentication & Configuration
 
 ```typescript
-const client = await PDFDancer.open(
-    token,        // Authentication token
-    pdfData,      // PDF data as Uint8Array, File, or ArrayBuffer
-    baseUrl,      // Optional: API server URL (default: http://localhost:8080)
-    readTimeout   // Optional: Request timeout in ms (default: 30000)
+const pdf = await PDFDancer.open(
+  pdfData,     // Uint8Array, File, or ArrayBuffer
+  token,       // Optional: defaults to process.env.PDFDANCER_TOKEN
+  baseUrl,     // Optional: defaults to process.env.PDFDANCER_BASE_URL or https://api.pdfdancer.com
+  timeout      // Optional request timeout in ms (default: 30000)
 );
 ```
 
-### Search Operations
+- Set `PDFDANCER_TOKEN` to avoid passing the token explicitly.
+- Override the API endpoint with `PDFDANCER_BASE_URL`.
+- Page indexes start at `0` throughout the API.
+
+## Working with Pages
 
 ```typescript
-// Find objects by type and position
-const objects = await client.find(ObjectType.PARAGRAPH, position);
+const page = pdf.page(0);
+const allPages = await pdf.pages(); // Array<PageClient>
 
-// Convenience methods for specific object types
-const paragraphs = await client.findParagraphs(position);
-const images = await client.findImages(position);
-const forms = await client.findFormXObjects(position);
-const paths = await client.findPaths(position);
-const textLines = await client.findTextLines(position);
-
-// Page operations
-const pages = await client.getPages();
-const page = await client.getPage(1); // 1-based index
+await page.delete(); // Remove the page from the document
 ```
 
-### Position Specification
+`PageClient` exposes page-scoped helpers like `selectParagraphs`, `selectTextLinesStartingWith`, `selectImagesAt`, and `newParagraph()`.
+
+## Finding Objects
 
 ```typescript
-// Page-based position
-const pagePosition = Position.atPage(1);
-
-// Coordinate-based position
-const coordPosition = Position.atPageCoordinates(1, 100, 200);
-
-// Position with movement
-const movedPosition = coordPosition.copy().moveX(50).moveY(30);
+const paragraphs = await pdf.selectParagraphs();
+const header = await pdf.page(0).selectParagraphsStartingWith('Invoice #');
+const imagesAtPoint = await pdf.page(2).selectImagesAt(120, 300);
+const fieldsByName = await pdf.selectFieldsByName('firstName');
+const textLines = await pdf.selectLines(); // All text lines across the document
 ```
 
-### Adding Content
+Use `Position` helpers when you need explicit coordinates:
 
 ```typescript
-// Add paragraph using builder pattern
-const paragraph = client.newParagraph()
-    .fromString('Your text here')
-    .withFont(new Font('Arial', 12))
-    .withColor(new Color(0, 0, 0))
-    .withPosition(Position.atPageCoordinates(1, 100, 200))
-    .withLineSpacing(1.2)
-    .build();
+import { Position } from 'pdfdancer-client-typescript';
 
-await client.addParagraph(paragraph);
-
-// Add image
-const image = new Image(position, 'PNG', 100, 50, imageData);
-await client.addImage(image);
+const point = Position.atPageCoordinates(1, 250, 400);
+const paragraphsAtPoint = await pdf.page(1).selectParagraphsAt(point.getX()!, point.getY()!);
 ```
 
-### Modifying Content
+## Creating and Editing Paragraphs
+
+### Add a Paragraph
 
 ```typescript
-// Modify paragraph text
-await client.modifyParagraph(paragraphRef, 'New text content');
-
-// Modify text line
-await client.modifyTextLine(textLineRef, 'New line content');
-
-// Move object to new position
-await client.move(objectRef, newPosition);
-
-// Delete object
-await client.delete(objectRef);
+await pdf.page(0).newParagraph()
+  .text('Awesomely\nObvious!')
+  .font('Roboto-Regular', 14)
+  .lineSpacing(0.8)
+  .color(new Color(0, 0, 0))
+  .at(300, 500)
+  .apply();
 ```
 
-### Font Management
+### Edit an Existing Paragraph
 
 ```typescript
-// Find available fonts
-const fonts = await client.findFonts('Arial', 12);
+const [para] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
 
-// Register custom font
-const ttfData = new Uint8Array(/* TTF font data */);
-const fontName = await client.registerFont(ttfData);
-
-// Use custom font
-const customFont = new Font(fontName, 14);
+if (para) {
+  await para.edit()
+    .replace('Awesomely\nObvious!')
+    .font('Helvetica', 12)
+    .color(new Color(0, 0, 0))
+    .moveTo(280, 460)
+    .apply();
+}
 ```
 
-### Document Operations
+`ParagraphBuilder` also supports `.fontFile(ttfBytes, size)` to register a custom font before applying.
+
+## Working with Images
 
 ```typescript
-// Get modified PDF data
-const pdfBytes = await client.getPdfFile();
+await pdf.newImage()
+  .fromFile('fixtures/logo-80.png')
+  .at(0, 420, 200)
+  .add();
 
-// Save PDF file (browser)
-await client.savePdf('output.pdf');
-
-// Delete page
-await client.deletePage(pageRef);
+const images = await pdf.selectImages();
+await images[0].moveTo(200, 350);
+await images[1].delete();
 ```
+
+Use `.fromBytes()` when image data already exists in memory.
+
+## Form Fields
+
+```typescript
+const fields = await pdf.selectFormFields();
+
+for (const field of fields) {
+  if (field.name === 'firstName') {
+    await field.fill('Ada');
+  }
+}
+
+const zipFields = await pdf.selectFieldsByName('zip');
+await zipFields[0]?.delete();
+```
+
+## Document Operations
+
+```typescript
+const pdfBytes = await pdf.getPdfFile();
+await pdf.save('output.pdf'); // Node.js helper that writes the file
+```
+
+`pdf.save` wraps `fs.writeFile` for convenience. In browsers, use the bytes returned by `getPdfFile()` with your own download logic.
 
 ## Error Handling
 
-The client provides specific exception types for different error scenarios:
-
 ```typescript
 import {
-    ValidationException,
-    HttpClientException,
-    SessionException,
-    FontNotFoundException,
-    PdfDancerException
+  ValidationException,
+  HttpClientException,
+  SessionException,
+  FontNotFoundException,
+  PdfDancerException
 } from 'pdfdancer-client-typescript';
 
 try {
-    await client.addParagraph(paragraph);
+  await pdf.page(0).newParagraph()
+    .text('Hello')
+    .font('Unknown-Font', 12)
+    .at(100, 100)
+    .apply();
 } catch (error) {
-    if (error instanceof ValidationException) {
-        console.error('Invalid input:', error.message);
-    } else if (error instanceof HttpClientException) {
-        console.error('API error:', error.message, 'Status:', error.statusCode);
-    } else if (error instanceof FontNotFoundException) {
-        console.error('Font not found:', error.message);
-    } else if (error instanceof SessionException) {
-        console.error('Session error:', error.message);
-    }
+  if (error instanceof FontNotFoundException) {
+    console.error('Font not found:', error.message);
+  } else if (error instanceof ValidationException) {
+    console.error('Invalid input:', error.message);
+  } else if (error instanceof HttpClientException) {
+    console.error('API error:', error.message);
+  } else if (error instanceof SessionException) {
+    console.error('Session error:', error.message);
+  } else if (error instanceof PdfDancerException) {
+    console.error('Unexpected failure:', error.message);
+  }
 }
 ```
 
@@ -189,11 +199,15 @@ try {
 ### ObjectType
 
 - `IMAGE` - Image objects
-- `FORM_X_OBJECT` - Form field objects
+- `FORM_X_OBJECT` - Form XObjects
 - `PATH` - Vector path objects
 - `PARAGRAPH` - Paragraph objects
 - `TEXT_LINE` - Text line objects
 - `PAGE` - Page objects
+- `FORM_FIELD` - Generic form field references
+- `TEXT_FIELD` - Text input fields
+- `CHECK_BOX` - Checkbox form fields
+- `RADIO_BUTTON` - Radio button form fields
 
 ### PositionMode
 
@@ -222,7 +236,7 @@ npm test
 # Run only unit tests
 npm run test:unit
 
-# Run only e2e tests (requires fixtures and server)
+# Run e2e tests (requires fixtures and a running server)
 npm run test:e2e
 
 # Run linter
@@ -231,31 +245,19 @@ npm run lint
 
 ### E2E Tests
 
-The project includes comprehensive end-to-end tests. To run e2e tests:
+The project includes comprehensive end-to-end tests. To run them:
 
-1. **Start PDFDancer server** at `http://localhost:8080` (or set `PDFDANCER_BASE_URL`)
+1. **Start the PDFDancer server** at `http://localhost:8080` or set `PDFDANCER_BASE_URL`.
+2. **Provide an authentication token** via `export PDFDANCER_TOKEN=your-token` or a `jwt-token-*.txt` file in the project root.
+3. **Populate fixtures** in the `fixtures/` directory:
+   - `ObviouslyAwesome.pdf`
+   - `mixed-form-types.pdf`
+   - `basic-paths.pdf`
+   - `logo-80.png`
+   - `DancingScript-Regular.ttf`
+4. **Run the suite**: `npm run test:e2e`
 
-2. **Set authentication token**:
-    - Environment variable: `export PDFDANCER_TOKEN=your-token`
-    - Or place a `jwt-token-*.txt` file in the project root
-
-3. **Add test fixtures** in the `fixtures/` directory:
-    - `ObviouslyAwesome.pdf` - Main test document
-    - `mixed-form-types.pdf` - Document with form fields
-    - `basic-paths.pdf` - Document with vector paths
-    - `logo-80.png` - Test image file
-    - `DancingScript-Regular.ttf` - Test font file
-
-4. **Run e2e tests**: `npm run test:e2e`
-
-The e2e tests cover:
-
-- **Paragraph operations**: Find, add, modify, delete paragraphs with custom fonts
-- **Page operations**: Get pages, delete pages
-- **Text line operations**: Find, modify, move, delete text lines
-- **Image operations**: Find, add, move, delete images
-- **Form operations**: Find and delete form fields
-- **Path operations**: Find, move, delete vector paths
+The e2e suite covers paragraphs, pages, text lines, images, form fields, and path manipulation scenarios.
 
 ## License
 
