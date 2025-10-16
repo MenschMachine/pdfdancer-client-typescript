@@ -6,6 +6,13 @@ import {ValidationException} from './exceptions';
 import {Color, Font, ObjectRef, Paragraph, Position} from './models';
 import {PDFDancer} from "./pdfdancer_v1";
 
+// 👇 Internal view of PDFDancer methods, not exported
+interface PDFDancerInternals {
+    modifyParagraph(objectRefOrPageIndex: ObjectRef, text: string | Paragraph): Promise<boolean>;
+
+    addParagraph(paragraph: Paragraph): Promise<boolean>;
+}
+
 /**
  * Builder class for constructing Paragraph objects with fluent interface.
  */
@@ -18,6 +25,7 @@ export class ParagraphBuilder {
     private _pending: Promise<unknown>[] = [];
     private _registeringFont: boolean = false;
     private _pageIndex: number;
+    private _internals: PDFDancerInternals;
 
     constructor(private _client: PDFDancer, private objectRefOrPageIndex?: ObjectRef | number) {
         if (!_client) {
@@ -26,6 +34,9 @@ export class ParagraphBuilder {
 
         this._pageIndex = objectRefOrPageIndex instanceof ObjectRef ? objectRefOrPageIndex.position.pageIndex! : objectRefOrPageIndex!;
         this._paragraph = new Paragraph();
+
+        // Cast to the internal interface to get access
+        this._internals = this._client as unknown as PDFDancerInternals;
     }
 
     /**
@@ -197,12 +208,12 @@ export class ParagraphBuilder {
         let paragraph = this.build();
         if (this.objectRefOrPageIndex instanceof ObjectRef) {
             if (!this._font || !this._textColor) {
-                return await this._client.modifyParagraph(this.objectRefOrPageIndex, this._text);
+                return await this._internals.modifyParagraph(this.objectRefOrPageIndex, this._text);
             } else {
-                return await this._client.modifyParagraph(this.objectRefOrPageIndex, paragraph);
+                return await this._internals.modifyParagraph(this.objectRefOrPageIndex, paragraph);
             }
         } else {
-            return await this._client.addParagraph(paragraph);
+            return await this._internals.addParagraph(paragraph);
         }
     }
 

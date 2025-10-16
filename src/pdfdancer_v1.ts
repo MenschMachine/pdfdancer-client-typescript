@@ -35,6 +35,36 @@ import {FormFieldObject, FormXObject, ImageObject, ParagraphObject, PathObject, 
 import {ImageBuilder} from "./image-builder";
 import fs from "fs";
 
+// 👇 Internal view of PDFDancer methods, not exported
+interface PDFDancerInternals {
+
+    toImageObjects(objectRefs: ObjectRef[]): ImageObject[];
+
+    toPathObjects(objectRefs: ObjectRef[]): PathObject[];
+
+    toFormXObjects(objectRefs: ObjectRef[]): FormXObject[];
+
+    deletePage(objectRef: ObjectRef): Promise<boolean>;
+
+    toTextLineObjects(objectRefs: ObjectRef[]): TextLineObject[];
+
+    toFormFields(formFieldRefs: FormFieldRef[]): FormFieldObject[];
+
+    toParagraphObjects(objectRefs: ObjectRef[]): ParagraphObject[];
+
+    findFormFields(position?: Position): Promise<FormFieldRef[]>;
+
+    findPaths(position?: Position): Promise<ObjectRef[]>;
+
+    findFormXObjects(position?: Position): Promise<ObjectRef[]>;
+
+    findParagraphs(position?: Position): Promise<ObjectRef[]>;
+
+    findTextLines(pos?: Position): Promise<ObjectRef[]>;
+
+    _findImages(position?: Position): Promise<ObjectRef[]>;
+}
+
 class PageClient {
 
     private _pageIndex: number;
@@ -42,28 +72,31 @@ class PageClient {
     type: ObjectType = ObjectType.PAGE;
     position: Position;
     internalId: string;
+    private _internals: PDFDancerInternals;
 
     constructor(client: PDFDancer, pageIndex: number) {
         this._client = client;
         this._pageIndex = pageIndex;
         this.internalId = `PAGE-${this._pageIndex}`;
         this.position = Position.atPage(this._pageIndex);
+        // Cast to the internal interface to get access
+        this._internals = this._client as unknown as PDFDancerInternals;
     }
 
     async selectPathsAt(x: number, y: number) {
-        return this._client.toPathObjects(await this._client.findPaths(Position.atPageCoordinates(this._pageIndex, x, y)));
+        return this._internals.toPathObjects(await this._internals.findPaths(Position.atPageCoordinates(this._pageIndex, x, y)));
     }
 
     async selectImages() {
-        return this._client.toImageObjects(await this._client._findImages(Position.atPage(this._pageIndex)));
+        return this._internals.toImageObjects(await this._internals._findImages(Position.atPage(this._pageIndex)));
     }
 
     async selectImagesAt(x: number, y: number) {
-        return this._client.toImageObjects(await this._client._findImages(Position.atPageCoordinates(this._pageIndex, x, y)));
+        return this._internals.toImageObjects(await this._internals._findImages(Position.atPageCoordinates(this._pageIndex, x, y)));
     }
 
     async delete() {
-        return this._client.deletePage(this.ref());
+        return this._internals.deletePage(this.ref());
     }
 
     private ref() {
@@ -72,52 +105,52 @@ class PageClient {
 
     // noinspection JSUnusedGlobalSymbols
     async selectForms() {
-        return this._client.toFormXObjects(await this._client.findFormXObjects(Position.atPage(this._pageIndex)));
+        return this._internals.toFormXObjects(await this._internals.findFormXObjects(Position.atPage(this._pageIndex)));
     }
 
     async selectFormsAt(x: number, y: number) {
-        return this._client.toFormXObjects(await this._client.findFormXObjects(Position.atPageCoordinates(this._pageIndex, x, y)));
+        return this._internals.toFormXObjects(await this._internals.findFormXObjects(Position.atPageCoordinates(this._pageIndex, x, y)));
     }
 
     async selectFormFields() {
-        return this._client.toFormFields(await this._client.findFormFields(Position.atPage(this._pageIndex)));
+        return this._internals.toFormFields(await this._internals.findFormFields(Position.atPage(this._pageIndex)));
     }
 
     async selectFormFieldsAt(x: number, y: number) {
-        return this._client.toFormFields(await this._client.findFormFields(Position.atPageCoordinates(this._pageIndex, x, y)));
+        return this._internals.toFormFields(await this._internals.findFormFields(Position.atPageCoordinates(this._pageIndex, x, y)));
     }
 
     // noinspection JSUnusedGlobalSymbols
     async selectFormFieldsByName(fieldName: string) {
         let pos = Position.atPage(this._pageIndex);
         pos.name = fieldName;
-        return this._client.toFormFields(await this._client.findFormFields(pos));
+        return this._internals.toFormFields(await this._internals.findFormFields(pos));
     }
 
     async selectParagraphs() {
-        return this._client.toParagraphObjects(await this._client.findParagraphs(Position.atPage(this._pageIndex)));
+        return this._internals.toParagraphObjects(await this._internals.findParagraphs(Position.atPage(this._pageIndex)));
     }
 
     async selectParagraphsStartingWith(text: string) {
         let pos = Position.atPage(this._pageIndex);
         pos.textStartsWith = text;
-        return this._client.toParagraphObjects(await this._client.findParagraphs(pos));
+        return this._internals.toParagraphObjects(await this._internals.findParagraphs(pos));
     }
 
     async selectParagraphsMatching(pattern: string) {
         let pos = Position.atPage(this._pageIndex);
         pos.textPattern = pattern;
-        return this._client.toParagraphObjects(await this._client.findParagraphs(pos));
+        return this._internals.toParagraphObjects(await this._internals.findParagraphs(pos));
     }
 
     async selectParagraphsAt(x: number, y: number) {
-        return this._client.toParagraphObjects(await this._client.findParagraphs(Position.atPageCoordinates(this._pageIndex, x, y)));
+        return this._internals.toParagraphObjects(await this._internals.findParagraphs(Position.atPageCoordinates(this._pageIndex, x, y)));
     }
 
     async selectTextLinesStartingWith(text: string) {
         let pos = Position.atPage(this._pageIndex);
         pos.textStartsWith = text;
-        return this._client.toTextLineObjects(await this._client.findTextLines(pos));
+        return this._internals.toTextLineObjects(await this._internals.findTextLines(pos));
     }
 
     /**
@@ -128,20 +161,23 @@ class PageClient {
     }
 
     async selectTextLines() {
-        return this._client.toTextLineObjects(await this._client.findTextLines(Position.atPage(this._pageIndex)));
+        return this._internals.toTextLineObjects(await this._internals.findTextLines(Position.atPage(this._pageIndex)));
     }
 
+    // noinspection JSUnusedGlobalSymbols
     async selectTextLinesMatching(pattern: string) {
         let pos = Position.atPage(this._pageIndex);
         pos.textPattern = pattern;
-        return this._client.toTextLineObjects(await this._client.findTextLines(pos));
+        return this._internals.toTextLineObjects(await this._internals.findTextLines(pos));
     }
 
+    // noinspection JSUnusedGlobalSymbols
     async selectTextLinesAt(x: number, y: number) {
-        return this._client.toTextLineObjects(await this._client.findTextLines(Position.atPageCoordinates(this._pageIndex, x, y)));
+        return this._internals.toTextLineObjects(await this._internals.findTextLines(Position.atPageCoordinates(this._pageIndex, x, y)));
     }
 }
 
+// noinspection ExceptionCaughtLocallyJS,JSUnusedLocalSymbols
 /**
  * REST API client for interacting with the PDFDancer PDF manipulation service.
  * This client provides a convenient TypeScript interface for performing PDF operations
@@ -161,7 +197,7 @@ export class PDFDancer {
      * This constructor initializes the client, uploads the PDF data to open
      * a new session, and prepares the client for PDF manipulation operations.
      */
-    constructor(
+    private constructor(
         token: string,
         pdfData: Uint8Array | File | ArrayBuffer,
         baseUrl: string = "http://localhost:8080",
@@ -393,7 +429,7 @@ export class PDFDancer {
      * This method provides flexible search capabilities across all PDF content,
      * allowing filtering by object type and position constraints.
      */
-    async find(objectType?: ObjectType, position?: Position): Promise<ObjectRef[]> {
+    private async find(objectType?: ObjectType, position?: Position): Promise<ObjectRef[]> {
         const requestData = new FindRequest(objectType, position).toDict();
         const response = await this._makeRequest('POST', '/pdf/find', requestData);
 
@@ -404,14 +440,14 @@ export class PDFDancer {
     /**
      * Searches for paragraph objects at the specified position.
      */
-    async findParagraphs(position?: Position): Promise<ObjectRef[]> {
+    private async findParagraphs(position?: Position): Promise<ObjectRef[]> {
         return this.find(ObjectType.PARAGRAPH, position);
     }
 
     /**
      * Searches for image objects at the specified position.
      */
-    async _findImages(position?: Position): Promise<ObjectRef[]> {
+    private async _findImages(position?: Position): Promise<ObjectRef[]> {
         return this.find(ObjectType.IMAGE, position);
     }
 
@@ -422,14 +458,14 @@ export class PDFDancer {
     /**
      * Searches for form X objects at the specified position.
      */
-    async findFormXObjects(position?: Position): Promise<ObjectRef[]> {
+    private async findFormXObjects(position?: Position): Promise<ObjectRef[]> {
         return this.find(ObjectType.FORM_X_OBJECT, position);
     }
 
     /**
      * Searches for vector path objects at the specified position.
      */
-    async findPaths(position?: Position): Promise<ObjectRef[]> {
+    private async findPaths(position?: Position): Promise<ObjectRef[]> {
         return this.find(ObjectType.PATH, position);
     }
 
@@ -452,7 +488,7 @@ export class PDFDancer {
     /**
      * Searches for text line objects at the specified position.
      */
-    async findTextLines(position?: Position): Promise<ObjectRef[]> {
+    private async findTextLines(position?: Position): Promise<ObjectRef[]> {
         return this.find(ObjectType.TEXT_LINE, position);
     }
 
@@ -460,7 +496,7 @@ export class PDFDancer {
      * Searches for form fields at the specified position.
      * Returns FormFieldRef objects with name and value properties.
      */
-    async findFormFields(position?: Position): Promise<FormFieldRef[]> {
+    private async findFormFields(position?: Position): Promise<FormFieldRef[]> {
         const requestData = new FindRequest(ObjectType.FORM_FIELD, position).toDict();
         const response = await this._makeRequest('POST', '/pdf/find', requestData);
 
@@ -473,7 +509,7 @@ export class PDFDancer {
     /**
      * Retrieves references to all pages in the PDF document.
      */
-    async getPages(): Promise<ObjectRef[]> {
+    private async getPages(): Promise<ObjectRef[]> {
         const response = await this._makeRequest('POST', '/pdf/page/find');
         const pagesData = await response.json() as any[];
         return pagesData.map((pageData: any) => this._parseObjectRef(pageData));
@@ -501,7 +537,7 @@ export class PDFDancer {
     /**
      * Deletes a page from the PDF document.
      */
-    async deletePage(pageRef: ObjectRef): Promise<boolean> {
+    private async deletePage(pageRef: ObjectRef): Promise<boolean> {
         if (!pageRef) {
             throw new ValidationException("Page reference cannot be null");
         }
@@ -516,7 +552,7 @@ export class PDFDancer {
     /**
      * Deletes the specified PDF object from the document.
      */
-    async delete(objectRef: ObjectRef): Promise<boolean> {
+    private async delete(objectRef: ObjectRef): Promise<boolean> {
         if (!objectRef) {
             throw new ValidationException("Object reference cannot be null");
         }
@@ -529,7 +565,7 @@ export class PDFDancer {
     /**
      * Moves a PDF object to a new position within the document.
      */
-    async move(objectRef: ObjectRef, position: Position): Promise<boolean> {
+    private async move(objectRef: ObjectRef, position: Position): Promise<boolean> {
         if (!objectRef) {
             throw new ValidationException("Object reference cannot be null");
         }
@@ -545,7 +581,7 @@ export class PDFDancer {
     /**
      * Changes the value of a form field.
      */
-    async changeFormField(formFieldRef: FormFieldRef, newValue: string): Promise<boolean> {
+    private async changeFormField(formFieldRef: FormFieldRef, newValue: string): Promise<boolean> {
         if (!formFieldRef) {
             throw new ValidationException("Form field reference cannot be null");
         }
@@ -560,7 +596,7 @@ export class PDFDancer {
     /**
      * Adds an image to the PDF document.
      */
-    async addImage(image: Image, position?: Position): Promise<boolean> {
+    private async addImage(image: Image, position?: Position): Promise<boolean> {
         if (!image) {
             throw new ValidationException("Image cannot be null");
         }
@@ -579,7 +615,7 @@ export class PDFDancer {
     /**
      * Adds a paragraph to the PDF document.
      */
-    async addParagraph(paragraph: Paragraph): Promise<boolean> {
+    private async addParagraph(paragraph: Paragraph): Promise<boolean> {
         if (!paragraph) {
             throw new ValidationException("Paragraph cannot be null");
         }
@@ -610,7 +646,7 @@ export class PDFDancer {
     /**
      * Modifies a paragraph object or its text content.
      */
-    async modifyParagraph(objectRef: ObjectRef, newParagraph: Paragraph | string): Promise<boolean> {
+    private async modifyParagraph(objectRef: ObjectRef, newParagraph: Paragraph | string): Promise<boolean> {
         if (!objectRef) {
             throw new ValidationException("Object reference cannot be null");
         }
@@ -634,7 +670,7 @@ export class PDFDancer {
     /**
      * Modifies a text line object.
      */
-    async modifyTextLine(objectRef: ObjectRef, newText: string): Promise<boolean> {
+    private async modifyTextLine(objectRef: ObjectRef, newText: string): Promise<boolean> {
         if (!objectRef) {
             throw new ValidationException("Object reference cannot be null");
         }
@@ -817,15 +853,15 @@ export class PDFDancer {
     // Builder Pattern Support
 
 
-    toPathObjects(objectRefs: ObjectRef[]) {
+    private toPathObjects(objectRefs: ObjectRef[]) {
         return objectRefs.map(ref => PathObject.fromRef(this, ref));
     }
 
-    toFormXObjects(objectRefs: ObjectRef[]) {
+    private toFormXObjects(objectRefs: ObjectRef[]) {
         return objectRefs.map(ref => FormXObject.fromRef(this, ref));
     }
 
-    toImageObjects(objectRefs: ObjectRef[]) {
+    private toImageObjects(objectRefs: ObjectRef[]) {
         return objectRefs.map(ref => ImageObject.fromRef(this, ref));
     }
 
@@ -845,7 +881,7 @@ export class PDFDancer {
         return pageRefs.map((_, pageIndex) => new PageClient(this, pageIndex));
     }
 
-    toFormFields(objectRefs: FormFieldRef[]) {
+    private toFormFields(objectRefs: FormFieldRef[]) {
         return objectRefs.map(ref => FormFieldObject.fromRef(this, ref));
     }
 
@@ -853,11 +889,11 @@ export class PDFDancer {
         return this.toParagraphObjects(await this.findParagraphs());
     }
 
-    toParagraphObjects(objectRefs: ObjectRef[]) {
+    private toParagraphObjects(objectRefs: ObjectRef[]) {
         return objectRefs.map(ref => ParagraphObject.fromRef(this, ref));
     }
 
-    toTextLineObjects(objectRefs: ObjectRef[]) {
+    private toTextLineObjects(objectRefs: ObjectRef[]) {
         return objectRefs.map(ref => TextLineObject.fromRef(this, ref));
     }
 

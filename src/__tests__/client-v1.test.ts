@@ -2,42 +2,8 @@
  * Basic tests for the PDFDancer TypeScript client.
  */
 
-import {ValidationException} from '../exceptions';
 import {Color, Font, Paragraph, Position} from '../models';
-import {PDFDancer} from "../pdfdancer_v1";
 
-describe('PDFDancer', () => {
-    const mockToken = 'test-token';
-    const mockPdfData = new Uint8Array([0x25, 0x50, 0x44, 0x46]); // %PDF header
-
-    describe('constructor validation', () => {
-        test('should throw ValidationException for empty token', () => {
-            expect(() => {
-                new PDFDancer('', mockPdfData);
-            }).toThrow(ValidationException);
-        });
-
-        test('should throw ValidationException for null PDF data', () => {
-            expect(() => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                new PDFDancer(mockToken, (null as any));
-            }).toThrow(ValidationException);
-        });
-
-        test('should throw ValidationException for empty PDF data', () => {
-            expect(() => {
-                new PDFDancer(mockToken, new Uint8Array(0));
-            }).toThrow(ValidationException);
-        });
-
-        test('should accept valid parameters', () => {
-            expect(() => {
-                new PDFDancer(mockToken, mockPdfData);
-            }).not.toThrow();
-        });
-    });
-
-});
 
 describe('Position', () => {
     test('should open position from page index', () => {

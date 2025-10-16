@@ -2,6 +2,17 @@ import {FormFieldRef, ObjectRef, ObjectType, Position} from "./models";
 import {PDFDancer} from "./pdfdancer_v1";
 import {ParagraphBuilder} from "./paragraph-builder";
 
+// 👇 Internal view of PDFDancer methods, not exported
+interface PDFDancerInternals {
+    delete(objectRef: ObjectRef): Promise<boolean>;
+
+    move(objectRef: ObjectRef, position: Position): Promise<boolean>;
+
+    changeFormField(formFieldRef: FormFieldRef, value: string): Promise<boolean>;
+
+    modifyTextLine(objectRef: ObjectRef, newText: string): Promise<boolean>;
+}
+
 export class BaseObject<TRef extends ObjectRef = ObjectRef> {
 
     _client: PDFDancer;
@@ -9,16 +20,18 @@ export class BaseObject<TRef extends ObjectRef = ObjectRef> {
     internalId: string;
     type: ObjectType;
     position: Position;
+    protected _internals: PDFDancerInternals;
 
     constructor(client: PDFDancer, internalId: string, type: ObjectType, position: Position) {
         this.internalId = internalId;
         this.type = type;
         this.position = position;
         this._client = client;
+        this._internals = this._client as unknown as PDFDancerInternals;
     }
 
     async delete() {
-        return this._client.delete(this.ref());
+        return this._internals.delete(this.ref());
     }
 
     protected ref(): TRef {
@@ -26,7 +39,7 @@ export class BaseObject<TRef extends ObjectRef = ObjectRef> {
     }
 
     async moveTo(x: number, y: number) {
-        return this._client.move(this.ref(), Position.atPageCoordinates(this.position.pageIndex!, x, y));
+        return this._internals.move(this.ref(), Position.atPageCoordinates(this.position.pageIndex!, x, y));
     }
 }
 
@@ -62,7 +75,7 @@ export class FormFieldObject extends BaseObject<FormFieldRef> {
     }
 
     async fill(value: string) {
-        return await this._client.changeFormField(this.ref(), value);
+        return await this._internals.changeFormField(this.ref(), value);
     }
 
     protected ref() {
@@ -101,11 +114,12 @@ class TextLineBuilder {
     private _text: string | undefined;
     private _objectRef: ObjectRef;
     private _client: PDFDancer
+    private _internals: PDFDancerInternals;
 
     constructor(client: PDFDancer, objectRef: ObjectRef) {
         this._objectRef = objectRef;
         this._client = client;
-
+        this._internals = this._client as unknown as PDFDancerInternals;
     }
 
     text(newText: string) {
@@ -114,6 +128,6 @@ class TextLineBuilder {
     }
 
     async apply() {
-        return await this._client.modifyTextLine(this._objectRef, this._text!);
+        return await this._internals.modifyTextLine(this._objectRef, this._text!);
     }
 }
