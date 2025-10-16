@@ -40,7 +40,7 @@ async function run() {
     .at(100, 200)
     .apply();
 
-  const updated = await pdf.getPdfFile();
+  const updated = await pdf.getBytes();
   await fs.writeFile('output.pdf', updated);
 }
 
@@ -156,11 +156,11 @@ await zipFields[0]?.delete();
 ## Document Operations
 
 ```typescript
-const pdfBytes = await pdf.getPdfFile();
+const pdfBytes = await pdf.getBytes();
 await pdf.save('output.pdf'); // Node.js helper that writes the file
 ```
 
-`pdf.save` wraps `fs.writeFile` for convenience. In browsers, use the bytes returned by `getPdfFile()` with your own download logic.
+`pdf.save` wraps `fs.writeFile` for convenience. In browsers, use the bytes returned by `getBytes()` with your own download logic.
 
 ## Error Handling
 

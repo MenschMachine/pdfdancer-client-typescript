@@ -67,7 +67,7 @@ describe('Text Line E2E Tests (v2 API)', () => {
 
         // Save PDF to verify operation
         const outPath = createTempPath('deleteLine.pdf');
-        const data = await pdf.getPdfFile();
+        const data = await pdf.getBytes();
         fs.writeFileSync(outPath, data);
         expect(fs.existsSync(outPath)).toBe(true);
         expect(fs.statSync(outPath).size).toBeGreaterThan(0);

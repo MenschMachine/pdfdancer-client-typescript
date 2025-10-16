@@ -766,7 +766,7 @@ export class PDFDancer {
     /**
      * Downloads the current state of the PDF document with all modifications applied.
      */
-    async getPdfFile(): Promise<Uint8Array> {
+    async getBytes(): Promise<Uint8Array> {
         const response = await this._makeRequest('GET', `/session/${this._sessionId}/pdf`);
         return new Uint8Array(await response.arrayBuffer());
     }
@@ -781,7 +781,7 @@ export class PDFDancer {
         }
 
         try {
-            const pdfData = await this.getPdfFile();
+            const pdfData = await this.getBytes();
             fs.writeFileSync(filename, pdfData);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);

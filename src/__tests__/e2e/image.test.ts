@@ -34,7 +34,7 @@ describe('Image E2E Tests (v2 API)', () => {
         expect(remaining).toHaveLength(0);
 
         const outPath = createTempPath('deleteImage.pdf');
-        const outData = await pdf.getPdfFile();
+        const outData = await pdf.getBytes();
         fs.writeFileSync(outPath, outData);
 
         expect(fs.existsSync(outPath)).toBe(true);
