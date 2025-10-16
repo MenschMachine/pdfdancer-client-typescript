@@ -37,13 +37,6 @@ describe('PDFDancer', () => {
         });
     });
 
-    describe('paragraphBuilder', () => {
-        test('should open a ParagraphBuilder instance', () => {
-            const client = new PDFDancer(mockToken, mockPdfData);
-            const builder = client.paragraphBuilder();
-            expect(builder).toBeDefined();
-        });
-    });
 });
 
 describe('Position', () => {

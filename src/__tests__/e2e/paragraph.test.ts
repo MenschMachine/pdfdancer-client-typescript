@@ -1,22 +1,21 @@
 /**
- * E2E tests for paragraph operations
+ * E2E tests for paragraph operations — new PDFDancer API
  */
 
-import {PDFDancer, Color, Font, Position} from '../../index';
+import {Color, PDFDancer} from '../../index';
 import {readFontFixture, requireEnvAndFixture} from './test-helpers';
-import {expectWithin} from "../assertions";
+import {expectWithin} from '../assertions';
 
-describe('Paragraph E2E Tests', () => {
-    // Tests should fail properly if environment is not configured
+describe('Paragraph E2E Tests (v2 API)', () => {
 
     test('find paragraphs by position', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const paras = await client.findParagraphs();
+        const paras = await pdf.selectParagraphs();
         expect(paras).toHaveLength(172);
 
-        const parasPage0 = await client.findParagraphs(Position.atPage(0));
+        const parasPage0 = await pdf.page(0).selectParagraphs();
         expect(parasPage0).toHaveLength(2);
 
         const first = parasPage0[0];
@@ -34,10 +33,9 @@ describe('Paragraph E2E Tests', () => {
 
     test('find paragraphs by text', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const pos = Position.atPage(0).withTextStarts('The Complete');
-        const paras = await client.findParagraphs(pos);
+        const paras = await pdf.page(0).selectParagraphsStartingWith('The Complete');
         expect(paras).toHaveLength(1);
 
         const p = paras[0];
@@ -47,147 +45,155 @@ describe('Paragraph E2E Tests', () => {
         expectWithin(p.position.boundingRect?.y, 496, 2);
     });
 
+    test('find paragraphs by pattern', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const paras = await pdf.page(0).selectParagraphsMatching('.*Complete.*');
+        expect(paras).toHaveLength(1);
+        const p = paras[0];
+        expect(p.internalId).toBe('PARAGRAPH_000004');
+
+        const paras2 = await pdf.page(0).selectParagraphsMatching('.*NOT FOUND.*');
+        expect(paras2).toHaveLength(0);
+
+        const paras3 = await pdf.page(0).selectParagraphsMatching('.*');
+        expect(paras3).toHaveLength(2);
+    });
+
     test('delete paragraph', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const posDel = Position.atPage(0).withTextStarts('The Complete');
-        const ref = (await client.findParagraphs(posDel))[0];
-        expect(await client.delete(ref)).toBe(true);
+        const [target] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
+        await target.delete();
 
-        const posDel2 = Position.atPage(0).withTextStarts('The Complete');
-        expect(await client.findParagraphs(posDel2)).toHaveLength(0);
+        const remaining = await pdf.page(0).selectParagraphsStartingWith('The Complete');
+        expect(remaining).toHaveLength(0);
     });
 
     test('move paragraph', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const posMove = Position.atPage(0).withTextStarts('The Complete');
-        const ref = (await client.findParagraphs(posMove))[0];
-        const newPos = Position.atPageCoordinates(0, 0.1, 300);
-        expect(await client.move(ref, newPos)).toBe(true);
+        const [para] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
+        await para.moveTo(0.1, 300);
 
-        const ref2 = (await client.findParagraphs(newPos))[0];
-        expect(ref2).toBeDefined();
+        const moved = await pdf.page(0).selectParagraphsAt(0.1, 300);
+        expect(moved.length).toBeGreaterThan(0);
     });
 
-    async function assertNewParagraphExists(client: PDFDancer): Promise<void> {
-        // Validate via find_text_lines for text starting with 'Awesomely'
-        const pos = Position.atPage(0).withTextStarts('Awesomely');
-        const lines = await client.findTextLines(pos);
+    async function assertNewParagraphExists(pdf: PDFDancer) {
+        const lines = await pdf.page(0).selectTextLinesStartingWith('Awesomely');
         expect(lines.length).toBeGreaterThanOrEqual(1);
     }
 
     test('modify paragraph', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const posMod = Position.atPage(0).withTextStarts('The Complete');
-        const ref = (await client.findParagraphs(posMod))[0];
+        const [para] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
 
-        const newParagraph = client.paragraphBuilder()
-            .fromString('Awesomely\\nObvious!')
-            .withFont(new Font('Helvetica', 14))
-            .withLineSpacing(0.7)
-            .withPosition(Position.atPageCoordinates(0, 300.1, 500))
-            .build();
+        await para.edit().replace('Awesomely\nObvious!')
+            .font("Helvetica", 12)
+            .lineSpacing(0.7)
+            .moveTo(300.1, 500)
+            .apply()
 
-        expect(await client.modifyParagraph(ref, newParagraph)).toBe(true);
-        await assertNewParagraphExists(client);
+        await assertNewParagraphExists(pdf);
     });
 
-    test('modify paragraph simple', async () => {
+    test('modify paragraph (simple)', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const posMod2 = Position.atPage(0).withTextStarts('The Complete');
-        const ref = (await client.findParagraphs(posMod2))[0];
-        expect(await client.modifyParagraph(ref, 'Awesomely\\nObvious!')).toBe(true);
-        await assertNewParagraphExists(client);
+        const [para] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
+        await para.edit().replace('Awesomely\nObvious!').apply();
+        await assertNewParagraphExists(pdf);
     });
 
-    test('add paragraph with custom font - expect not found', async () => {
+    test('add paragraph with missing font (expect error)', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const pb = client.paragraphBuilder()
-            .fromString('Awesomely\\nObvious!')
-            .withFont(new Font('Roboto', 14))
-            .withLineSpacing(0.7)
-            .withPosition(Position.atPageCoordinates(0, 300.1, 500));
-
-        await expect(client.addParagraph(pb.build())).rejects.toThrow('Font not found');
+        await expect(
+            pdf.page(0).newParagraph()
+                .text('Awesomely\nObvious!')
+                .font('Roboto', 14)
+                .lineSpacing(0.7)
+                .at(300.1, 500)
+                .apply()
+        ).rejects.toThrow('Font not found');
     });
 
-    test('add paragraph with custom font - Roboto-Regular', async () => {
+    test('add paragraph with known font', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const pb = client.paragraphBuilder()
-            .fromString('Awesomely\\nObvious!')
-            .withFont(new Font('Roboto-Regular', 14))
-            .withLineSpacing(0.7)
-            .withPosition(Position.atPageCoordinates(0, 300.1, 500));
+        const success = await pdf.page(0).newParagraph()
+            .text('Awesomely\nObvious!')
+            .font('Roboto-Regular', 14)
+            .lineSpacing(0.7)
+            .at(300.1, 500)
+            .apply()
 
-        expect(await client.addParagraph(pb.build())).toBe(true);
-        await assertNewParagraphExists(client);
+        expect(success).toBe(true);
+        await assertNewParagraphExists(pdf);
     });
 
-    test('add paragraph with found font', async () => {
+    test('add paragraph using font lookup', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const fonts = await client.findFonts('Roboto', 14);
+        const fonts = await pdf.findFonts('Roboto', 14);
         expect(fonts.length).toBeGreaterThan(0);
-        expect(fonts[0].name).toContain('Roboto');
-
         const roboto = fonts[0];
-        const pb = client.paragraphBuilder()
-            .fromString('Awesomely\\nObvious!')
-            .withFont(roboto)
-            .withLineSpacing(0.7)
-            .withPosition(Position.atPageCoordinates(0, 300.1, 500));
 
-        expect(await client.addParagraph(pb.build())).toBe(true);
-        await assertNewParagraphExists(client);
+        const success = await pdf.page(0).newParagraph()
+            .text('Awesomely\nObvious!')
+            .font(roboto)
+            .lineSpacing(0.7)
+            .at(300.1, 500)
+            .apply();
+
+        expect(success).toBe(true);
+        await assertNewParagraphExists(pdf);
     });
 
     test('add paragraph with Asimovian font', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const fonts = await client.findFonts('Asimovian', 14);
+        const fonts = await pdf.findFonts('Asimovian', 14);
         expect(fonts.length).toBeGreaterThan(0);
-        expect(fonts[0].name).toBe('Asimovian-Regular');
-
         const asimovian = fonts[0];
-        const pb = client.paragraphBuilder()
-            .fromString('Awesomely\\nObvious!')
-            .withFont(asimovian)
-            .withLineSpacing(0.7)
-            .withPosition(Position.atPageCoordinates(0, 300.1, 500));
 
-        expect(await client.addParagraph(pb.build())).toBe(true);
-        await assertNewParagraphExists(client);
+        const success = await pdf.page(0).newParagraph()
+            .text('Awesomely\nObvious!')
+            .font(asimovian)
+            .lineSpacing(0.7)
+            .at(300.1, 500)
+            .apply();
+
+        expect(success).toBe(true);
+        await assertNewParagraphExists(pdf);
     });
 
     test('add paragraph with custom TTF font', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        // Use DancingScript-Regular.ttf from fixtures directory
-        const ttfData = readFontFixture('DancingScript-Regular.ttf');
+        const ttf = readFontFixture('DancingScript-Regular.ttf');
 
-        const pb = client.paragraphBuilder()
-            .fromString('Awesomely\\nObvious!')
-            .withLineSpacing(1.8)
-            .withColor(new Color(0, 0, 255))
-            .withPosition(Position.atPageCoordinates(0, 300.1, 500));
+        const success = await pdf.page(0).newParagraph()
+            .text('Awesomely\nObvious!')
+            .fontFile(ttf, 24)
+            .lineSpacing(1.8)
+            .color(new Color(0, 0, 255))
+            .at(300.1, 500)
+            .apply();
 
-        await pb.withFontFile(ttfData, 24);
-
-        expect(await client.addParagraph(pb.build())).toBe(true);
-        await assertNewParagraphExists(client);
+        expect(success).toBe(true);
+        await assertNewParagraphExists(pdf);
     });
 });

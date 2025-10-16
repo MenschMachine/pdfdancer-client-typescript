@@ -34,7 +34,7 @@ async function example() {
     const paragraphs = await client.findParagraphs(Position.atPage(1));
 
     // Add a new paragraph
-    const newParagraph = client.paragraphBuilder()
+    const newParagraph = client.newParagraph()
         .fromString('Hello, PDFDancer!', new Color(255, 0, 0))
         .withFont(new Font('Arial', 12))
         .withPosition(Position.atPageCoordinates(1, 100, 200))
@@ -98,7 +98,7 @@ const movedPosition = coordPosition.copy().moveX(50).moveY(30);
 
 ```typescript
 // Add paragraph using builder pattern
-const paragraph = client.paragraphBuilder()
+const paragraph = client.newParagraph()
     .fromString('Your text here')
     .withFont(new Font('Arial', 12))
     .withColor(new Color(0, 0, 0))

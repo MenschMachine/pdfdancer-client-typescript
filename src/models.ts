@@ -88,7 +88,8 @@ export class Position {
         public shape?: ShapeType,
         public mode?: PositionMode,
         public boundingRect?: BoundingRect,
-        public textStartsWith?: string
+        public textStartsWith?: string,
+        public textPattern?: string
     ) {
     }
 
@@ -507,6 +508,7 @@ function positionToDict(position: Position): Record<string, any> {
     const result: Record<string, any> = {
         pageIndex: position.pageIndex,
         textStartsWith: position.textStartsWith,
+        textPattern: position.textPattern,
         name: position.name
     };
 

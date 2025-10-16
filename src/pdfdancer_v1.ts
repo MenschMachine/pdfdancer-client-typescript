@@ -31,7 +31,7 @@ import {
     ShapeType
 } from './models';
 import {ParagraphBuilder} from './paragraph-builder';
-import {FormFieldObject, FormXObject, ImageObject, PathObject} from "./types";
+import {FormFieldObject, FormXObject, ImageObject, ParagraphObject, PathObject, TextLineObject} from "./types";
 import {ImageBuilder} from "./image-builder";
 import fs from "fs";
 
@@ -70,6 +70,7 @@ class PageClient {
         return new ObjectRef(this.internalId, this.position, this.type);
     }
 
+    // noinspection JSUnusedGlobalSymbols
     async selectForms() {
         return this._client.toFormXObjects(await this._client.findFormXObjects(Position.atPage(this._pageIndex)));
     }
@@ -86,10 +87,44 @@ class PageClient {
         return this._client.toFormFields(await this._client.findFormFields(Position.atPageCoordinates(this._pageIndex, x, y)));
     }
 
+    // noinspection JSUnusedGlobalSymbols
     async selectFormFieldsByName(fieldName: string) {
         let pos = Position.atPage(this._pageIndex);
         pos.name = fieldName;
         return this._client.toFormFields(await this._client.findFormFields(pos));
+    }
+
+    async selectParagraphs() {
+        return this._client.toParagraphObjects(await this._client.findParagraphs(Position.atPage(this._pageIndex)));
+    }
+
+    async selectParagraphsStartingWith(text: string) {
+        let pos = Position.atPage(this._pageIndex);
+        pos.textStartsWith = text;
+        return this._client.toParagraphObjects(await this._client.findParagraphs(pos));
+    }
+
+    async selectParagraphsMatching(pattern: string) {
+        let pos = Position.atPage(this._pageIndex);
+        pos.textPattern = pattern;
+        return this._client.toParagraphObjects(await this._client.findParagraphs(pos));
+    }
+
+    async selectParagraphsAt(x: number, y: number) {
+        return this._client.toParagraphObjects(await this._client.findParagraphs(Position.atPageCoordinates(this._pageIndex, x, y)));
+    }
+
+    async selectTextLinesStartingWith(text: string) {
+        let pos = Position.atPage(this._pageIndex);
+        pos.textStartsWith = text;
+        return this._client.toTextLineObjects(await this._client.findTextLines(pos));
+    }
+
+    /**
+     * Creates a new ParagraphBuilder for fluent paragraph construction.
+     */
+    newParagraph(): ParagraphBuilder {
+        return new ParagraphBuilder(this._client, this.position.pageIndex);
     }
 }
 
@@ -767,12 +802,6 @@ export class PDFDancer {
 
     // Builder Pattern Support
 
-    /**
-     * Creates a new ParagraphBuilder for fluent paragraph construction.
-     */
-    paragraphBuilder(): ParagraphBuilder {
-        return new ParagraphBuilder(this);
-    }
 
     toPathObjects(objectRefs: ObjectRef[]) {
         return objectRefs.map(ref => PathObject.fromRef(this, ref));
@@ -804,5 +833,17 @@ export class PDFDancer {
 
     toFormFields(objectRefs: FormFieldRef[]) {
         return objectRefs.map(ref => FormFieldObject.fromRef(this, ref));
+    }
+
+    async selectParagraphs() {
+        return this.toParagraphObjects(await this.findParagraphs());
+    }
+
+    toParagraphObjects(objectRefs: ObjectRef[]) {
+        return objectRefs.map(ref => ParagraphObject.fromRef(this, ref));
+    }
+
+    toTextLineObjects(objectRefs: ObjectRef[]) {
+        return objectRefs.map(ref => TextLineObject.fromRef(this, ref));
     }
 }

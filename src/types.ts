@@ -1,5 +1,6 @@
 import {FormFieldRef, ObjectRef, ObjectType, Position} from "./models";
 import {PDFDancer} from "./pdfdancer_v1";
+import {ParagraphBuilder} from "./paragraph-builder";
 
 export class BaseObject<TRef extends ObjectRef = ObjectRef> {
 
@@ -73,3 +74,19 @@ export class FormFieldObject extends BaseObject<FormFieldRef> {
     }
 }
 
+export class ParagraphObject extends BaseObject {
+
+    static fromRef(_client: PDFDancer, objectRef: ObjectRef) {
+        return new ParagraphObject(_client, objectRef.internalId, objectRef.type, objectRef.position);
+    }
+
+    edit() {
+        return new ParagraphBuilder(this._client, this.ref());
+    }
+}
+
+export class TextLineObject extends BaseObject {
+    static fromRef(_client: PDFDancer, objectRef: ObjectRef) {
+        return new TextLineObject(_client, objectRef.internalId, objectRef.type, objectRef.position);
+    }
+}
