@@ -28,7 +28,8 @@ import {
     Paragraph,
     Position,
     PositionMode,
-    ShapeType
+    ShapeType,
+    TextObjectRef
 } from './models';
 import {ParagraphBuilder} from './paragraph-builder';
 import {FormFieldObject, FormXObject, ImageObject, ParagraphObject, PathObject, TextLineObject} from "./types";
@@ -441,7 +442,7 @@ export class PDFDancer {
     /**
      * Searches for paragraph objects at the specified position.
      */
-    private async findParagraphs(position?: Position): Promise<ObjectRef[]> {
+    private async findParagraphs(position?: Position): Promise<TextObjectRef[]> {
         return this.find(ObjectType.PARAGRAPH, position);
     }
 
@@ -621,7 +622,7 @@ export class PDFDancer {
             throw new ValidationException("Paragraph cannot be null");
         }
         if (!paragraph.getPosition()) {
-            throw new ValidationException("Paragraph position is null");
+            throw new ValidationException("Paragraph position is null, you need to specify a position for the new paragraph, using .at(x,y)");
         }
         if (paragraph.getPosition()!.pageIndex === undefined) {
             throw new ValidationException("Paragraph position page index is null");
@@ -807,11 +808,51 @@ export class PDFDancer {
 
         const objectType = objData.type as ObjectType;
 
+        if (this._isTextObjectData(objData, objectType)) {
+            return this._parseTextObjectRef(objData);
+        }
+
         return new ObjectRef(
             objData.internalId,
             position,
             objectType
         );
+    }
+
+    private _isTextObjectData(objData: any, objectType: ObjectType): boolean {
+        return objectType === ObjectType.PARAGRAPH ||
+            objectType === ObjectType.TEXT_LINE ||
+            typeof objData.text === 'string' ||
+            typeof objData.fontName === 'string' ||
+            Array.isArray(objData.children);
+    }
+
+    private _parseTextObjectRef(objData: any, fallbackId?: string): TextObjectRef {
+        const positionData = objData.position || {};
+        const position = positionData ? this._parsePosition(positionData) : new Position();
+
+        const objectType = (objData.type as ObjectType) ?? ObjectType.TEXT_LINE;
+        const lineSpacings = Array.isArray(objData.lineSpacings) ? objData.lineSpacings : null;
+        const internalId = objData.internalId ?? fallbackId ?? '';
+
+        const textObject = new TextObjectRef(
+            internalId,
+            position,
+            objectType,
+            typeof objData.text === 'string' ? objData.text : undefined,
+            typeof objData.fontName === 'string' ? objData.fontName : undefined,
+            typeof objData.fontSize === 'number' ? objData.fontSize : undefined,
+            lineSpacings
+        );
+
+        if (Array.isArray(objData.children) && objData.children.length > 0) {
+            textObject.children = objData.children.map((childData: any, index: number) => {
+                const childFallbackId = `${internalId || 'child'}-${index}`;
+                return this._parseTextObjectRef(childData, childFallbackId);
+            });
+        }
+
+        return textObject;
     }
 
     private _parseFormFieldRef(objData: any): FormFieldRef {
@@ -896,11 +937,11 @@ export class PDFDancer {
         return this.toParagraphObjects(await this.findParagraphs());
     }
 
-    private toParagraphObjects(objectRefs: ObjectRef[]) {
+    private toParagraphObjects(objectRefs: TextObjectRef[]) {
         return objectRefs.map(ref => ParagraphObject.fromRef(this, ref));
     }
 
-    private toTextLineObjects(objectRefs: ObjectRef[]) {
+    private toTextLineObjects(objectRefs: TextObjectRef[]) {
         return objectRefs.map(ref => TextLineObject.fromRef(this, ref));
     }
 

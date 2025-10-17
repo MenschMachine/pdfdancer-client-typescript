@@ -2,7 +2,7 @@
  * E2E tests for paragraph operations — new PDFDancer API
  */
 
-import {Color, PDFDancer} from '../../index';
+import {Color, PDFDancer, StandardFonts} from '../../index';
 import {getFontPath, readFontFixture, requireEnvAndFixture} from './test-helpers';
 import {expectWithin} from '../assertions';
 
@@ -213,5 +213,194 @@ describe('Paragraph E2E Tests (v2 API)', () => {
 
         expect(success).toBe(true);
         await assertNewParagraphExists(pdf);
+    });
+
+    test('add paragraph with standard font - Helvetica', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const success = await pdf.page(0).newParagraph()
+            .text('Standard Font Test\nHelvetica')
+            .font(StandardFonts.HELVETICA, 14)
+            .lineSpacing(1.2)
+            .at(100, 600)
+            .apply();
+
+        expect(success).toBe(true);
+        const lines = await pdf.page(0).selectTextLinesStartingWith('Standard Font Test');
+        expect(lines.length).toBeGreaterThanOrEqual(1);
+    });
+
+    test('add paragraph with standard font - Times Bold', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const success = await pdf.page(0).newParagraph()
+            .text('Times Bold Test')
+            .font(StandardFonts.TIMES_BOLD, 16)
+            .color(new Color(255, 0, 0))
+            .at(100, 550)
+            .apply();
+
+        expect(success).toBe(true);
+        const lines = await pdf.page(0).selectTextLinesStartingWith('Times Bold Test');
+        expect(lines.length).toBeGreaterThanOrEqual(1);
+    });
+
+    test('add paragraph with standard font - Courier', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const success = await pdf.page(0).newParagraph()
+            .text('Courier Monospace\nCode Example')
+            .font(StandardFonts.COURIER, 12)
+            .lineSpacing(1.5)
+            .at(100, 500)
+            .apply();
+
+        expect(success).toBe(true);
+        const lines = await pdf.page(0).selectTextLinesStartingWith('Courier Monospace');
+        expect(lines.length).toBeGreaterThanOrEqual(1);
+    });
+
+
+    test('modify paragraph without position', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const [para] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
+        let originalX = para.position.getX();
+        let originalY = para.position.getY();
+
+        await para.edit()
+            .replace('Modified with\nStandard Font')
+            .font(StandardFonts.HELVETICA_BOLD, 14)
+            .lineSpacing(1.3)
+            .apply();
+
+        const [newPara] = await pdf.page(0).selectParagraphsStartingWith('Modified with');
+        // TODO should be at the original position
+        expect(newPara.position.getX()).toBe(originalX);
+        expect(newPara.position.getY()).toBe(originalY);
+    });
+
+    test('modify paragraph without position and lineSpacing', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const [para] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
+        let originalX = para.position.getX();
+        let originalY = para.position.getY();
+
+        await para.edit()
+            .replace('Modified with\nStandard Font')
+            .font(StandardFonts.HELVETICA_BOLD, 14)
+            .apply();
+
+        const [newPara] = await pdf.page(0).selectParagraphsStartingWith('Modified with');
+        // TODO should be at the original position
+        expect(newPara.position.getX()).toBe(originalX);
+        expect(newPara.position.getY()).toBe(originalY);
+    });
+
+    test('modify paragraph only change font', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const [para] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
+        let originalX = para.position.getX();
+        let originalY = para.position.getY();
+
+        await para.edit()
+            .font(StandardFonts.HELVETICA_BOLD, 28)
+            .apply();
+
+        const [newPara] = await pdf.page(0).selectParagraphsStartingWith('Modified with');
+        // TODO should be at the original position
+        expect(newPara.position.getX()).toBe(originalX);
+        expect(newPara.position.getY()).toBe(originalY);
+    });
+
+    test('add paragraph without position', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        await expect(pdf.page(0).newParagraph()
+            .text('Courier Monospace\nCode Example')
+            .font(StandardFonts.COURIER, 12)
+            .lineSpacing(1.5)
+            .apply())
+            .rejects
+            .toThrow("Paragraph position is null, you need to specify a position for the new paragraph, using .at(x,y)");
+    });
+
+    test('modify paragraph to use standard font', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const [para] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
+
+        await para.edit()
+            .replace('Modified with\nStandard Font')
+            .font(StandardFonts.HELVETICA_BOLD, 14)
+            .lineSpacing(1.3)
+            .moveTo(100, 400)
+            .apply();
+
+        const lines = await pdf.page(0).selectTextLinesStartingWith('Modified with');
+        expect(lines.length).toBeGreaterThanOrEqual(1);
+    });
+
+    test('use all Times family standard fonts', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const timesFonts = [
+            StandardFonts.TIMES_ROMAN,
+            StandardFonts.TIMES_BOLD,
+            StandardFonts.TIMES_ITALIC,
+            StandardFonts.TIMES_BOLD_ITALIC
+        ];
+
+        for (let i = 0; i < timesFonts.length; i++) {
+            const success = await pdf.page(0).newParagraph()
+                .text(`Times Font ${i}`)
+                .font(timesFonts[i], 12)
+                .at(50, 700 - (i * 30))
+                .apply();
+            expect(success).toBe(true);
+        }
+
+        const lines = await pdf.page(0).selectTextLinesStartingWith('Times Font');
+        expect(lines.length).toBe(4);
+    });
+
+    test('use all Helvetica family standard fonts', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const helveticaFonts = [
+            StandardFonts.HELVETICA,
+            StandardFonts.HELVETICA_BOLD,
+            StandardFonts.HELVETICA_OBLIQUE,
+            StandardFonts.HELVETICA_BOLD_OBLIQUE
+        ];
+
+        for (let i = 0; i < helveticaFonts.length; i++) {
+            const success = await pdf.page(0).newParagraph()
+                .text(`Helvetica Font ${i}`)
+                .font(helveticaFonts[i], 12)
+                .at(200, 700 - (i * 30))
+                .apply();
+            expect(success).toBe(true);
+        }
+
+        const lines = await pdf.page(0).selectTextLinesStartingWith('Helvetica Font');
+        expect(lines.length).toBe(4);
+    });
+
+    test('Symbol and ZapfDingbats fonts are available as standard fonts', () => {
+        expect(StandardFonts.SYMBOL).toBe('Symbol');
+        expect(StandardFonts.ZAPF_DINGBATS).toBe('ZapfDingbats');
     });
 });

@@ -234,6 +234,52 @@ export class FormFieldRef extends ObjectRef {
     }
 }
 
+export class TextObjectRef extends ObjectRef {
+    private _text?: string;
+    private _fontName?: string;
+    private _fontSize?: number;
+    private _lineSpacings?: number[] | null;
+    private _children?: TextObjectRef[];
+
+    constructor(
+        internalId: string,
+        position: Position,
+        type: ObjectType,
+        text?: string,
+        fontName?: string,
+        fontSize?: number,
+        lineSpacings?: number[] | null,
+        children?: TextObjectRef[]
+    ) {
+        super(internalId, position, type);
+        this._text = text;
+        this._fontName = fontName;
+        this._fontSize = fontSize;
+        this._lineSpacings = lineSpacings;
+        this._children = children;
+    }
+
+    get text(): string | undefined {
+        return this._text;
+    }
+
+    get fontName(): string | undefined {
+        return this._fontName;
+    }
+
+    get fontSize(): number | undefined {
+        return this._fontSize;
+    }
+
+    get lineSpacings(): number[] | null | undefined {
+        return this._lineSpacings;
+    }
+
+    get children(): TextObjectRef[] | undefined {
+        return this._children;
+    }
+}
+
 /**
  * Represents an RGB color with optional alpha channel, values from 0-255.
  */
@@ -250,6 +296,27 @@ export class Color {
             }
         }
     }
+}
+
+/**
+ * Standard PDF fonts that are available in all PDF readers.
+ * These 14 fonts are guaranteed to be available without embedding.
+ */
+export enum StandardFonts {
+    TIMES_ROMAN = "Times-Roman",
+    TIMES_BOLD = "Times-Bold",
+    TIMES_ITALIC = "Times-Italic",
+    TIMES_BOLD_ITALIC = "Times-BoldItalic",
+    HELVETICA = "Helvetica",
+    HELVETICA_BOLD = "Helvetica-Bold",
+    HELVETICA_OBLIQUE = "Helvetica-Oblique",
+    HELVETICA_BOLD_OBLIQUE = "Helvetica-BoldOblique",
+    COURIER = "Courier",
+    COURIER_BOLD = "Courier-Bold",
+    COURIER_OBLIQUE = "Courier-Oblique",
+    COURIER_BOLD_OBLIQUE = "Courier-BoldOblique",
+    SYMBOL = "Symbol",
+    ZAPF_DINGBATS = "ZapfDingbats"
 }
 
 /**

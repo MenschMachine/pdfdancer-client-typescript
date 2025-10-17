@@ -18,6 +18,7 @@ export {
 export {
   ObjectRef,
   FormFieldRef,
+  TextObjectRef,
   Position,
   ObjectType,
   Font,
@@ -27,7 +28,8 @@ export {
   Paragraph,
   PositionMode,
   ShapeType,
-  Point
+  Point,
+  StandardFonts
 } from './models';
 
 export const VERSION = "1.0.0";

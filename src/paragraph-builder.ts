@@ -3,7 +3,7 @@
  */
 
 import {ValidationException} from './exceptions';
-import {Color, Font, ObjectRef, Paragraph, Position} from './models';
+import {Color, Font, ObjectRef, Paragraph, Position, TextObjectRef} from './models';
 import {PDFDancer} from "./pdfdancer_v1";
 
 // 👇 Internal view of PDFDancer methods, not exported
@@ -27,7 +27,7 @@ export class ParagraphBuilder {
     private _pageIndex: number;
     private _internals: PDFDancerInternals;
 
-    constructor(private _client: PDFDancer, private objectRefOrPageIndex?: ObjectRef | number) {
+    constructor(private _client: PDFDancer, private objectRefOrPageIndex?: TextObjectRef | number) {
         if (!_client) {
             throw new ValidationException("Client cannot be null");
         }
@@ -193,7 +193,7 @@ export class ParagraphBuilder {
 
     async apply() {
         if (!this._text) {
-            throw new ValidationException("Text must be set before building paragraph");
+            throw new ValidationException("A paragraph must have text. Set the text using .text()");
         }
         // Wait for all deferred operations (e.g., fontFile, images, etc.)
         if (this._pending.length) {
@@ -210,6 +210,12 @@ export class ParagraphBuilder {
             if (!this._font || !this._textColor) {
                 return await this._internals.modifyParagraph(this.objectRefOrPageIndex, this._text);
             } else {
+                if (!paragraph.position) {
+                    paragraph.position = this.objectRefOrPageIndex.position;
+                }
+                if (!this._text) {
+                    this._text = this.objectRefOrPageIndex.text;
+                }
                 return await this._internals.modifyParagraph(this.objectRefOrPageIndex, paragraph);
             }
         } else {

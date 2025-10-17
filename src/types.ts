@@ -1,4 +1,4 @@
-import {FormFieldRef, ObjectRef, ObjectType, Position} from "./models";
+import {FormFieldRef, ObjectRef, ObjectType, Position, TextObjectRef} from "./models";
 import {PDFDancer} from "./pdfdancer_v1";
 import {ParagraphBuilder} from "./paragraph-builder";
 
@@ -89,22 +89,89 @@ export class FormFieldObject extends BaseObject<FormFieldRef> {
 
 export class ParagraphObject extends BaseObject {
 
-    static fromRef(_client: PDFDancer, objectRef: ObjectRef) {
-        return new ParagraphObject(_client, objectRef.internalId, objectRef.type, objectRef.position);
+    private fontName: string | undefined;
+    private fontSize: number | undefined;
+    private lineSpacings: number[] | null | undefined;
+    private children: TextObjectRef[] | undefined;
+    private text: string | undefined;
+
+    static fromRef(_client: PDFDancer, objectRef: TextObjectRef) {
+        let paragraphObject = new ParagraphObject(_client, objectRef.internalId, objectRef.type, objectRef.position);
+        paragraphObject.setFontName(objectRef.fontName);
+        paragraphObject.setFontSize(objectRef.fontSize);
+        paragraphObject.setLineSpacings(objectRef.lineSpacings);
+        paragraphObject.setText(objectRef.text);
+        paragraphObject.setChildren(objectRef.children);
+        paragraphObject.ref = () => objectRef;
+        return paragraphObject;
     }
 
     edit() {
         return new ParagraphBuilder(this._client, this.ref());
     }
+
+    private setFontName(fontName: string | undefined) {
+        this.fontName = fontName;
+    }
+
+    private setFontSize(fontSize: number | undefined) {
+        this.fontSize = fontSize;
+    }
+
+    private setLineSpacings(lineSpacings: number[] | null | undefined) {
+        this.lineSpacings = lineSpacings;
+    }
+
+    private setText(text: string | undefined) {
+        this.text = text;
+    }
+
+    private setChildren(children: TextObjectRef[] | undefined) {
+        this.children = children;
+    }
 }
 
 export class TextLineObject extends BaseObject {
-    static fromRef(_client: PDFDancer, objectRef: ObjectRef) {
-        return new TextLineObject(_client, objectRef.internalId, objectRef.type, objectRef.position);
+
+    private fontName: string | undefined;
+    private fontSize: number | undefined;
+    private lineSpacings: number[] | null | undefined;
+    private children: TextObjectRef[] | undefined;
+    private text: string | undefined;
+
+    static fromRef(_client: PDFDancer, objectRef: TextObjectRef) {
+        let textLineObject = new TextLineObject(_client, objectRef.internalId, objectRef.type, objectRef.position);
+        textLineObject.setFontName(objectRef.fontName);
+        textLineObject.setFontSize(objectRef.fontSize);
+        textLineObject.setLineSpacings(objectRef.lineSpacings);
+        textLineObject.setText(objectRef.text);
+        textLineObject.setChildren(objectRef.children);
+        textLineObject.ref = () => objectRef;
+        return textLineObject;
     }
 
     edit() {
         return new TextLineBuilder(this._client, this.ref());
+    }
+
+    private setFontName(fontName: string | undefined) {
+        this.fontName = fontName;
+    }
+
+    private setFontSize(fontSize: number | undefined) {
+        this.fontSize = fontSize;
+    }
+
+    private setLineSpacings(lineSpacings: number[] | null | undefined) {
+        this.lineSpacings = lineSpacings;
+    }
+
+    private setText(text: string | undefined) {
+        this.text = text;
+    }
+
+    private setChildren(children: TextObjectRef[] | undefined) {
+        this.children = children;
     }
 }
 
