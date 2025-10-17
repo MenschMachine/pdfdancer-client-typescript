@@ -278,6 +278,10 @@ export class TextObjectRef extends ObjectRef {
     get children(): TextObjectRef[] | undefined {
         return this._children;
     }
+
+    set children(value: TextObjectRef[] | undefined) {
+        this._children = value;
+    }
 }
 
 /**

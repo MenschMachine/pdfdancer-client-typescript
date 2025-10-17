@@ -443,7 +443,7 @@ export class PDFDancer {
      * Searches for paragraph objects at the specified position.
      */
     private async findParagraphs(position?: Position): Promise<TextObjectRef[]> {
-        return this.find(ObjectType.PARAGRAPH, position);
+        return this.find(ObjectType.PARAGRAPH, position) as Promise<TextObjectRef[]>;
     }
 
     /**
@@ -490,8 +490,8 @@ export class PDFDancer {
     /**
      * Searches for text line objects at the specified position.
      */
-    private async findTextLines(position?: Position): Promise<ObjectRef[]> {
-        return this.find(ObjectType.TEXT_LINE, position);
+    private async findTextLines(position?: Position): Promise<TextObjectRef[]> {
+        return this.find(ObjectType.TEXT_LINE, position) as Promise<TextObjectRef[]>;
     }
 
     /**

@@ -87,7 +87,7 @@ export class FormFieldObject extends BaseObject<FormFieldRef> {
     }
 }
 
-export class ParagraphObject extends BaseObject {
+export class ParagraphObject extends BaseObject<TextObjectRef> {
 
     private fontName: string | undefined;
     private fontSize: number | undefined;
@@ -131,7 +131,7 @@ export class ParagraphObject extends BaseObject {
     }
 }
 
-export class TextLineObject extends BaseObject {
+export class TextLineObject extends BaseObject<TextObjectRef> {
 
     private fontName: string | undefined;
     private fontSize: number | undefined;

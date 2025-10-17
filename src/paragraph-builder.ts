@@ -192,9 +192,6 @@ export class ParagraphBuilder {
     }
 
     async apply() {
-        if (!this._text) {
-            throw new ValidationException("A paragraph must have text. Set the text using .text()");
-        }
         // Wait for all deferred operations (e.g., fontFile, images, etc.)
         if (this._pending.length) {
             await Promise.all(this._pending);
@@ -205,20 +202,24 @@ export class ParagraphBuilder {
             throw new ValidationException("Font registration is not complete");
         }
 
-        let paragraph = this.build();
-        if (this.objectRefOrPageIndex instanceof ObjectRef) {
+        if (this.objectRefOrPageIndex instanceof TextObjectRef) {
             if (!this._font || !this._textColor) {
-                return await this._internals.modifyParagraph(this.objectRefOrPageIndex, this._text);
+                return await this._internals.modifyParagraph(this.objectRefOrPageIndex, this._text!);
             } else {
-                if (!paragraph.position) {
-                    paragraph.position = this.objectRefOrPageIndex.position;
+                if (!this._text && !this.objectRefOrPageIndex?.text) {
+                    throw new ValidationException("A paragraph must have text. Set the text using .text()");
                 }
                 if (!this._text) {
                     this._text = this.objectRefOrPageIndex.text;
                 }
+                let paragraph = this.build();
+                if (!paragraph.position) {
+                    paragraph.position = this.objectRefOrPageIndex.position;
+                }
                 return await this._internals.modifyParagraph(this.objectRefOrPageIndex, paragraph);
             }
         } else {
+            let paragraph = this.build();
             return await this._internals.addParagraph(paragraph);
         }
     }

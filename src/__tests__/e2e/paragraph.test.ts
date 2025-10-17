@@ -315,7 +315,7 @@ describe('Paragraph E2E Tests (v2 API)', () => {
             .font(StandardFonts.HELVETICA_BOLD, 28)
             .apply();
 
-        const [newPara] = await pdf.page(0).selectParagraphsStartingWith('Modified with');
+        const [newPara] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
         // TODO should be at the original position
         expect(newPara.position.getX()).toBe(originalX);
         expect(newPara.position.getY()).toBe(originalY);
