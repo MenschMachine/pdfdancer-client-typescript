@@ -29,7 +29,8 @@ import {
     Position,
     PositionMode,
     ShapeType,
-    TextObjectRef
+    TextObjectRef,
+    Color
 } from './models';
 import {ParagraphBuilder} from './paragraph-builder';
 import {FormFieldObject, FormXObject, ImageObject, ParagraphObject, PathObject, TextLineObject} from "./types";
@@ -842,7 +843,9 @@ export class PDFDancer {
             typeof objData.text === 'string' ? objData.text : undefined,
             typeof objData.fontName === 'string' ? objData.fontName : undefined,
             typeof objData.fontSize === 'number' ? objData.fontSize : undefined,
-            lineSpacings
+            lineSpacings,
+            undefined,
+            this._parseColor(objData.color)
         );
 
         if (Array.isArray(objData.children) && objData.children.length > 0) {
@@ -853,6 +856,26 @@ export class PDFDancer {
         }
 
         return textObject;
+    }
+
+    private _parseColor(colorData: any): Color | undefined {
+        if (!colorData || typeof colorData !== 'object') {
+            return undefined;
+        }
+
+        const {red, green, blue, alpha} = colorData;
+
+        if (typeof red !== 'number' || typeof green !== 'number' || typeof blue !== 'number') {
+            return undefined;
+        }
+
+        const resolvedAlpha = typeof alpha === 'number' ? alpha : 255;
+
+        try {
+            return new Color(red, green, blue, resolvedAlpha);
+        } catch (_error) {
+            return undefined;
+        }
     }
 
     private _parseFormFieldRef(objData: any): FormFieldRef {

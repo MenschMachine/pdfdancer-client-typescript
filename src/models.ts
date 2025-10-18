@@ -240,6 +240,7 @@ export class TextObjectRef extends ObjectRef {
     private _fontSize?: number;
     private _lineSpacings?: number[] | null;
     private _children?: TextObjectRef[];
+    private _color?: Color;
 
     constructor(
         internalId: string,
@@ -249,7 +250,8 @@ export class TextObjectRef extends ObjectRef {
         fontName?: string,
         fontSize?: number,
         lineSpacings?: number[] | null,
-        children?: TextObjectRef[]
+        children?: TextObjectRef[],
+        color?: Color
     ) {
         super(internalId, position, type);
         this._text = text;
@@ -257,6 +259,7 @@ export class TextObjectRef extends ObjectRef {
         this._fontSize = fontSize;
         this._lineSpacings = lineSpacings;
         this._children = children;
+        this._color = color;
     }
 
     get text(): string | undefined {
@@ -281,6 +284,10 @@ export class TextObjectRef extends ObjectRef {
 
     set children(value: TextObjectRef[] | undefined) {
         this._children = value;
+    }
+
+    get color(): Color | undefined {
+        return this._color;
     }
 }
 

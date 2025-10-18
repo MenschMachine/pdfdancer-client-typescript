@@ -1,4 +1,4 @@
-import {FormFieldRef, ObjectRef, ObjectType, Position, TextObjectRef} from "./models";
+import {Color, FormFieldRef, ObjectRef, ObjectType, Position, TextObjectRef} from "./models";
 import {PDFDancer} from "./pdfdancer_v1";
 import {ParagraphBuilder} from "./paragraph-builder";
 
@@ -94,6 +94,7 @@ export class ParagraphObject extends BaseObject<TextObjectRef> {
     private lineSpacings: number[] | null | undefined;
     private children: TextObjectRef[] | undefined;
     private text: string | undefined;
+    private color: Color | undefined;
 
     static fromRef(_client: PDFDancer, objectRef: TextObjectRef) {
         let paragraphObject = new ParagraphObject(_client, objectRef.internalId, objectRef.type, objectRef.position);
@@ -102,6 +103,7 @@ export class ParagraphObject extends BaseObject<TextObjectRef> {
         paragraphObject.setLineSpacings(objectRef.lineSpacings);
         paragraphObject.setText(objectRef.text);
         paragraphObject.setChildren(objectRef.children);
+        paragraphObject.setColor(objectRef.color);
         paragraphObject.ref = () => objectRef;
         return paragraphObject;
     }
@@ -129,6 +131,10 @@ export class ParagraphObject extends BaseObject<TextObjectRef> {
     private setChildren(children: TextObjectRef[] | undefined) {
         this.children = children;
     }
+
+    private setColor(color: Color | undefined) {
+        this.color = color;
+    }
 }
 
 export class TextLineObject extends BaseObject<TextObjectRef> {
@@ -138,6 +144,7 @@ export class TextLineObject extends BaseObject<TextObjectRef> {
     private lineSpacings: number[] | null | undefined;
     private children: TextObjectRef[] | undefined;
     private text: string | undefined;
+    private color: Color | undefined;
 
     static fromRef(_client: PDFDancer, objectRef: TextObjectRef) {
         let textLineObject = new TextLineObject(_client, objectRef.internalId, objectRef.type, objectRef.position);
@@ -146,6 +153,7 @@ export class TextLineObject extends BaseObject<TextObjectRef> {
         textLineObject.setLineSpacings(objectRef.lineSpacings);
         textLineObject.setText(objectRef.text);
         textLineObject.setChildren(objectRef.children);
+        textLineObject.setColor(objectRef.color);
         textLineObject.ref = () => objectRef;
         return textLineObject;
     }
@@ -172,6 +180,10 @@ export class TextLineObject extends BaseObject<TextObjectRef> {
 
     private setChildren(children: TextObjectRef[] | undefined) {
         this.children = children;
+    }
+
+    private setColor(color: Color | undefined) {
+        this.color = color;
     }
 }
 
