@@ -863,6 +863,7 @@ export class PDFDancer {
             return undefined;
         }
 
+        // The API returns color as {red, green, blue, alpha}
         const {red, green, blue, alpha} = colorData;
 
         if (typeof red !== 'number' || typeof green !== 'number' || typeof blue !== 'number') {

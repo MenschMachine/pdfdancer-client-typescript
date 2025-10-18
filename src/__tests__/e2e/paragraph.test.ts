@@ -5,6 +5,7 @@
 import {Color, PDFDancer, StandardFonts} from '../../index';
 import {getFontPath, readFontFixture, requireEnvAndFixture} from './test-helpers';
 import {expectWithin} from '../assertions';
+import {PDFAssertions} from './pdf-assertions';
 
 describe('Paragraph E2E Tests (v2 API)', () => {
 
@@ -101,6 +102,13 @@ describe('Paragraph E2E Tests (v2 API)', () => {
             .apply()
 
         await assertNewParagraphExists(pdf);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertTextlineHasFont('Awesomely', 'Helvetica', 12, 0);
+        await assertions.assertTextlineHasFont('Obvious!', 'Helvetica', 12, 0);
+        await assertions.assertTextlineHasColor('Awesomely', new Color(255, 255, 255), 0);
+        await assertions.assertTextlineHasColor('Obvious!', new Color(255, 255, 255), 0);
+        await assertions.assertParagraphIsAt('Awesomely', 300.1, 500, 0);
     });
 
     test('modify paragraph (simple)', async () => {
@@ -110,6 +118,12 @@ describe('Paragraph E2E Tests (v2 API)', () => {
         const [para] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
         await para.edit().replace('Awesomely\nObvious!').apply();
         await assertNewParagraphExists(pdf);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertTextlineHasFont('Awesomely', 'IXKSWR+Poppins-Bold', 1, 0);
+        await assertions.assertTextlineHasFont('Obvious!', 'IXKSWR+Poppins-Bold', 1, 0);
+        await assertions.assertTextlineHasColor('Awesomely', new Color(255, 255, 255), 0);
+        await assertions.assertTextlineHasColor('Obvious!', new Color(255, 255, 255), 0);
     });
 
     test('add paragraph with missing font (expect error)', async () => {
@@ -399,8 +413,188 @@ describe('Paragraph E2E Tests (v2 API)', () => {
         expect(lines.length).toBe(4);
     });
 
+
+    test('modify paragraph with assertions', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const [para] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
+
+        await para.edit().replace('Awesomely\nObvious!')
+            .font("Helvetica", 12)
+            .lineSpacing(0.7)
+            .moveTo(300.1, 500)
+            .apply();
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertTextlineHasFont('Awesomely', 'Helvetica', 12, 0);
+        await assertions.assertTextlineHasFont('Obvious!', 'Helvetica', 12, 0);
+        await assertions.assertTextlineHasColor('Awesomely', new Color(255, 255, 255), 0);
+        await assertions.assertTextlineHasColor('Obvious!', new Color(255, 255, 255), 0);
+        await assertions.assertParagraphIsAt('Awesomely', 300.1, 500, 0);
+    });
+
+    test('modify paragraph without position', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const [para] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
+        let originalX = para.position.getX();
+        let originalY = para.position.getY();
+
+        await para.edit()
+            .replace('Awesomely\nObvious!')
+            .font('Helvetica', 12)
+            .lineSpacing(0.7)
+            .apply();
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertTextlineHasFont('Awesomely', 'Helvetica', 12, 0);
+        await assertions.assertTextlineHasFont('Obvious!', 'Helvetica', 12, 0);
+        await assertions.assertTextlineHasColor('Awesomely', new Color(255, 255, 255), 0);
+        await assertions.assertTextlineHasColor('Obvious!', new Color(255, 255, 255), 0);
+        await assertions.assertParagraphIsAt('Awesomely', originalX!, originalY!, 0);
+    });
+
+    test('modify paragraph without position and spacing', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const [para] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
+        let originalX = para.position.getX();
+        let originalY = para.position.getY();
+
+        await para.edit()
+            .replace('Awesomely\nObvious!')
+            .font('Helvetica', 12)
+            .apply();
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertTextlineHasFont('Awesomely', 'Helvetica', 12, 0);
+        await assertions.assertTextlineHasFont('Obvious!', 'Helvetica', 12, 0);
+        await assertions.assertTextlineHasColor('Awesomely', new Color(255, 255, 255), 0);
+        await assertions.assertTextlineHasColor('Obvious!', new Color(255, 255, 255), 0);
+        await assertions.assertParagraphIsAt('Awesomely', originalX!, originalY!, 0);
+    });
+
+    test('modify paragraph only font', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const [para] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
+
+        await para.edit()
+            .font('Helvetica', 28)
+            .apply();
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertTextlineHasFont('The Complete', 'Helvetica', 28, 0);
+        await assertions.assertTextlineHasColor('The Complete', new Color(255, 255, 255), 0);
+    });
+
+    test('modify paragraph only move', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const [para] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
+
+        await para.edit()
+            .moveTo(1, 1)
+            .apply();
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertTextlineHasFont('The Complete', 'IXKSWR+Poppins-Bold', 1, 0);
+        await assertions.assertTextlineIsAt('The Complete', 1, 1, 0, 0.22);
+        await assertions.assertTextlineHasColor('The Complete', new Color(255, 255, 255), 0);
+    });
+
+    test('modify paragraph simple', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const [para] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
+        await para.edit().replace('Awesomely\nObvious!').apply();
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertTextlineHasFont('Awesomely', 'IXKSWR+Poppins-Bold', 1, 0);
+        await assertions.assertTextlineHasFont('Obvious!', 'IXKSWR+Poppins-Bold', 1, 0);
+        await assertions.assertTextlineHasColor('Awesomely', new Color(255, 255, 255), 0);
+        await assertions.assertTextlineHasColor('Obvious!', new Color(255, 255, 255), 0);
+    });
+
+    test('add paragraph with standard font Times Roman', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        await pdf.page(0).newParagraph()
+            .text('Times Roman Test')
+            .font(StandardFonts.TIMES_ROMAN, 14)
+            .at(150, 150)
+            .apply();
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertTextHasFont('Times Roman Test', StandardFonts.TIMES_ROMAN, 14, 0);
+        await assertions.assertParagraphIsAt('Times Roman Test', 150, 150, 0);
+    });
+
+    test('add paragraph with standard font Courier Bold', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        await pdf.page(0).newParagraph()
+            .text('Courier Monospace\nCode Example')
+            .font(StandardFonts.COURIER_BOLD, 12)
+            .lineSpacing(1.5)
+            .at(200, 200)
+            .apply();
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertTextHasFont('Courier Monospace', StandardFonts.COURIER_BOLD, 12, 0);
+        await assertions.assertParagraphIsAt('Courier Monospace', 200, 200, 0);
+    });
+
+    test('paragraph color reading', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        await pdf.page(0).newParagraph()
+            .text('Red Color Test')
+            .font(StandardFonts.HELVETICA, 14)
+            .color(new Color(255, 0, 0))
+            .at(100, 100)
+            .apply();
+
+        await pdf.page(0).newParagraph()
+            .text('Blue Color Test')
+            .font(StandardFonts.HELVETICA, 14)
+            .color(new Color(0, 0, 255))
+            .at(100, 120)
+            .apply();
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertTextlineHasColor('Blue Color Test', new Color(0, 0, 255), 0);
+        await assertions.assertTextlineHasColor('Red Color Test', new Color(255, 0, 0), 0);
+    });
+
+    test('add paragraph to new page', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('Empty.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        await pdf.page(0).newParagraph()
+            .text('Awesome')
+            .font('Roboto-Regular', 14)
+            .at(50, 100)
+            .apply();
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertTextlineHasFontMatching('Awesome', 'Roboto-Regular', 14, 0);
+        await assertions.assertTextlineHasColor('Awesome', new Color(0, 0, 0), 0);
+        await assertions.assertParagraphIsAt('Awesome', 50, 100, 0);
+    });
+
     test('Symbol and ZapfDingbats fonts are available as standard fonts', () => {
         expect(StandardFonts.SYMBOL).toBe('Symbol');
         expect(StandardFonts.ZAPF_DINGBATS).toBe('ZapfDingbats');
     });
+
 });

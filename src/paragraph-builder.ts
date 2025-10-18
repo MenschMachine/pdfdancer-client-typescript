@@ -18,10 +18,11 @@ interface PDFDancerInternals {
  */
 export class ParagraphBuilder {
     private _paragraph: Paragraph;
-    private _lineSpacing: number = 1.2;
-    private _textColor: Color = new Color(0, 0, 0); // Black by default
+    private _lineSpacing?: number; // undefined initially, like Python's None
+    private _textColor?: Color;
     private _text?: string;
     private _font?: Font;
+    private _position?: Position; // Track if position was explicitly set
     private _pending: Promise<unknown>[] = [];
     private _registeringFont: boolean = false;
     private _pageIndex: number;
@@ -129,7 +130,8 @@ export class ParagraphBuilder {
             throw new ValidationException("Coordinates cannot be null or undefined");
         }
 
-        this._paragraph.setPosition(Position.atPageCoordinates(this._pageIndex, x, y));
+        this._position = Position.atPageCoordinates(this._pageIndex, x, y);
+        this._paragraph.setPosition(this._position);
         return this;
     }
 
@@ -143,13 +145,46 @@ export class ParagraphBuilder {
         }
         // Set paragraph properties
         this._paragraph.font = this._font;
-        this._paragraph.color = this._textColor;
-        this._paragraph.lineSpacing = this._lineSpacing;
+        this._paragraph.color = this._textColor ?? new Color(0, 0, 0);
+        this._paragraph.lineSpacing = this._lineSpacing ?? 1.2; // Default 1.2 like Python
 
         // Process text into lines
         this._paragraph.textLines = this._processTextLines(this._text);
 
         return this._paragraph;
+    }
+
+    // Python-style getter methods that preserve original values if not explicitly set
+    private _getLineSpacing(originalRef: TextObjectRef): number {
+        if (this._lineSpacing !== undefined) {
+            return this._lineSpacing;
+        } else if (originalRef.lineSpacings && originalRef.lineSpacings.length > 0) {
+            // Calculate average like Python does
+            const sum = originalRef.lineSpacings.reduce((a, b) => a + b, 0);
+            return sum / originalRef.lineSpacings.length;
+        } else {
+            return 1.2; // DEFAULT_LINE_SPACING
+        }
+    }
+
+    private _getFont(originalRef: TextObjectRef): Font {
+        if (this._font) {
+            return this._font;
+        } else if (originalRef.fontName && originalRef.fontSize) {
+            return new Font(originalRef.fontName, originalRef.fontSize);
+        } else {
+            throw new ValidationException("Font is required");
+        }
+    }
+
+    private _getColor(originalRef: TextObjectRef): Color {
+        if (this._textColor) {
+            return this._textColor;
+        } else if (originalRef.color) {
+            return originalRef.color;
+        } else {
+            return new Color(0, 0, 0); // DEFAULT_COLOR
+        }
     }
 
     /**
@@ -203,22 +238,29 @@ export class ParagraphBuilder {
         }
 
         if (this.objectRefOrPageIndex instanceof TextObjectRef) {
-            if (!this._font || !this._textColor) {
-                return await this._internals.modifyParagraph(this.objectRefOrPageIndex, this._text!);
+            // Modifying existing paragraph - match Python's ParagraphEdit.apply() logic
+            const originalRef = this.objectRefOrPageIndex;
+
+            // Python logic: if ONLY text is being changed (all other properties are None), use simple text modification
+            if (this._position === undefined &&
+                this._lineSpacing === undefined &&
+                this._font === undefined &&
+                this._textColor === undefined) {
+                // Simple text-only modification
+                return await this._internals.modifyParagraph(originalRef, this._text!);
             } else {
-                if (!this._text && !this.objectRefOrPageIndex?.text) {
-                    throw new ValidationException("A paragraph must have text. Set the text using .text()");
-                }
-                if (!this._text) {
-                    this._text = this.objectRefOrPageIndex.text;
-                }
-                let paragraph = this.build();
-                if (!paragraph.position) {
-                    paragraph.position = this.objectRefOrPageIndex.position;
-                }
-                return await this._internals.modifyParagraph(this.objectRefOrPageIndex, paragraph);
+                // Full paragraph modification - build new paragraph using getter methods to preserve original values
+                const newParagraph = new Paragraph();
+                newParagraph.position = this._position ?? originalRef.position;
+                newParagraph.lineSpacing = this._getLineSpacing(originalRef);
+                newParagraph.font = this._getFont(originalRef);
+                newParagraph.textLines = this._text ? this._processTextLines(this._text) : this._processTextLines(originalRef.text!);
+                newParagraph.color = this._getColor(originalRef);
+
+                return await this._internals.modifyParagraph(originalRef, newParagraph);
             }
         } else {
+            // Adding new paragraph
             let paragraph = this.build();
             return await this._internals.addParagraph(paragraph);
         }

@@ -485,7 +485,7 @@ export class AddRequest {
                     const textElement = {
                         text: line,
                         font: obj.font ? {name: obj.font.name, size: obj.font.size} : null,
-                        color: obj.color ? {r: obj.color.r, g: obj.color.g, b: obj.color.b} : null,
+                        color: obj.color ? {red: obj.color.r, green: obj.color.g, blue: obj.color.b, alpha: obj.color.a} : null,
                         position: obj.position ? positionToDict(obj.position) : null
                     };
 
@@ -494,7 +494,7 @@ export class AddRequest {
                     };
 
                     if (obj.color) {
-                        textLine.color = {r: obj.color.r, g: obj.color.g, b: obj.color.b};
+                        textLine.color = {red: obj.color.r, green: obj.color.g, blue: obj.color.b, alpha: obj.color.a};
                     }
                     if (obj.position) {
                         textLine.position = positionToDict(obj.position);
