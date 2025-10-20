@@ -4,6 +4,7 @@
 
 import {ObjectType, PDFDancer} from '../../index';
 import {requireEnvAndFixture} from './test-helpers';
+import {PDFAssertions} from './pdf-assertions';
 
 describe('Page E2E Tests', () => {
     // Tests should fail properly if environment is not configured
@@ -39,5 +40,8 @@ describe('Page E2E Tests', () => {
 
         const newPages = await client.pages();
         expect(newPages).toHaveLength(11);
+
+        const assertions = await PDFAssertions.create(client);
+        await assertions.assertPageCount(11);
     });
 });

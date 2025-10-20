@@ -4,6 +4,7 @@
 
 import {requireEnvAndFixture} from './test-helpers';
 import {PDFDancer} from "../../pdfdancer_v1";
+import {PDFAssertions} from './pdf-assertions';
 
 describe('Path E2E Tests (New API)', () => {
 
@@ -47,6 +48,10 @@ describe('Path E2E Tests (New API)', () => {
 
         const allPaths = await pdf.selectPaths();
         expect(allPaths).toHaveLength(8);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertNoPathAt(80, 720);
+        await assertions.assertNumberOfPaths(8);
     });
 
     test('move path', async () => {
@@ -67,5 +72,8 @@ describe('Path E2E Tests (New API)', () => {
         const movedPos = moved[0].position;
         expect(movedPos.getX()).toBeCloseTo(50.1, 1);
         expect(movedPos.getY()).toBeCloseTo(100, 1);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertPathIsAt('PATH_000001', 50.1, 100);
     });
 });

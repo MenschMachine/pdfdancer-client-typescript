@@ -6,6 +6,7 @@ import * as fs from 'fs';
 import {PDFDancer} from '../../index';
 import {createTempPath, requireEnvAndFixture} from './test-helpers';
 import {expectWithin} from '../assertions';
+import {PDFAssertions} from './pdf-assertions';
 
 describe('Text Line E2E Tests (v2 API)', () => {
 
@@ -73,6 +74,9 @@ describe('Text Line E2E Tests (v2 API)', () => {
         expect(fs.statSync(outPath).size).toBeGreaterThan(0);
 
         fs.unlinkSync(outPath);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertTextlineDoesNotExist('The Complete');
     });
 
     test('move line', async () => {
@@ -93,6 +97,9 @@ describe('Text Line E2E Tests (v2 API)', () => {
         expect(fs.statSync(outPath).size).toBeGreaterThan(0);
 
         fs.unlinkSync(outPath);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertTextlineIsAt('The Complete', newX, newY, 0, 0.25);
     });
 
     test('modify line', async () => {
@@ -117,5 +124,8 @@ describe('Text Line E2E Tests (v2 API)', () => {
         expect(containingParas.length).toBeGreaterThan(0);
 
         fs.unlinkSync(outPath);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertTextlineExists(' replaced ');
     });
 });

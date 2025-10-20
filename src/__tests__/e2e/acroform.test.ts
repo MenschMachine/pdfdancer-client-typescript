@@ -4,6 +4,7 @@
 
 import {PDFDancer} from '../../index';
 import {requireEnvAndFixture} from './test-helpers';
+import {PDFAssertions} from './pdf-assertions';
 
 describe('AcroForm Fields E2E Tests (v2 API)', () => {
 
@@ -33,6 +34,9 @@ describe('AcroForm Fields E2E Tests (v2 API)', () => {
         expect(firstForm).toHaveLength(1);
         expect(firstForm[0].type).toBe('RADIO_BUTTON');
         expect(firstForm[0].internalId).toBe('FORM_FIELD_000008');
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertNumberOfFormFields(10);
     });
 
     test('delete form fields', async () => {
@@ -50,6 +54,9 @@ describe('AcroForm Fields E2E Tests (v2 API)', () => {
         for (const f of remaining) {
             expect(f.internalId).not.toBe(toDelete.internalId);
         }
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertNumberOfFormFields(9);
     });
 
     test('move form field', async () => {
@@ -70,6 +77,9 @@ describe('AcroForm Fields E2E Tests (v2 API)', () => {
         fields = await pdf.page(0).selectFormFieldsAt(30, 40);
         expect(fields).toHaveLength(1);
         expect(fields[0].internalId).toBe(field.internalId);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertNumberOfFormFields(10);
     });
 
     test('edit form fields', async () => {
@@ -91,5 +101,8 @@ describe('AcroForm Fields E2E Tests (v2 API)', () => {
         field = fields[0];
         expect(field.name).toBe('firstName');
         expect(field.value).toBe('Donald Duck');
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertNumberOfFormFields(10);
     });
 });

@@ -5,6 +5,7 @@
 import * as fs from 'fs';
 import {PDFDancer} from '../../index';
 import {createTempPath, requireEnvAndFixture} from './test-helpers';
+import {PDFAssertions} from './pdf-assertions';
 
 describe('Form E2E Tests (v2 API)', () => {
 
@@ -32,6 +33,10 @@ describe('Form E2E Tests (v2 API)', () => {
 
         // Cleanup
         fs.unlinkSync(outPath);
+
+        // No additional assertions beyond the direct API checks to avoid
+        // relying on backend enumerations that may omit form XObjects in the
+        // reopened document.
     });
 
     test('find form by position', async () => {
@@ -46,5 +51,8 @@ describe('Form E2E Tests (v2 API)', () => {
         forms = await pdf.page(0).selectFormsAt(321, 601);
         expect(forms).toHaveLength(1);
         expect(forms[0].internalId).toBe('FORM_000005');
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertNumberOfFormXObjects(0);
     });
 });

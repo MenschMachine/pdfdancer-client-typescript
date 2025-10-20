@@ -112,6 +112,30 @@ export class ParagraphObject extends BaseObject<TextObjectRef> {
         return new ParagraphBuilder(this._client, this.ref());
     }
 
+    objectRef() {
+        return this.ref();
+    }
+
+    getText() {
+        return this.text;
+    }
+
+    getFontName() {
+        return this.fontName;
+    }
+
+    getFontSize() {
+        return this.fontSize;
+    }
+
+    getColor() {
+        return this.color;
+    }
+
+    getChildren() {
+        return this.children;
+    }
+
     private setFontName(fontName: string | undefined) {
         this.fontName = fontName;
     }
@@ -184,6 +208,30 @@ export class TextLineObject extends BaseObject<TextObjectRef> {
 
     private setColor(color: Color | undefined) {
         this.color = color;
+    }
+
+    objectRef() {
+        return this.ref();
+    }
+
+    getText() {
+        return this.text;
+    }
+
+    getFontName() {
+        return this.fontName;
+    }
+
+    getFontSize() {
+        return this.fontSize;
+    }
+
+    getColor() {
+        return this.color;
+    }
+
+    getChildren() {
+        return this.children;
     }
 }
 

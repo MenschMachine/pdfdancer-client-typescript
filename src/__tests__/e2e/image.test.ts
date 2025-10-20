@@ -6,6 +6,7 @@ import * as fs from 'fs';
 import {PDFDancer} from '../../index';
 import {createTempPath, getImagePath, requireEnvAndFixture} from './test-helpers';
 import {expectWithin} from '../assertions';
+import {PDFAssertions} from './pdf-assertions';
 
 describe('Image E2E Tests (v2 API)', () => {
 
@@ -26,21 +27,25 @@ describe('Image E2E Tests (v2 API)', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
 
         const images = await pdf.selectImages();
+        expect(images).toHaveLength(3);
         for (const img of images) {
             await img.delete();
         }
 
-        const remaining = await pdf.selectImages();
-        expect(remaining).toHaveLength(0);
+        expect(await pdf.selectImages()).toHaveLength(0);
 
         const outPath = createTempPath('deleteImage.pdf');
         const outData = await pdf.getBytes();
         fs.writeFileSync(outPath, outData);
-
         expect(fs.existsSync(outPath)).toBe(true);
         expect(fs.statSync(outPath).size).toBeGreaterThan(0);
-
         fs.unlinkSync(outPath);
+
+        const assertions = await PDFAssertions.create(pdf);
+        const pages = await pdf.pages();
+        for (const page of pages) {
+            await assertions.assertNumberOfImages(0, page.position.pageIndex);
+        }
     });
 
     test('move image', async () => {
@@ -50,14 +55,26 @@ describe('Image E2E Tests (v2 API)', () => {
         const images = await pdf.selectImages();
         const image = images[2];
 
-        expectWithin(image.position.boundingRect?.x, 54, 0.5);
-        expectWithin(image.position.boundingRect?.y, 300, 1);
+        const originalX = image.position.boundingRect?.x!;
+        const originalY = image.position.boundingRect?.y!;
+        const pageIndex = image.position.pageIndex!;
 
-        await image.moveTo(50.1, 100);
+        expectWithin(originalX, 54, 0.5);
+        expectWithin(originalY, 300, 1);
+        expect(pageIndex).toBe(11);
 
-        const moved = (await pdf.selectImages())[2];
-        expectWithin(moved.position.boundingRect?.x, 50.1, 0.05);
-        expectWithin(moved.position.boundingRect?.y, 100, 0.05);
+        const newX = 500.1;
+        const newY = 600.1;
+        await image.moveTo(newX, newY);
+
+        const moved = await pdf.page(pageIndex).selectImagesAt(newX, newY);
+        expect(moved).toHaveLength(1);
+        expectWithin(moved[0].position.boundingRect?.x, newX, 0.05);
+        expectWithin(moved[0].position.boundingRect?.y, newY, 0.05);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertImageAt(newX, newY, pageIndex);
+        await assertions.assertNoImageAt(originalX, originalY, pageIndex);
     });
 
     test('find image by position', async () => {
@@ -89,13 +106,8 @@ describe('Image E2E Tests (v2 API)', () => {
         const after = await pdf.selectImages();
         expect(after).toHaveLength(4);
 
-        const page6Images = await pdf.page(6).selectImages();
-        expect(page6Images).toHaveLength(1);
-
-        const added = page6Images[0];
-        expect(added.position.pageIndex).toBe(6);
-        expect(added.internalId).toBe('IMAGE_000004');
-        expectWithin(added.position.boundingRect?.x, 50.1, 0.05);
-        expectWithin(added.position.boundingRect?.y, 98.0, 0.05);
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertImageAt(50.1, 98.0, 6);
+        await assertions.assertNumberOfImages(1, 6);
     });
 });

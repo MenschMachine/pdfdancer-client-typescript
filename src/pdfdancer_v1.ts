@@ -79,6 +79,8 @@ class PageClient {
     type: ObjectType = ObjectType.PAGE;
     position: Position;
     internalId: string;
+    pageSize?: PageSize;
+    orientation?: Orientation;
     private _internals: PDFDancerInternals;
 
     constructor(client: PDFDancer, pageIndex: number, pageRef?: PageRef) {
@@ -86,12 +88,18 @@ class PageClient {
         this._pageIndex = pageIndex;
         this.internalId = pageRef?.internalId ?? `PAGE-${this._pageIndex}`;
         this.position = pageRef?.position ?? Position.atPage(this._pageIndex);
+        this.pageSize = pageRef?.pageSize;
+        this.orientation = pageRef?.orientation;
         // Cast to the internal interface to get access
         this._internals = this._client as unknown as PDFDancerInternals;
     }
 
     async selectPathsAt(x: number, y: number) {
         return this._internals.toPathObjects(await this._internals.findPaths(Position.atPageCoordinates(this._pageIndex, x, y)));
+    }
+
+    async selectPaths() {
+        return this._internals.toPathObjects(await this._internals.findPaths(Position.atPage(this._pageIndex)));
     }
 
     async selectImages() {
@@ -111,6 +119,8 @@ class PageClient {
         this._pageIndex = pageRef.position.pageIndex ?? targetPageIndex;
         this.position = pageRef.position;
         this.internalId = pageRef.internalId;
+        this.pageSize = pageRef.pageSize;
+        this.orientation = pageRef.orientation;
         return pageRef;
     }
 
