@@ -15,6 +15,8 @@ import {
     AddRequest,
     BoundingRect,
     ChangeFormFieldRequest,
+    Color,
+    CreatePdfRequest,
     DeleteRequest,
     FindRequest,
     Font,
@@ -23,14 +25,18 @@ import {
     ModifyRequest,
     ModifyTextRequest,
     MoveRequest,
+    MovePageRequest,
     ObjectRef,
     ObjectType,
+    PageRef,
+    PageSize,
+    PageSizeInput,
+    Orientation,
     Paragraph,
     Position,
     PositionMode,
     ShapeType,
-    TextObjectRef,
-    Color
+    TextObjectRef
 } from './models';
 import {ParagraphBuilder} from './paragraph-builder';
 import {FormFieldObject, FormXObject, ImageObject, ParagraphObject, PathObject, TextLineObject} from "./types";
@@ -46,8 +52,6 @@ interface PDFDancerInternals {
     toPathObjects(objectRefs: ObjectRef[]): PathObject[];
 
     toFormXObjects(objectRefs: ObjectRef[]): FormXObject[];
-
-    deletePage(objectRef: ObjectRef): Promise<boolean>;
 
     toTextLineObjects(objectRefs: ObjectRef[]): TextLineObject[];
 
@@ -77,11 +81,11 @@ class PageClient {
     internalId: string;
     private _internals: PDFDancerInternals;
 
-    constructor(client: PDFDancer, pageIndex: number) {
+    constructor(client: PDFDancer, pageIndex: number, pageRef?: PageRef) {
         this._client = client;
         this._pageIndex = pageIndex;
-        this.internalId = `PAGE-${this._pageIndex}`;
-        this.position = Position.atPage(this._pageIndex);
+        this.internalId = pageRef?.internalId ?? `PAGE-${this._pageIndex}`;
+        this.position = pageRef?.position ?? Position.atPage(this._pageIndex);
         // Cast to the internal interface to get access
         this._internals = this._client as unknown as PDFDancerInternals;
     }
@@ -98,12 +102,16 @@ class PageClient {
         return this._internals.toImageObjects(await this._internals._findImages(Position.atPageCoordinates(this._pageIndex, x, y)));
     }
 
-    async delete() {
-        return this._internals.deletePage(this.ref());
+    async delete(): Promise<boolean> {
+        return this._client.deletePage(this._pageIndex);
     }
 
-    private ref() {
-        return new ObjectRef(this.internalId, this.position, this.type);
+    async moveTo(targetPageIndex: number): Promise<PageRef> {
+        const pageRef = await this._client.movePage(this._pageIndex, targetPageIndex);
+        this._pageIndex = pageRef.position.pageIndex ?? targetPageIndex;
+        this.position = pageRef.position;
+        this.internalId = pageRef.internalId;
+        return pageRef;
     }
 
     // noinspection JSUnusedGlobalSymbols
@@ -244,6 +252,94 @@ export class PDFDancer {
     }
 
     /**
+     * Creates a new, blank PDF document with the specified parameters.
+     *
+     * @param options Configuration options for the new PDF
+     * @param options.pageSize Page size (default: "A4")
+     * @param options.orientation Page orientation (default: "PORTRAIT")
+     * @param options.initialPageCount Number of initial pages (default: 1)
+     * @param token Authentication token (optional, can use PDFDANCER_TOKEN env var)
+     * @param baseUrl Base URL for the PDFDancer API (optional)
+     * @param timeout Request timeout in milliseconds (default: 30000)
+     */
+    static async new(
+        options?: {
+            pageSize?: PageSizeInput;
+            orientation?: Orientation;
+            initialPageCount?: number;
+        },
+        token?: string,
+        baseUrl?: string,
+        timeout?: number
+    ): Promise<PDFDancer> {
+        const resolvedToken = token ?? process.env.PDFDANCER_TOKEN;
+        const resolvedBaseUrl =
+            baseUrl ??
+            process.env.PDFDANCER_BASE_URL ??
+            "https://api.pdfdancer.com";
+        const resolvedTimeout = timeout ?? 30000;
+
+        if (!resolvedToken) {
+            throw new Error("Missing PDFDancer token (pass it explicitly or set PDFDANCER_TOKEN in environment).");
+        }
+
+        let createRequest: CreatePdfRequest;
+        try {
+            createRequest = new CreatePdfRequest(
+                options?.pageSize ?? "A4",
+                options?.orientation ?? Orientation.PORTRAIT,
+                options?.initialPageCount ?? 1
+            );
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            throw new ValidationException(message);
+        }
+
+        try {
+            // Build URL ensuring no double slashes
+            const base = resolvedBaseUrl.replace(/\/+$/, '');
+            const endpoint = '/session/new'.replace(/^\/+/, '');
+            const url = `${base}/${endpoint}`;
+
+            // Make request to create endpoint
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${resolvedToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(createRequest.toDict()),
+                signal: resolvedTimeout > 0 ? AbortSignal.timeout(resolvedTimeout) : undefined
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new HttpClientException(`Failed to create new PDF: ${errorText}`, response);
+            }
+
+            const sessionId = (await response.text()).trim();
+
+            if (!sessionId) {
+                throw new SessionException("Server returned empty session ID");
+            }
+
+            const client = Object.create(PDFDancer.prototype) as PDFDancer;
+            client._token = resolvedToken.trim();
+            client._baseUrl = resolvedBaseUrl.replace(/\/+$/, '');
+            client._readTimeout = resolvedTimeout;
+            client._pdfBytes = new Uint8Array();
+            client._sessionId = sessionId;
+            return client;
+        } catch (error) {
+            if (error instanceof HttpClientException || error instanceof SessionException || error instanceof ValidationException) {
+                throw error;
+            }
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new HttpClientException(`Failed to create new PDF: ${errorMessage}`, undefined, error as Error);
+        }
+    }
+
+    /**
      * Process PDF data from various input types with strict validation.
      */
     private _processPdfData(pdfData: Uint8Array | File | ArrayBuffer): Uint8Array {
@@ -275,6 +371,16 @@ export class PDFDancer {
             }
             throw new PdfDancerException(`Failed to process PDF data: ${error}`, error as Error);
         }
+    }
+
+    /**
+     * Build a URL path ensuring no double slashes.
+     * Combines baseUrl and path while handling trailing/leading slashes.
+     */
+    private _buildUrl(path: string): string {
+        const base = this._baseUrl.replace(/\/+$/, '');
+        const endpoint = path.replace(/^\/+/, '');
+        return `${base}/${endpoint}`;
     }
 
     /**
@@ -335,7 +441,7 @@ export class PDFDancer {
                 formData.append('pdf', blob, 'document.pdf');
             }
 
-            const response = await fetch(`${this._baseUrl}/session/create`, {
+            const response = await fetch(this._buildUrl('/session/create'), {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${this._token}`
@@ -374,7 +480,7 @@ export class PDFDancer {
         data?: Record<string, any>,
         params?: Record<string, string>
     ): Promise<Response> {
-        const url = new URL(`${this._baseUrl}${path}`);
+        const url = new URL(this._buildUrl(path));
         if (params) {
             Object.entries(params).forEach(([key, value]) => {
                 url.searchParams.append(key, value);
@@ -512,16 +618,16 @@ export class PDFDancer {
     /**
      * Retrieves references to all pages in the PDF document.
      */
-    private async getPages(): Promise<ObjectRef[]> {
+    private async getPages(): Promise<PageRef[]> {
         const response = await this._makeRequest('POST', '/pdf/page/find');
         const pagesData = await response.json() as any[];
-        return pagesData.map((pageData: any) => this._parseObjectRef(pageData));
+        return pagesData.map((pageData: any) => this._parsePageRef(pageData));
     }
 
     /**
      * Retrieves a reference to a specific page by its page index.
      */
-    private async _getPage(pageIndex: number): Promise<ObjectRef | null> {
+    private async _getPage(pageIndex: number): Promise<PageRef | null> {
         if (pageIndex < 0) {
             throw new ValidationException(`Page index must be >= 0, got ${pageIndex}`);
         }
@@ -534,13 +640,62 @@ export class PDFDancer {
             return null;
         }
 
-        return this._parseObjectRef(pagesData[0]);
+        return this._parsePageRef(pagesData[0]);
+    }
+
+    /**
+     * Moves an existing page to a new index.
+     */
+    async movePage(pageIndex: number, targetPageIndex: number): Promise<PageRef> {
+        this._validatePageIndex(pageIndex, 'pageIndex');
+        this._validatePageIndex(targetPageIndex, 'targetPageIndex');
+
+        // Ensure the source page exists before attempting the move
+        await this._requirePageRef(pageIndex);
+
+        const request = new MovePageRequest(pageIndex, targetPageIndex).toDict();
+        const response = await this._makeRequest('PUT', '/pdf/page/move', request);
+        const success = await response.json() as boolean;
+
+        if (!success) {
+            throw new HttpClientException(`Failed to move page from ${pageIndex} to ${targetPageIndex}`, response);
+        }
+
+        // Fetch the page again at its new position for up-to-date metadata
+        return await this._requirePageRef(targetPageIndex);
+    }
+
+    /**
+     * Deletes the page at the specified index.
+     */
+    async deletePage(pageIndex: number): Promise<boolean> {
+        this._validatePageIndex(pageIndex, 'pageIndex');
+
+        const pageRef = await this._requirePageRef(pageIndex);
+        return this._deletePage(pageRef);
+    }
+
+    private _validatePageIndex(pageIndex: number, fieldName: string): void {
+        if (!Number.isInteger(pageIndex)) {
+            throw new ValidationException(`${fieldName} must be an integer, got ${pageIndex}`);
+        }
+        if (pageIndex < 0) {
+            throw new ValidationException(`${fieldName} must be >= 0, got ${pageIndex}`);
+        }
+    }
+
+    private async _requirePageRef(pageIndex: number): Promise<PageRef> {
+        const pageRef = await this._getPage(pageIndex);
+        if (!pageRef) {
+            throw new ValidationException(`Page not found at index ${pageIndex}`);
+        }
+        return pageRef;
     }
 
     /**
      * Deletes a page from the PDF document.
      */
-    private async deletePage(pageRef: ObjectRef): Promise<boolean> {
+    private async _deletePage(pageRef: ObjectRef): Promise<boolean> {
         if (!pageRef) {
             throw new ValidationException("Page reference cannot be null");
         }
@@ -745,7 +900,7 @@ export class PDFDancer {
             const blob = new Blob([fontData.buffer as ArrayBuffer], {type: 'font/ttf'});
             formData.append('ttfFile', blob, filename);
 
-            const response = await fetch(`${this._baseUrl}/font/register`, {
+            const response = await fetch(this._buildUrl('/font/register'), {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${this._token}`,
@@ -809,6 +964,10 @@ export class PDFDancer {
 
         const objectType = objData.type as ObjectType;
 
+        if (objectType === ObjectType.PAGE) {
+            return this._parsePageRef(objData);
+        }
+
         if (this._isTextObjectData(objData, objectType)) {
             return this._parseTextObjectRef(objData);
         }
@@ -856,6 +1015,55 @@ export class PDFDancer {
         }
 
         return textObject;
+    }
+
+    private _parsePageRef(objData: any): PageRef {
+        const positionData = objData.position || {};
+        const position = positionData ? this._parsePosition(positionData) : new Position();
+
+        const pageSize = this._parsePageSize(objData.pageSize);
+        const orientation = this._parseOrientation(objData.orientation);
+
+        return new PageRef(
+            objData.internalId,
+            position,
+            ObjectType.PAGE,
+            pageSize,
+            orientation
+        );
+    }
+
+    private _parsePageSize(pageSizeData: any): PageSize | undefined {
+        if (!pageSizeData || typeof pageSizeData !== 'object') {
+            return undefined;
+        }
+
+        const name = typeof pageSizeData.name === 'string' ? pageSizeData.name : undefined;
+        const width = typeof pageSizeData.width === 'number' ? pageSizeData.width : undefined;
+        const height = typeof pageSizeData.height === 'number' ? pageSizeData.height : undefined;
+
+        if (name === undefined && width === undefined && height === undefined) {
+            return undefined;
+        }
+
+        return {name, width, height};
+    }
+
+    private _parseOrientation(orientationData: any): Orientation | undefined {
+        if (typeof orientationData !== 'string') {
+            return undefined;
+        }
+
+        if (orientationData === Orientation.PORTRAIT || orientationData === Orientation.LANDSCAPE) {
+            return orientationData;
+        }
+
+        const normalized = orientationData.trim().toUpperCase();
+        if (normalized === Orientation.PORTRAIT || normalized === Orientation.LANDSCAPE) {
+            return normalized as Orientation;
+        }
+
+        return undefined;
     }
 
     private _parseColor(colorData: any): Color | undefined {
@@ -949,8 +1157,8 @@ export class PDFDancer {
     }
 
     async pages() {
-        let pageRefs = await this.getPages();
-        return pageRefs.map((_, pageIndex) => new PageClient(this, pageIndex));
+        const pageRefs = await this.getPages();
+        return pageRefs.map((pageRef, pageIndex) => new PageClient(this, pageIndex, pageRef));
     }
 
     private toFormFields(objectRefs: FormFieldRef[]) {

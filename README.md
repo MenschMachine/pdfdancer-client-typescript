@@ -2,6 +2,8 @@
 
 A TypeScript client library for the PDFDancer PDF manipulation API.
 
+Latest schema version available at  https://bucket.pdfdancer.com/api-doc/development-0.0.yml.
+
 ## Features
 
 - Session-based PDF manipulation with automatic session creation

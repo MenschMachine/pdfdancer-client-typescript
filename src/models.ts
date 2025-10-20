@@ -218,6 +218,43 @@ export class ObjectRef {
     }
 }
 
+export interface PageSize {
+    name?: string;
+    width?: number;
+    height?: number;
+}
+
+export const STANDARD_PAGE_SIZES: Record<string, {width: number; height: number}> = {
+    A4: {width: 595.0, height: 842.0},
+    LETTER: {width: 612.0, height: 792.0},
+    LEGAL: {width: 612.0, height: 1008.0},
+    TABLOID: {width: 792.0, height: 1224.0},
+    A3: {width: 842.0, height: 1191.0},
+    A5: {width: 420.0, height: 595.0}
+};
+
+export enum Orientation {
+    PORTRAIT = "PORTRAIT",
+    LANDSCAPE = "LANDSCAPE"
+}
+
+export class PageRef extends ObjectRef {
+    pageSize?: PageSize;
+    orientation?: Orientation;
+
+    constructor(
+        internalId: string,
+        position: Position,
+        type: ObjectType,
+        pageSize?: PageSize,
+        orientation?: Orientation
+    ) {
+        super(internalId, position, type);
+        this.pageSize = pageSize;
+        this.orientation = orientation;
+    }
+}
+
 /**
  * Represents a form field reference with name and value properties.
  * Extends ObjectRef to include form-specific properties.
@@ -577,6 +614,125 @@ export class ChangeFormFieldRequest {
                 type: this.formFieldRef.type
             },
             value: this.newValue
+        };
+    }
+}
+
+/**
+ * Request object for creating a new PDF document.
+ */
+export type PageSizeInput = string | PageSize | { name?: string; width?: number; height?: number };
+
+export class CreatePdfRequest {
+    private readonly _pageSize: PageSize;
+    private readonly _orientation: Orientation;
+    private readonly _initialPageCount: number;
+
+    constructor(
+        pageSize: PageSizeInput = "A4",
+        orientation: Orientation = Orientation.PORTRAIT,
+        initialPageCount: number = 1
+    ) {
+        this._pageSize = this.normalizePageSize(pageSize);
+        this._orientation = this.normalizeOrientation(orientation);
+        this._initialPageCount = this.normalizeInitialPageCount(initialPageCount);
+    }
+
+    toDict(): Record<string, any> {
+        return {
+            pageSize: this._pageSize,
+            orientation: this._orientation,
+            initialPageCount: this._initialPageCount
+        };
+    }
+
+    private normalizePageSize(input: PageSizeInput): PageSize {
+        const resolveStandardSize = (name: string): { width: number; height: number } | undefined => {
+            const normalized = name.trim().toUpperCase();
+            return STANDARD_PAGE_SIZES[normalized];
+        };
+
+        if (typeof input === 'string') {
+            const normalizedName = input.trim().toUpperCase();
+            const standard = resolveStandardSize(normalizedName);
+            if (!standard) {
+                throw new Error(`Unknown page size: ${input}`);
+            }
+            return {name: normalizedName, width: standard.width, height: standard.height};
+        }
+
+        const name = input.name ? input.name.trim().toUpperCase() : undefined;
+        const standard = name ? resolveStandardSize(name) : undefined;
+        const width = typeof input.width === 'number' ? input.width : standard?.width;
+        const height = typeof input.height === 'number' ? input.height : standard?.height;
+
+        if (width === undefined || height === undefined) {
+            throw new Error('Page size must include numeric width and height');
+        }
+
+        if (width <= 0 || height <= 0) {
+            throw new Error('Page size width and height must be positive numbers');
+        }
+
+        return {
+            name,
+            width,
+            height
+        };
+    }
+
+    private normalizeOrientation(orientation: Orientation): Orientation {
+        if (orientation !== Orientation.PORTRAIT && orientation !== Orientation.LANDSCAPE) {
+            throw new Error(`Invalid orientation: ${orientation}`);
+        }
+        return orientation;
+    }
+
+    private normalizeInitialPageCount(initialPageCount: number): number {
+        if (!Number.isInteger(initialPageCount)) {
+            throw new Error(`Initial page count must be an integer, got ${initialPageCount}`);
+        }
+        if (initialPageCount < 1) {
+            throw new Error(`Initial page count must be at least 1, got ${initialPageCount}`);
+        }
+        return initialPageCount;
+    }
+}
+
+/**
+ * Request object for adding a page to the PDF.
+ */
+export class AddPageRequest {
+    constructor(
+        public pageIndex: number,
+        public pageSize?: string,
+        public orientation?: string
+    ) {
+    }
+
+    toDict(): Record<string, any> {
+        return {
+            pageIndex: this.pageIndex,
+            pageSize: this.pageSize,
+            orientation: this.orientation
+        };
+    }
+}
+
+/**
+ * Request object for moving a page within the PDF.
+ */
+export class MovePageRequest {
+    constructor(
+        public fromPageIndex: number,
+        public toPageIndex: number
+    ) {
+    }
+
+    toDict(): Record<string, any> {
+        return {
+            fromPageIndex: this.fromPageIndex,
+            toPageIndex: this.toPageIndex
         };
     }
 }

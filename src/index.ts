@@ -18,6 +18,8 @@ export {
 export {
   ObjectRef,
   FormFieldRef,
+  PageRef,
+  PageSize,
   TextObjectRef,
   Position,
   ObjectType,
@@ -29,7 +31,8 @@ export {
   PositionMode,
   ShapeType,
   Point,
-  StandardFonts
+  StandardFonts,
+  Orientation
 } from './models';
 
 export const VERSION = "1.0.0";
