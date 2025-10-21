@@ -1,18 +1,28 @@
 # PDFDancer TypeScript Client
 
-A TypeScript client library for the PDFDancer PDF manipulation API.
+**Getting Started with PDFDancer**
 
-Latest schema version available at  https://bucket.pdfdancer.com/api-doc/development-0.0.yml.
+PDFDancer gives you pixel-perfect programmatic control over any PDF document from TypeScript. Locate existing elements by coordinates or text, adjust them precisely, add brand-new content, and ship the modified PDF in memory or on disk. The same API is also available for Python and Java, so teams can orchestrate identical PDF workflows across stacks.
 
-## Features
+> Need the raw API schema? The latest OpenAPI description is published at https://bucket.pdfdancer.com/api-doc/development-0.0.yml.
 
-- Session-based PDF manipulation with automatic session creation
-- Type-safe models and fluent builders for paragraphs and images
-- Page-scoped selectors for paragraphs, text lines, images, forms, and paths
-- Form filling helpers with field-name lookup
-- Custom font registration with on-the-fly TTF uploads
-- Detailed exceptions for validation, HTTP, and session errors
-- Works in both Node.js and browser environments
+## Highlights
+
+- Locate paragraphs, text lines, images, vector paths, form fields, and pages by index, coordinates, or text prefixes.
+- Edit existing content in place with fluent editors that apply changes safely.
+- Programmatically control third-party PDFs—modify invoices, contracts, and reports you did not author.
+- Add content with precise XY positioning using paragraph and image builders, custom fonts, and color helpers.
+- Export results as bytes for downstream processing or save directly to disk with one call.
+- Works in both Node.js and browser environments.
+
+## What Makes PDFDancer Different
+
+- **Edit any PDF**: Work with documents from customers, governments, or vendors—not just ones you generated.
+- **Pixel-perfect positioning**: Move or add elements at exact coordinates and keep the original layout intact.
+- **Surgical text replacement**: Swap or rewrite paragraphs without reflowing the rest of the page.
+- **Form manipulation**: Inspect, fill, and update AcroForm fields programmatically.
+- **Coordinate-based selection**: Select objects by position, bounding box, or text patterns.
+- **Real PDF editing**: Modify the underlying PDF structure instead of merely stamping overlays.
 
 ## Installation
 
@@ -20,36 +30,109 @@ Latest schema version available at  https://bucket.pdfdancer.com/api-doc/develop
 npm install pdfdancer-client-typescript
 ```
 
-## Quick Start
+Requires Node.js 18+ (or a modern browser) and a PDFDancer API token.
+
+## Quick Start — Edit an Existing PDF
 
 ```typescript
-import { PDFDancer, Color } from 'pdfdancer-client-typescript';
+import { PDFDancer, Color, StandardFonts } from 'pdfdancer-client-typescript';
 import { promises as fs } from 'node:fs';
 
 async function run() {
   const pdfBytes = await fs.readFile('input.pdf');
 
-  // Token defaults to PDFDANCER_TOKEN when omitted.
-  const pdf = await PDFDancer.open(pdfBytes, 'your-auth-token');
+  // Token defaults to PDFDANCER_TOKEN environment variable when omitted
+  const pdf = await PDFDancer.open(
+    pdfBytes,
+    'your-api-token',              // optional when PDFDANCER_TOKEN is set
+    'https://api.pdfdancer.com'    // optional base URL
+  );
 
-  const page0 = pdf.page(0); // Page indexes are zero-based
+  // Locate and update an existing paragraph
+  const heading = (await pdf.page(0).selectParagraphsStartingWith('Executive Summary'))[0];
+  await heading.moveTo(72, 680);
 
-  await page0.newParagraph()
-    .text('Hello, PDFDancer!')
-    .font('Roboto-Regular', 14)
-    .color(new Color(255, 64, 64))
-    .lineSpacing(1.1)
-    .at(100, 200)
+  const result = await heading.edit()
+    .replace('Overview')
     .apply();
 
-  const updated = await pdf.getBytes();
-  await fs.writeFile('output.pdf', updated);
+  // Add a new paragraph with precise placement
+  await pdf.page(0).newParagraph()
+    .text('Generated with PDFDancer')
+    .font(StandardFonts.HELVETICA, 12)
+    .color(new Color(70, 70, 70))
+    .lineSpacing(1.4)
+    .at(72, 520)
+    .apply();
+
+  // Persist the modified document
+  await pdf.save('output.pdf');
+  // or keep it in memory
+  const updatedBytes = await pdf.getBytes();
 }
 
 run().catch(console.error);
 ```
 
-## Authentication & Configuration
+## Create a Blank PDF
+
+```typescript
+import { PDFDancer, Color, StandardFonts } from 'pdfdancer-client-typescript';
+
+async function createNew() {
+  const pdf = await PDFDancer.new('your-api-token');
+
+  await pdf.page(0).newParagraph()
+    .text('Quarterly Summary')
+    .font(StandardFonts.TIMES_BOLD, 18)
+    .color(new Color(10, 10, 80))
+    .lineSpacing(1.2)
+    .at(72, 730)
+    .apply();
+
+  await pdf.newImage()
+    .fromFile('logo.png')
+    .at(0, 420, 710)
+    .add();
+
+  await pdf.save('summary.pdf');
+}
+
+createNew().catch(console.error);
+```
+
+## Work with Forms and Layout
+
+```typescript
+import { PDFDancer } from 'pdfdancer-client-typescript';
+
+async function workWithForms() {
+  const pdf = await PDFDancer.open('contract.pdf');
+
+  // Inspect global document structure
+  const pages = await pdf.pages();
+  console.log('Total pages:', pages.length);
+
+  // Update form fields
+  const signature = (await pdf.selectFieldsByName('signature'))[0];
+  await signature.fill('Signed by Jane Doe');
+
+  // Trim or move content at specific coordinates
+  const images = await pdf.page(1).selectImages();
+  for (const image of images) {
+    const x = image.position.boundingRect?.x;
+    if (x !== undefined && x < 100) {
+      await image.delete();
+    }
+  }
+
+  await pdf.save('contract-updated.pdf');
+}
+```
+
+Selectors return typed objects (`ParagraphObject`, `TextLineObject`, `ImageObject`, `FormFieldObject`, `PageRef`, …) with helpers such as `delete()`, `moveTo(x, y)`, or `edit()` depending on the object type.
+
+## Configuration
 
 ```typescript
 const pdf = await PDFDancer.open(
@@ -60,8 +143,9 @@ const pdf = await PDFDancer.open(
 );
 ```
 
-- Set `PDFDANCER_TOKEN` to avoid passing the token explicitly.
-- Override the API endpoint with `PDFDANCER_BASE_URL`.
+- Set `PDFDANCER_TOKEN` for authentication (preferred for local development and CI).
+- Override the API host with `PDFDANCER_BASE_URL` (e.g., sandbox environments).
+- Tune HTTP read timeouts via the `timeout` argument on `PDFDancer.open()` and `PDFDancer.new()`.
 - Page indexes start at `0` throughout the API.
 
 ## Working with Pages
@@ -114,16 +198,45 @@ await pdf.page(0).newParagraph()
 const [para] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
 
 if (para) {
-  await para.edit()
+  const result = await para.edit()
     .replace('Awesomely\nObvious!')
     .font('Helvetica', 12)
     .color(new Color(0, 0, 0))
     .moveTo(280, 460)
     .apply();
+
+  // Check for warnings (e.g., embedded font modifications)
+  if (typeof result === 'object' && result.warning) {
+    console.warn('Operation warning:', result.warning);
+  }
 }
 ```
 
+**Note:** When modifying text with embedded fonts, you may receive warnings. Embedded fonts have limited character sets, and modifying text may result in unrenderable characters. Consider using standard fonts when possible.
+
 `ParagraphBuilder` also supports `.fontFile(ttfBytes, size)` to register a custom font before applying.
+
+### Text Object Status
+
+Text objects (paragraphs and lines) include status information about their font and modification state:
+
+```typescript
+const lines = await pdf.page(0).selectTextLines();
+const line = lines[0];
+
+// Check text object status
+const status = line.objectRef().status;
+if (status) {
+  console.log('Font type:', status.getFontType());        // SYSTEM, STANDARD, or EMBEDDED
+  console.log('Is modified:', status.isModified());       // true if text was changed
+  console.log('Is encodable:', status.isEncodable());     // true if text can be rendered
+
+  // Get font recommendation if available
+  const recommendation = status.getFontRecommendation();
+  console.log('Recommended font:', recommendation.getFontName());
+  console.log('Similarity score:', recommendation.getSimilarityScore());
+}
+```
 
 ## Working with Images
 
@@ -165,6 +278,15 @@ await pdf.save('output.pdf'); // Node.js helper that writes the file
 `pdf.save` wraps `fs.writeFile` for convenience. In browsers, use the bytes returned by `getBytes()` with your own download logic.
 
 ## Error Handling
+
+Operations raise subclasses of `PdfDancerException`:
+
+- `ValidationException`: input validation problems (missing token, invalid coordinates, etc.).
+- `FontNotFoundException`: requested font unavailable on the service.
+- `HttpClientException`: transport or server errors with detailed context.
+- `SessionException`: session creation and lifecycle failures.
+
+Wrap automated workflows in `try/catch` blocks to surface actionable errors to your users:
 
 ```typescript
 import {
@@ -223,6 +345,39 @@ try {
 - `CIRCLE` - Circular area with radius
 - `RECT` - Rectangular area with width and height
 
+### FontType
+
+- `SYSTEM` - System fonts available on the local machine
+- `STANDARD` - Standard PDF fonts (14 built-in fonts)
+- `EMBEDDED` - Fonts embedded in the PDF document
+
+### Text Modification Results
+
+When modifying text objects (paragraphs or lines), the operation returns a `CommandResult`:
+
+```typescript
+interface CommandResult {
+  commandName: string;    // Name of the operation
+  elementId: string | null;  // ID of the affected element
+  message: string | null;    // Optional status message
+  success: boolean;          // Operation success status
+  warning: string | null;    // Warning message (e.g., embedded font issues)
+}
+```
+
+### Text Status
+
+Text objects include status information via `TextStatus`:
+
+```typescript
+interface TextStatus {
+  modified: boolean;           // Whether text has been modified
+  encodable: boolean;          // Whether text is encodable with current font
+  fontType: FontType;         // Type of font being used
+  fontRecommendation: FontRecommendation;  // Recommended alternative font
+}
+```
+
 ## Development
 
 ```bash
@@ -261,6 +416,11 @@ The project includes comprehensive end-to-end tests. To run them:
 
 The e2e suite covers paragraphs, pages, text lines, images, form fields, and path manipulation scenarios.
 
+## Related SDKs
+
+- Python client: https://github.com/MenschMachine/pdfdancer-client-python
+- Java client: https://github.com/MenschMachine/pdfdancer-client-java
+
 ## License
 
-MIT
+MIT © The Famous Cat Ltd.
