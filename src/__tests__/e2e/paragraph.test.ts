@@ -2,7 +2,7 @@
  * E2E tests for paragraph operations — new PDFDancer API
  */
 
-import {Color, PDFDancer, StandardFonts} from '../../index';
+import {Color, FontType, PDFDancer, StandardFonts} from '../../index';
 import {getFontPath, readFontFixture, requireEnvAndFixture} from './test-helpers';
 import {expectWithin} from '../assertions';
 import {PDFAssertions} from './pdf-assertions';
@@ -30,6 +30,11 @@ describe('Paragraph E2E Tests (v2 API)', () => {
         expect(last.position).toBeDefined();
         expectWithin(last.position.boundingRect?.x, 54, 1);
         expectWithin(last.position.boundingRect?.y, 496, 2);
+
+        expect(last.objectRef().status).toBeDefined();
+        expect(last.objectRef().status?.isEncodable()).toBe(true);
+        expect(last.objectRef().status?.getFontType()).toBe(FontType.EMBEDDED);
+        expect(last.objectRef().status?.isModified()).toBe(false);
     });
 
     test('find paragraphs by text', async () => {
@@ -103,6 +108,14 @@ describe('Paragraph E2E Tests (v2 API)', () => {
 
         await assertNewParagraphExists(pdf);
 
+        const movedParas = await pdf.page(0).selectParagraphsAt(300.1, 500);
+        expect(movedParas.length).toBeGreaterThan(0);
+        const moved = movedParas[0];
+        expect(moved.objectRef().status).toBeDefined();
+        expect(moved.objectRef().status?.isEncodable()).toBe(true);
+        expect(moved.objectRef().status?.getFontType()).toBe(FontType.STANDARD);
+        expect(moved.objectRef().status?.isModified()).toBe(true);
+
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextlineHasFont('Awesomely', 'Helvetica', 12, 0);
         await assertions.assertTextlineHasFont('Obvious!', 'Helvetica', 12, 0);
@@ -116,8 +129,22 @@ describe('Paragraph E2E Tests (v2 API)', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const [para] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
-        await para.edit().replace('Awesomely\nObvious!').apply();
+        const result = await para.edit().replace('Awesomely\nObvious!').apply();
+
+        // This should issue a warning about an embedded font modification
+        expect(typeof result).toBe('object');
+        expect((result as any).warning).toBeDefined();
+        expect((result as any).warning).toContain('You are using an embedded font and modified the text.');
+
         await assertNewParagraphExists(pdf);
+
+        const modifiedParas = await pdf.page(0).selectParagraphsStartingWith('Awesomely');
+        expect(modifiedParas.length).toBeGreaterThan(0);
+        const modified = modifiedParas[0];
+        expect(modified.objectRef().status).toBeDefined();
+        expect(modified.objectRef().status?.isEncodable()).toBe(true);
+        expect(modified.objectRef().status?.getFontType()).toBe(FontType.EMBEDDED);
+        expect(modified.objectRef().status?.isModified()).toBe(true);
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextlineHasFont('Awesomely', 'IXKSWR+Poppins-Bold', 1, 0);

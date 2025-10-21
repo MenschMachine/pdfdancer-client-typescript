@@ -3,12 +3,12 @@
  */
 
 import {ValidationException} from './exceptions';
-import {Color, Font, ObjectRef, Paragraph, Position, TextObjectRef} from './models';
+import {Color, CommandResult, Font, ObjectRef, Paragraph, Position, TextObjectRef} from './models';
 import {PDFDancer} from "./pdfdancer_v1";
 
 // 👇 Internal view of PDFDancer methods, not exported
 interface PDFDancerInternals {
-    modifyParagraph(objectRefOrPageIndex: ObjectRef, text: string | Paragraph): Promise<boolean>;
+    modifyParagraph(objectRefOrPageIndex: ObjectRef, text: string | Paragraph): Promise<CommandResult>;
 
     addParagraph(paragraph: Paragraph): Promise<boolean>;
 }
@@ -226,7 +226,7 @@ export class ParagraphBuilder {
         return lines;
     }
 
-    async apply() {
+    async apply(): Promise<boolean | CommandResult> {
         // Wait for all deferred operations (e.g., fontFile, images, etc.)
         if (this._pending.length) {
             await Promise.all(this._pending);
@@ -247,7 +247,11 @@ export class ParagraphBuilder {
                 this._font === undefined &&
                 this._textColor === undefined) {
                 // Simple text-only modification
-                return await this._internals.modifyParagraph(originalRef, this._text!);
+                const result = await this._internals.modifyParagraph(originalRef, this._text!);
+                if (result.warning) {
+                    process.stderr.write(`WARNING: ${result.warning}\n`);
+                }
+                return result;
             } else {
                 // Full paragraph modification - build new paragraph using getter methods to preserve original values
                 const newParagraph = new Paragraph();
@@ -257,7 +261,11 @@ export class ParagraphBuilder {
                 newParagraph.textLines = this._text ? this._processTextLines(this._text) : this._processTextLines(originalRef.text!);
                 newParagraph.color = this._getColor(originalRef);
 
-                return await this._internals.modifyParagraph(originalRef, newParagraph);
+                const result = await this._internals.modifyParagraph(originalRef, newParagraph);
+                if (result.warning) {
+                    process.stderr.write(`WARNING: ${result.warning}\n`);
+                }
+                return result;
             }
         } else {
             // Adding new paragraph

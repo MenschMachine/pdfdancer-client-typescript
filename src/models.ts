@@ -238,6 +238,66 @@ export enum Orientation {
     LANDSCAPE = "LANDSCAPE"
 }
 
+/**
+ * Font type classification from the PDF.
+ */
+export enum FontType {
+    SYSTEM = "SYSTEM",
+    STANDARD = "STANDARD",
+    EMBEDDED = "EMBEDDED"
+}
+
+/**
+ * Represents a font recommendation with similarity score.
+ */
+export class FontRecommendation {
+    constructor(
+        public fontName: string,
+        public fontType: FontType,
+        public similarityScore: number
+    ) {}
+
+    getFontName(): string {
+        return this.fontName;
+    }
+
+    getFontType(): FontType {
+        return this.fontType;
+    }
+
+    getSimilarityScore(): number {
+        return this.similarityScore;
+    }
+}
+
+/**
+ * Status information for text objects.
+ */
+export class TextStatus {
+    constructor(
+        public modified: boolean,
+        public encodable: boolean,
+        public fontType: FontType,
+        public fontRecommendation: FontRecommendation
+    ) {}
+
+    isModified(): boolean {
+        return this.modified;
+    }
+
+    isEncodable(): boolean {
+        return this.encodable;
+    }
+
+    getFontType(): FontType {
+        return this.fontType;
+    }
+
+    getFontRecommendation(): FontRecommendation {
+        return this.fontRecommendation;
+    }
+}
+
 export class PageRef extends ObjectRef {
     pageSize?: PageSize;
     orientation?: Orientation;
@@ -278,6 +338,7 @@ export class TextObjectRef extends ObjectRef {
     private _lineSpacings?: number[] | null;
     private _children?: TextObjectRef[];
     private _color?: Color;
+    private _status?: TextStatus;
 
     constructor(
         internalId: string,
@@ -288,7 +349,8 @@ export class TextObjectRef extends ObjectRef {
         fontSize?: number,
         lineSpacings?: number[] | null,
         children?: TextObjectRef[],
-        color?: Color
+        color?: Color,
+        status?: TextStatus
     ) {
         super(internalId, position, type);
         this._text = text;
@@ -297,6 +359,7 @@ export class TextObjectRef extends ObjectRef {
         this._lineSpacings = lineSpacings;
         this._children = children;
         this._color = color;
+        this._status = status;
     }
 
     get text(): string | undefined {
@@ -325,6 +388,14 @@ export class TextObjectRef extends ObjectRef {
 
     get color(): Color | undefined {
         return this._color;
+    }
+
+    get status(): TextStatus | undefined {
+        return this._status;
+    }
+
+    getStatus(): TextStatus | undefined {
+        return this._status;
     }
 }
 
@@ -734,6 +805,33 @@ export class MovePageRequest {
             fromPageIndex: this.fromPageIndex,
             toPageIndex: this.toPageIndex
         };
+    }
+}
+
+/**
+ * Result object returned by certain API endpoints indicating the outcome of an operation.
+ */
+export class CommandResult {
+    constructor(
+        public commandName: string,
+        public elementId: string | null,
+        public message: string | null,
+        public success: boolean,
+        public warning: string | null
+    ) {}
+
+    static fromDict(data: Record<string, any>): CommandResult {
+        return new CommandResult(
+            data.commandName || '',
+            data.elementId || null,
+            data.message || null,
+            data.success || false,
+            data.warning || null
+        );
+    }
+
+    static empty(commandName: string, elementId: string | null): CommandResult {
+        return new CommandResult(commandName, elementId, null, true, null);
     }
 }
 

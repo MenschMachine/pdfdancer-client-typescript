@@ -1,4 +1,4 @@
-import {Color, FormFieldRef, ObjectRef, ObjectType, Position, TextObjectRef} from "./models";
+import {Color, CommandResult, FormFieldRef, ObjectRef, ObjectType, Position, TextObjectRef} from "./models";
 import {PDFDancer} from "./pdfdancer_v1";
 import {ParagraphBuilder} from "./paragraph-builder";
 
@@ -10,7 +10,7 @@ interface PDFDancerInternals {
 
     changeFormField(formFieldRef: FormFieldRef, value: string): Promise<boolean>;
 
-    modifyTextLine(objectRef: ObjectRef, newText: string): Promise<boolean>;
+    modifyTextLine(objectRef: ObjectRef, newText: string): Promise<CommandResult>;
 }
 
 export class BaseObject<TRef extends ObjectRef = ObjectRef> {
@@ -255,6 +255,10 @@ class TextLineBuilder {
     }
 
     async apply() {
-        return await this._internals.modifyTextLine(this._objectRef, this._text!);
+        const result = await this._internals.modifyTextLine(this._objectRef, this._text!);
+        if (result.warning) {
+            process.stderr.write(`WARNING: ${result.warning}\n`);
+        }
+        return result;
     }
 }

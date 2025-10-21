@@ -16,10 +16,13 @@ import {
     BoundingRect,
     ChangeFormFieldRequest,
     Color,
+    CommandResult,
     CreatePdfRequest,
     DeleteRequest,
     FindRequest,
     Font,
+    FontRecommendation,
+    FontType,
     FormFieldRef,
     Image,
     ModifyRequest,
@@ -36,7 +39,8 @@ import {
     Position,
     PositionMode,
     ShapeType,
-    TextObjectRef
+    TextObjectRef,
+    TextStatus
 } from './models';
 import {ParagraphBuilder} from './paragraph-builder';
 import {FormFieldObject, FormXObject, ImageObject, ParagraphObject, PathObject, TextLineObject} from "./types";
@@ -814,31 +818,31 @@ export class PDFDancer {
     /**
      * Modifies a paragraph object or its text content.
      */
-    private async modifyParagraph(objectRef: ObjectRef, newParagraph: Paragraph | string): Promise<boolean> {
+    private async modifyParagraph(objectRef: ObjectRef, newParagraph: Paragraph | string): Promise<CommandResult> {
         if (!objectRef) {
             throw new ValidationException("Object reference cannot be null");
         }
         if (newParagraph === null || newParagraph === undefined) {
-            throw new ValidationException("New paragraph cannot be null");
+            return CommandResult.empty("ModifyParagraph", objectRef.internalId);
         }
 
         if (typeof newParagraph === 'string') {
-            // Text modification
+            // Text modification - returns CommandResult
             const requestData = new ModifyTextRequest(objectRef, newParagraph).toDict();
             const response = await this._makeRequest('PUT', '/pdf/text/paragraph', requestData);
-            return await response.json() as boolean;
+            return CommandResult.fromDict(await response.json());
         } else {
             // Object modification
             const requestData = new ModifyRequest(objectRef, newParagraph).toDict();
             const response = await this._makeRequest('PUT', '/pdf/modify', requestData);
-            return await response.json() as boolean;
+            return CommandResult.fromDict(await response.json());
         }
     }
 
     /**
      * Modifies a text line object.
      */
-    private async modifyTextLine(objectRef: ObjectRef, newText: string): Promise<boolean> {
+    private async modifyTextLine(objectRef: ObjectRef, newText: string): Promise<CommandResult> {
         if (!objectRef) {
             throw new ValidationException("Object reference cannot be null");
         }
@@ -848,7 +852,7 @@ export class PDFDancer {
 
         const requestData = new ModifyTextRequest(objectRef, newText).toDict();
         const response = await this._makeRequest('PUT', '/pdf/text/line', requestData);
-        return await response.json() as boolean;
+        return CommandResult.fromDict(await response.json());
     }
 
     // Font Operations
@@ -1005,6 +1009,32 @@ export class PDFDancer {
         const lineSpacings = Array.isArray(objData.lineSpacings) ? objData.lineSpacings : null;
         const internalId = objData.internalId ?? fallbackId ?? '';
 
+        // Parse status if present
+        let status: TextStatus | undefined;
+        const statusData = objData.status;
+        if (statusData && typeof statusData === 'object') {
+            // Parse font recommendation
+            const fontRecData = statusData.fontRecommendation;
+            let fontRec: FontRecommendation;
+            if (fontRecData && typeof fontRecData === 'object') {
+                fontRec = new FontRecommendation(
+                    fontRecData.fontName || '',
+                    (fontRecData.fontType as FontType) || FontType.SYSTEM,
+                    fontRecData.similarityScore || 0.0
+                );
+            } else {
+                // Create empty font recommendation if not provided
+                fontRec = new FontRecommendation('', FontType.SYSTEM, 0.0);
+            }
+
+            status = new TextStatus(
+                statusData.modified || false,
+                statusData.encodable !== undefined ? statusData.encodable : true,
+                (statusData.fontType as FontType) || FontType.SYSTEM,
+                fontRec
+            );
+        }
+
         const textObject = new TextObjectRef(
             internalId,
             position,
@@ -1014,7 +1044,8 @@ export class PDFDancer {
             typeof objData.fontSize === 'number' ? objData.fontSize : undefined,
             lineSpacings,
             undefined,
-            this._parseColor(objData.color)
+            this._parseColor(objData.color),
+            status
         );
 
         if (Array.isArray(objData.children) && objData.children.length > 0) {
