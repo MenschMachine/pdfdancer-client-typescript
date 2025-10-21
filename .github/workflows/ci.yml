@@ -33,5 +33,5 @@ jobs:
         run: npm run build
 
       - name: Run tests
-        run: npm run test:unit
+        run: PDFDANCER_BASE_URL=https://api.staging.pdfdancer.com PDFDANCER_TOKEN=42 npm run test
 
