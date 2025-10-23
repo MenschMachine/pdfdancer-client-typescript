@@ -27,14 +27,14 @@ import {
     Image,
     ModifyRequest,
     ModifyTextRequest,
-    MoveRequest,
     MovePageRequest,
+    MoveRequest,
     ObjectRef,
     ObjectType,
+    Orientation,
     PageRef,
     PageSize,
     PageSizeInput,
-    Orientation,
     Paragraph,
     Position,
     PositionMode,
@@ -225,15 +225,30 @@ export class PDFDancer {
     private constructor(
         token: string,
         pdfData: Uint8Array | File | ArrayBuffer,
-        baseUrl: string = "http://localhost:8080",
+        baseUrl: string | null = null,
         readTimeout: number = 30000
     ) {
+
         if (!token || !token.trim()) {
             throw new ValidationException("Authentication token cannot be null or empty");
         }
 
+
+        // Normalize baseUrl
+        const resolvedBaseUrl =
+            (baseUrl && baseUrl.trim()) ||
+            process.env.PDFDANCER_BASE_URL ||
+            "https://api.pdfdancer.com";
+
+        // Basic validation — ensures it's a valid absolute URL
+        try {
+            new URL(resolvedBaseUrl);
+        } catch {
+            throw new ValidationException(`Invalid base URL: ${resolvedBaseUrl}`);
+        }
+
         this._token = token.trim();
-        this._baseUrl = baseUrl.replace(/\/$/, ''); // Remove trailing slash
+        this._baseUrl = resolvedBaseUrl.replace(/\/$/, ''); // Remove trailing slash
         this._readTimeout = readTimeout;
 
         // Process PDF data with validation
