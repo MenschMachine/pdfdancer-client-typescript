@@ -30,7 +30,7 @@ PDFDancer gives you pixel-perfect programmatic control over any PDF document fro
 npm install pdfdancer-client-typescript
 ```
 
-Requires Node.js 18+ (or a modern browser) and a PDFDancer API token.
+Requires Node.js 20+ (or a modern browser) and a PDFDancer API token.
 
 ## Quick Start — Edit an Existing PDF
 
