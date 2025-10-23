@@ -273,7 +273,7 @@ export class PDFDancer {
         const resolvedTimeout = timeout ?? 30000;
 
         if (!resolvedToken) {
-            throw new Error("Missing PDFDancer token (pass it explicitly or set PDFDANCER_TOKEN in environment).");
+            throw new ValidationException("Missing PDFDancer API token. Pass a token via the `token` argument or set the PDFDANCER_TOKEN environment variable.");
         }
 
         const client = new PDFDancer(resolvedToken, pdfData, resolvedBaseUrl, resolvedTimeout);
@@ -309,7 +309,7 @@ export class PDFDancer {
         const resolvedTimeout = timeout ?? 30000;
 
         if (!resolvedToken) {
-            throw new Error("Missing PDFDancer token (pass it explicitly or set PDFDANCER_TOKEN in environment).");
+            throw new ValidationException("Missing PDFDancer token (pass it explicitly or set PDFDANCER_TOKEN in environment).");
         }
 
         let createRequest: CreatePdfRequest;
@@ -481,6 +481,16 @@ export class PDFDancer {
 
             if (!response.ok) {
                 const errorMessage = await this._extractErrorMessage(response);
+
+                if (response.status === 401 || response.status === 403) {
+                    const defaultMessage = "Authentication with the PDFDancer API failed. Confirm that your API token is valid, has not expired, and is authorized for the requested environment.";
+                    const normalized = errorMessage?.trim() ?? "";
+                    const message = normalized && normalized !== "Unauthorized" && normalized !== "Forbidden"
+                        ? normalized
+                        : defaultMessage;
+                    throw new ValidationException(message);
+                }
+
                 throw new HttpClientException(`Failed to create session: ${errorMessage}`, response);
             }
 
@@ -492,7 +502,7 @@ export class PDFDancer {
 
             return sessionId;
         } catch (error) {
-            if (error instanceof HttpClientException || error instanceof SessionException) {
+            if (error instanceof HttpClientException || error instanceof SessionException || error instanceof ValidationException) {
                 throw error;
             }
             const errorMessage = error instanceof Error ? error.message : String(error);
