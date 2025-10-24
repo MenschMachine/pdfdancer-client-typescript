@@ -51,7 +51,10 @@ import fs from "fs";
 import path from "node:path";
 
 // Debug flag - set to true to enable timing logs
-const DEBUG = true;
+const DEBUG =
+    (process.env.PDFDANCER_CLIENT_DEBUG ?? '').toLowerCase() === 'true' ||
+    (process.env.PDFDANCER_CLIENT_DEBUG ?? '') === '1' ||
+    (process.env.PDFDANCER_CLIENT_DEBUG ?? '').toLowerCase() === 'yes';
 
 /**
  * Generate a timestamp string in the format expected by the API.
