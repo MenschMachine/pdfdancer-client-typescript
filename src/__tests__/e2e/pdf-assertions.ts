@@ -91,7 +91,7 @@ export class PDFAssertions {
         expectWithin(reference.position.getX()!, x, epsilon);
         expectWithin(reference.position.getY()!, y, epsilon);
 
-        const byPosition = await this.pdf.page(page).selectParagraphsAt(x, y);
+        const byPosition = await this.pdf.page(page).selectParagraphsAt(x, y, epsilon);
         expect(byPosition.length).toBeGreaterThan(0);
         return this;
     }
@@ -151,7 +151,7 @@ export class PDFAssertions {
         const reference = lines[0].objectRef();
         expectWithin(reference.position.getX()!, x, epsilon);
         expectWithin(reference.position.getY()!, y, epsilon);
-        const byPosition = await this.pdf.page(page).selectTextLinesAt(x, y);
+        const byPosition = await this.pdf.page(page).selectTextLinesAt(x, y, epsilon);
         expect(byPosition.length).toBeGreaterThan(0);
         return this;
     }
@@ -185,7 +185,7 @@ export class PDFAssertions {
     }
 
     async assertImageAt(x: number, y: number, page = 0): Promise<this> {
-        const images = await this.pdf.page(page).selectImagesAt(x, y);
+        const images = await this.pdf.page(page).selectImagesAt(x, y, 0.1);
         expect(images.length).toBe(1);
         return this;
     }

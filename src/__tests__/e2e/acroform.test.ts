@@ -30,7 +30,7 @@ describe('AcroForm Fields E2E Tests (v2 API)', () => {
         const firstPageFields = await pdf.page(0).selectFormFields();
         expect(firstPageFields).toHaveLength(10);
 
-        const firstForm = await pdf.page(0).selectFormFieldsAt(290, 460);
+        const firstForm = await pdf.page(0).selectFormFieldsAt(280, 455, 1);
         expect(firstForm).toHaveLength(1);
         expect(firstForm[0].type).toBe('RADIO_BUTTON');
         expect(firstForm[0].internalId).toBe('FORM_FIELD_000008');
@@ -63,7 +63,7 @@ describe('AcroForm Fields E2E Tests (v2 API)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('mixed-form-types.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        let fields = await pdf.page(0).selectFormFieldsAt(290, 460);
+        let fields = await pdf.page(0).selectFormFieldsAt(280, 455, 1);
         expect(fields).toHaveLength(1);
         const field = fields[0];
         expect(Math.abs((field.position.getX() ?? 0) - 280)).toBeLessThan(0.1);
@@ -71,10 +71,10 @@ describe('AcroForm Fields E2E Tests (v2 API)', () => {
 
         await field.moveTo(30, 40);
 
-        fields = await pdf.page(0).selectFormFieldsAt(290, 460);
+        fields = await pdf.page(0).selectFormFieldsAt(280, 455, 1);
         expect(fields).toHaveLength(0);
 
-        fields = await pdf.page(0).selectFormFieldsAt(30, 40);
+        fields = await pdf.page(0).selectFormFieldsAt(30, 40, 1);
         expect(fields).toHaveLength(1);
         expect(fields[0].internalId).toBe(field.internalId);
 

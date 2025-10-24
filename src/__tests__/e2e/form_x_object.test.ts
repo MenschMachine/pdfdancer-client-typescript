@@ -48,7 +48,7 @@ describe('Form E2E Tests (v2 API)', () => {
         expect(forms).toHaveLength(0);
 
         // Page 0, position (321,601) — expect a form
-        forms = await pdf.page(0).selectFormsAt(321, 601);
+        forms = await pdf.page(0).selectFormsAt(321, 601, 1);
         expect(forms).toHaveLength(1);
         expect(forms[0].internalId).toBe('FORM_000005');
 

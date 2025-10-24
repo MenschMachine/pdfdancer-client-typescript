@@ -84,7 +84,7 @@ describe('Image E2E Tests (v2 API)', () => {
         const none = await pdf.page(11).selectImagesAt(0, 0);
         expect(none).toHaveLength(0);
 
-        const found = await pdf.page(11).selectImagesAt(55, 310);
+        const found = await pdf.page(11).selectImagesAt(54, 300, 1);
         expect(found).toHaveLength(1);
         expect(found[0].internalId).toBe('IMAGE_000003');
     });

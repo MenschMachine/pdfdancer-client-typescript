@@ -82,6 +82,7 @@ class PositioningError extends Error {
  */
 export class Position {
     public name?: string;
+    public tolerance?: number;
 
     constructor(
         public pageIndex?: number,
@@ -102,9 +103,12 @@ export class Position {
 
     /**
      * Creates a position specification for specific coordinates on a page.
+     * @param tolerance Optional tolerance in points for coordinate matching (default: 0)
      */
-    static atPageCoordinates(pageIndex: number, x: number, y: number): Position {
-        return Position.atPage(pageIndex).atCoordinates({x, y});
+    static atPageCoordinates(pageIndex: number, x: number, y: number, tolerance: number = 0): Position {
+        const pos = Position.atPage(pageIndex).atCoordinates({x, y});
+        pos.tolerance = tolerance;
+        return pos;
     }
 
     static atPageWithText(pageIndex: number, text: string) {

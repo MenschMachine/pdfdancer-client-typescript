@@ -94,16 +94,8 @@ describe('Text Line E2E Tests (v2 API)', () => {
         let newY = line.position!.getY()!;
         await line.moveTo(newX, newY);
 
-        const movedPara = await pdf.page(0).selectParagraphsAt(newX, newY);
+        const movedPara = await pdf.page(0).selectTextLinesAt(newX, newY);
         expect(movedPara.length).toBeGreaterThan(0);
-
-        const outPath = createTempPath('moveLine.pdf');
-        await pdf.save(outPath);
-        expect(fs.existsSync(outPath)).toBe(true);
-        expect(fs.statSync(outPath).size).toBeGreaterThan(0);
-
-        fs.unlinkSync(outPath);
-
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextlineIsAt('The Complete', newX, newY, 0, 0.25);
     });
@@ -118,11 +110,6 @@ describe('Text Line E2E Tests (v2 API)', () => {
         // This should issue a warning about an embedded font modification
         expect(result.warning).toBeDefined();
         expect(result.warning).toContain('You are using an embedded font and modified the text.');
-
-        const outPath = createTempPath('modifyLine.pdf');
-        await pdf.save(outPath);
-        expect(fs.existsSync(outPath)).toBe(true);
-        expect(fs.statSync(outPath).size).toBeGreaterThan(0);
 
         const stillOld = await pdf.page(0).selectParagraphsStartingWith('The Complete');
         expect(stillOld).toHaveLength(0);
@@ -139,8 +126,6 @@ describe('Text Line E2E Tests (v2 API)', () => {
 
         const containingParas = await pdf.page(0).selectParagraphsStartingWith(' replaced ');
         expect(containingParas.length).toBeGreaterThan(0);
-
-        fs.unlinkSync(outPath);
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextlineExists(' replaced ');

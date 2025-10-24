@@ -85,7 +85,7 @@ describe('Paragraph E2E Tests (v2 API)', () => {
         const [para] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
         await para.moveTo(0.1, 300);
 
-        const moved = await pdf.page(0).selectParagraphsAt(0.1, 300);
+        const moved = await pdf.page(0).selectParagraphsAt(0.1, 300, 1);
         expect(moved.length).toBeGreaterThan(0);
     });
 

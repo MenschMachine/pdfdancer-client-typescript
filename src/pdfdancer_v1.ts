@@ -100,8 +100,8 @@ class PageClient {
         this._internals = this._client as unknown as PDFDancerInternals;
     }
 
-    async selectPathsAt(x: number, y: number) {
-        return this._internals.toPathObjects(await this._internals.findPaths(Position.atPageCoordinates(this._pageIndex, x, y)));
+    async selectPathsAt(x: number, y: number, tolerance: number = 0) {
+        return this._internals.toPathObjects(await this._internals.findPaths(Position.atPageCoordinates(this._pageIndex, x, y, tolerance)));
     }
 
     async selectPaths() {
@@ -112,8 +112,8 @@ class PageClient {
         return this._internals.toImageObjects(await this._internals._findImages(Position.atPage(this._pageIndex)));
     }
 
-    async selectImagesAt(x: number, y: number) {
-        return this._internals.toImageObjects(await this._internals._findImages(Position.atPageCoordinates(this._pageIndex, x, y)));
+    async selectImagesAt(x: number, y: number, tolerance: number = 0) {
+        return this._internals.toImageObjects(await this._internals._findImages(Position.atPageCoordinates(this._pageIndex, x, y, tolerance)));
     }
 
     async delete(): Promise<boolean> {
@@ -135,16 +135,16 @@ class PageClient {
         return this._internals.toFormXObjects(await this._internals.findFormXObjects(Position.atPage(this._pageIndex)));
     }
 
-    async selectFormsAt(x: number, y: number) {
-        return this._internals.toFormXObjects(await this._internals.findFormXObjects(Position.atPageCoordinates(this._pageIndex, x, y)));
+    async selectFormsAt(x: number, y: number, tolerance: number = 0) {
+        return this._internals.toFormXObjects(await this._internals.findFormXObjects(Position.atPageCoordinates(this._pageIndex, x, y, tolerance)));
     }
 
     async selectFormFields() {
         return this._internals.toFormFields(await this._internals.findFormFields(Position.atPage(this._pageIndex)));
     }
 
-    async selectFormFieldsAt(x: number, y: number) {
-        return this._internals.toFormFields(await this._internals.findFormFields(Position.atPageCoordinates(this._pageIndex, x, y)));
+    async selectFormFieldsAt(x: number, y: number, tolerance: number = 0) {
+        return this._internals.toFormFields(await this._internals.findFormFields(Position.atPageCoordinates(this._pageIndex, x, y, tolerance)));
     }
 
     // noinspection JSUnusedGlobalSymbols
@@ -170,8 +170,8 @@ class PageClient {
         return this._internals.toParagraphObjects(await this._internals.findParagraphs(pos));
     }
 
-    async selectParagraphsAt(x: number, y: number) {
-        return this._internals.toParagraphObjects(await this._internals.findParagraphs(Position.atPageCoordinates(this._pageIndex, x, y)));
+    async selectParagraphsAt(x: number, y: number, tolerance: number = 0) {
+        return this._internals.toParagraphObjects(await this._internals.findParagraphs(Position.atPageCoordinates(this._pageIndex, x, y, tolerance)));
     }
 
     async selectTextLinesStartingWith(text: string) {
@@ -199,8 +199,8 @@ class PageClient {
     }
 
     // noinspection JSUnusedGlobalSymbols
-    async selectTextLinesAt(x: number, y: number) {
-        return this._internals.toTextLineObjects(await this._internals.findTextLines(Position.atPageCoordinates(this._pageIndex, x, y)));
+    async selectTextLinesAt(x: number, y: number, tolerance: number = 0) {
+        return this._internals.toTextLineObjects(await this._internals.findTextLines(Position.atPageCoordinates(this._pageIndex, x, y, tolerance)));
     }
 
     /**
@@ -226,6 +226,10 @@ export class PDFDancer {
     private _readTimeout: number;
     private _pdfBytes: Uint8Array;
     private _sessionId!: string;
+
+    // Snapshot caches for optimizing find operations
+    private _documentSnapshotCache: DocumentSnapshot | null = null;
+    private _pageSnapshotCache: Map<number, PageSnapshot> = new Map();
 
     /**
      * Creates a new client with PDF data.
@@ -263,6 +267,10 @@ export class PDFDancer {
 
         // Process PDF data with validation
         this._pdfBytes = this._processPdfData(pdfData);
+
+        // Initialize caches
+        this._documentSnapshotCache = null;
+        this._pageSnapshotCache = new Map();
     }
 
     /**
@@ -368,6 +376,9 @@ export class PDFDancer {
             client._readTimeout = resolvedTimeout;
             client._pdfBytes = new Uint8Array();
             client._sessionId = sessionId;
+            // Initialize caches
+            client._documentSnapshotCache = null;
+            client._pageSnapshotCache = new Map();
             return client;
         } catch (error) {
             if (error instanceof HttpClientException || error instanceof SessionException || error instanceof ValidationException) {
@@ -586,13 +597,43 @@ export class PDFDancer {
      * Searches for PDF objects matching the specified criteria.
      * This method provides flexible search capabilities across all PDF content,
      * allowing filtering by object type and position constraints.
+     *
+     * Now uses snapshot caching for better performance.
      */
     private async find(objectType?: ObjectType, position?: Position): Promise<ObjectRef[]> {
-        const requestData = new FindRequest(objectType, position).toDict();
-        const response = await this._makeRequest('POST', '/pdf/find', requestData);
+        // Determine if we should use snapshot or fall back to HTTP
+        // For paths with coordinates, we need to use HTTP (backend requirement)
+        const isPathWithCoordinates = objectType === ObjectType.PATH &&
+                                      position?.shape === ShapeType.POINT;
 
-        const objectsData = await response.json() as any[];
-        return objectsData.map((objData: any) => this._parseObjectRef(objData));
+        if (isPathWithCoordinates) {
+            // Fall back to HTTP for path coordinate queries
+            const requestData = new FindRequest(objectType, position).toDict();
+            const response = await this._makeRequest('POST', '/pdf/find', requestData);
+            const objectsData = await response.json() as any[];
+            return objectsData.map((objData: any) => this._parseObjectRef(objData));
+        }
+
+        // Use snapshot-based search
+        let elements: ObjectRef[];
+
+        if (position?.pageIndex !== undefined) {
+            // Page-specific query - use page snapshot
+            const pageSnapshot = await this._getOrFetchPageSnapshot(position.pageIndex);
+            elements = pageSnapshot.elements;
+        } else {
+            // Document-wide query - use document snapshot
+            const docSnapshot = await this._getOrFetchDocumentSnapshot();
+            elements = docSnapshot.getAllElements();
+        }
+
+        // Filter by object type
+        if (objectType) {
+            elements = elements.filter(el => el.type === objectType);
+        }
+
+        // Apply position-based filtering
+        return this._filterByPosition(elements, position);
     }
 
     /**
@@ -653,13 +694,34 @@ export class PDFDancer {
     /**
      * Searches for form fields at the specified position.
      * Returns FormFieldRef objects with name and value properties.
+     *
+     * Now uses snapshot caching for better performance.
      */
     private async findFormFields(position?: Position): Promise<FormFieldRef[]> {
-        const requestData = new FindRequest(ObjectType.FORM_FIELD, position).toDict();
-        const response = await this._makeRequest('POST', '/pdf/find', requestData);
+        // Use snapshot-based search
+        let elements: ObjectRef[];
 
-        const objectsData = await response.json() as any[];
-        return objectsData.map((objData: any) => this._parseFormFieldRef(objData));
+        if (position?.pageIndex !== undefined) {
+            // Page-specific query - use page snapshot
+            const pageSnapshot = await this._getOrFetchPageSnapshot(position.pageIndex);
+            elements = pageSnapshot.elements;
+        } else {
+            // Document-wide query - use document snapshot
+            const docSnapshot = await this._getOrFetchDocumentSnapshot();
+            elements = docSnapshot.getAllElements();
+        }
+
+        // Filter by form field types (FORM_FIELD, TEXT_FIELD, CHECKBOX, RADIO_BUTTON)
+        const formFieldTypes = [
+            ObjectType.FORM_FIELD,
+            ObjectType.TEXT_FIELD,
+            ObjectType.CHECKBOX,
+            ObjectType.RADIO_BUTTON
+        ];
+        const formFields = elements.filter(el => formFieldTypes.includes(el.type)) as FormFieldRef[];
+
+        // Apply position-based filtering
+        return this._filterFormFieldsByPosition(formFields, position);
     }
 
     // Page Operations
@@ -710,6 +772,9 @@ export class PDFDancer {
             throw new HttpClientException(`Failed to move page from ${pageIndex} to ${targetPageIndex}`, response);
         }
 
+        // Invalidate cache after mutation
+        this._invalidateCache();
+
         // Fetch the page again at its new position for up-to-date metadata
         return await this._requirePageRef(targetPageIndex);
     }
@@ -721,7 +786,12 @@ export class PDFDancer {
         this._validatePageIndex(pageIndex, 'pageIndex');
 
         const pageRef = await this._requirePageRef(pageIndex);
-        return this._deletePage(pageRef);
+        const result = await this._deletePage(pageRef);
+
+        // Invalidate cache after mutation
+        this._invalidateCache();
+
+        return result;
     }
 
     private _validatePageIndex(pageIndex: number, fieldName: string): void {
@@ -797,6 +867,118 @@ export class PDFDancer {
         return this._parsePageSnapshot(data);
     }
 
+    // Cache Management
+
+    /**
+     * Gets a page snapshot from cache or fetches it.
+     * First checks page cache, then document cache, then fetches from server.
+     */
+    private async _getOrFetchPageSnapshot(pageIndex: number): Promise<PageSnapshot> {
+        // Check page cache first
+        if (this._pageSnapshotCache.has(pageIndex)) {
+            return this._pageSnapshotCache.get(pageIndex)!;
+        }
+
+        // Check if we have document snapshot and can extract the page
+        if (this._documentSnapshotCache) {
+            const pageSnapshot = this._documentSnapshotCache.getPageSnapshot(pageIndex);
+            if (pageSnapshot) {
+                // Cache it for future use
+                this._pageSnapshotCache.set(pageIndex, pageSnapshot);
+                return pageSnapshot;
+            }
+        }
+
+        // Fetch page snapshot from server
+        const pageSnapshot = await this.getPageSnapshot(pageIndex);
+        this._pageSnapshotCache.set(pageIndex, pageSnapshot);
+        return pageSnapshot;
+    }
+
+    /**
+     * Gets the document snapshot from cache or fetches it.
+     */
+    private async _getOrFetchDocumentSnapshot(): Promise<DocumentSnapshot> {
+        if (!this._documentSnapshotCache) {
+            this._documentSnapshotCache = await this.getDocumentSnapshot();
+        }
+        return this._documentSnapshotCache;
+    }
+
+    /**
+     * Invalidates all snapshot caches.
+     * Called after any mutation operation.
+     */
+    private _invalidateCache(): void {
+        this._documentSnapshotCache = null;
+        this._pageSnapshotCache.clear();
+    }
+
+    /**
+     * Filters snapshot elements by Position criteria.
+     * Handles coordinates, text matching, and field name filtering.
+     */
+    private _filterByPosition(elements: ObjectRef[], position?: Position): ObjectRef[] {
+        if (!position) {
+            return elements;
+        }
+
+        let filtered = elements;
+
+        // Filter by page index
+        if (position.pageIndex !== undefined) {
+            filtered = filtered.filter(el => el.position.pageIndex === position.pageIndex);
+        }
+
+        // Filter by coordinates (point containment with tolerance)
+        if (position.boundingRect && position.shape === ShapeType.POINT) {
+            const x = position.boundingRect.x;
+            const y = position.boundingRect.y;
+            const tolerance = position.tolerance || 0;
+            filtered = filtered.filter(el => {
+                const rect = el.position.boundingRect;
+                if (!rect) return false;
+                return x >= rect.x - tolerance && x <= rect.x + rect.width + tolerance &&
+                       y >= rect.y - tolerance && y <= rect.y + rect.height + tolerance;
+            });
+        }
+
+        // Filter by text starts with
+        if (position.textStartsWith && filtered.length > 0) {
+            const textLower = position.textStartsWith.toLowerCase();
+            filtered = filtered.filter(el => {
+                const textObj = el as TextObjectRef;
+                return textObj.text && textObj.text.toLowerCase().startsWith(textLower);
+            });
+        }
+
+        // Filter by text pattern (regex)
+        if (position.textPattern && filtered.length > 0) {
+            const regex = new RegExp(position.textPattern);
+            filtered = filtered.filter(el => {
+                const textObj = el as TextObjectRef;
+                return textObj.text && regex.test(textObj.text);
+            });
+        }
+
+        // Filter by name (for form fields)
+        if (position.name && filtered.length > 0) {
+            filtered = filtered.filter(el => {
+                const formField = el as FormFieldRef;
+                return formField.name === position.name;
+            });
+        }
+
+        return filtered;
+    }
+
+    /**
+     * Filters FormFieldRef elements by Position criteria.
+     */
+    private _filterFormFieldsByPosition(elements: FormFieldRef[], position?: Position): FormFieldRef[] {
+        return this._filterByPosition(elements as ObjectRef[], position) as FormFieldRef[];
+    }
+
     // Manipulation Operations
 
     /**
@@ -809,7 +991,12 @@ export class PDFDancer {
 
         const requestData = new DeleteRequest(objectRef).toDict();
         const response = await this._makeRequest('DELETE', '/pdf/delete', requestData);
-        return await response.json() as boolean;
+        const result = await response.json() as boolean;
+
+        // Invalidate cache after mutation
+        this._invalidateCache();
+
+        return result;
     }
 
     /**
@@ -825,7 +1012,12 @@ export class PDFDancer {
 
         const requestData = new MoveRequest(objectRef, position).toDict();
         const response = await this._makeRequest('PUT', '/pdf/move', requestData);
-        return await response.json() as boolean;
+        const result = await response.json() as boolean;
+
+        // Invalidate cache after mutation
+        this._invalidateCache();
+
+        return result;
     }
 
     /**
@@ -838,7 +1030,12 @@ export class PDFDancer {
 
         const requestData = new ChangeFormFieldRequest(formFieldRef, newValue).toDict();
         const response = await this._makeRequest('PUT', '/pdf/modify/formField', requestData);
-        return await response.json() as boolean;
+        const result = await response.json() as boolean;
+
+        // Invalidate cache after mutation
+        this._invalidateCache();
+
+        return result;
     }
 
     // Add Operations
@@ -888,7 +1085,12 @@ export class PDFDancer {
     private async _addObject(pdfObject: Image | Paragraph): Promise<boolean> {
         const requestData = new AddRequest(pdfObject).toDict();
         const response = await this._makeRequest('POST', '/pdf/add', requestData);
-        return await response.json() as boolean;
+        const result = await response.json() as boolean;
+
+        // Invalidate cache after mutation
+        this._invalidateCache();
+
+        return result;
     }
 
     // Modify Operations
@@ -904,17 +1106,23 @@ export class PDFDancer {
             return CommandResult.empty("ModifyParagraph", objectRef.internalId);
         }
 
+        let result: CommandResult;
         if (typeof newParagraph === 'string') {
             // Text modification - returns CommandResult
             const requestData = new ModifyTextRequest(objectRef, newParagraph).toDict();
             const response = await this._makeRequest('PUT', '/pdf/text/paragraph', requestData);
-            return CommandResult.fromDict(await response.json());
+            result = CommandResult.fromDict(await response.json());
         } else {
             // Object modification
             const requestData = new ModifyRequest(objectRef, newParagraph).toDict();
             const response = await this._makeRequest('PUT', '/pdf/modify', requestData);
-            return CommandResult.fromDict(await response.json());
+            result = CommandResult.fromDict(await response.json());
         }
+
+        // Invalidate cache after mutation
+        this._invalidateCache();
+
+        return result;
     }
 
     /**
@@ -930,7 +1138,12 @@ export class PDFDancer {
 
         const requestData = new ModifyTextRequest(objectRef, newText).toDict();
         const response = await this._makeRequest('PUT', '/pdf/text/line', requestData);
-        return CommandResult.fromDict(await response.json());
+        const result = CommandResult.fromDict(await response.json());
+
+        // Invalidate cache after mutation
+        this._invalidateCache();
+
+        return result;
     }
 
     // Font Operations
@@ -1062,6 +1275,17 @@ export class PDFDancer {
 
         if (this._isTextObjectData(objData, objectType)) {
             return this._parseTextObjectRef(objData);
+        }
+
+        // Check if this is a form field type
+        const formFieldTypes = [
+            ObjectType.FORM_FIELD,
+            ObjectType.TEXT_FIELD,
+            ObjectType.CHECKBOX,
+            ObjectType.RADIO_BUTTON
+        ];
+        if (formFieldTypes.includes(objectType)) {
+            return this._parseFormFieldRef(objData);
         }
 
         return new ObjectRef(
