@@ -50,6 +50,99 @@ import {ImageBuilder} from "./image-builder";
 import fs from "fs";
 import path from "node:path";
 
+// Debug flag - set to true to enable timing logs
+const DEBUG = true;
+
+/**
+ * Generate a timestamp string in the format expected by the API.
+ * Format: YYYY-MM-DDTHH:MM:SS.ffffffZ (with microseconds)
+ */
+function generateTimestamp(): string {
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(now.getUTCDate()).padStart(2, '0');
+    const hours = String(now.getUTCHours()).padStart(2, '0');
+    const minutes = String(now.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(now.getUTCSeconds()).padStart(2, '0');
+    const milliseconds = String(now.getUTCMilliseconds()).padStart(3, '0');
+    // Add 3 more zeros for microseconds (JavaScript doesn't have microsecond precision)
+    const microseconds = milliseconds + '000';
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${microseconds}Z`;
+}
+
+/**
+ * Parse timestamp string, handling both microseconds and nanoseconds precision.
+ * @param timestampStr Timestamp string in format YYYY-MM-DDTHH:MM:SS.fffffffZ (with 6 or 9 fractional digits)
+ */
+function parseTimestamp(timestampStr: string): Date {
+    // Remove the 'Z' suffix
+    let ts = timestampStr.replace(/Z$/, '');
+
+    // Handle nanoseconds (9 digits) by truncating to milliseconds (3 digits)
+    // JavaScript's Date only supports millisecond precision
+    if (ts.includes('.')) {
+        const [datePart, fracPart] = ts.split('.');
+        // Truncate to 3 digits (milliseconds)
+        const truncatedFrac = fracPart.substring(0, 3);
+        ts = `${datePart}.${truncatedFrac}`;
+    }
+
+    return new Date(ts + 'Z');
+}
+
+/**
+ * Check for X-Generated-At and X-Received-At headers and log timing information if DEBUG=true.
+ *
+ * Expected timestamp formats:
+ * - 2025-10-24T08:49:39.161945Z (microseconds - 6 digits)
+ * - 2025-10-24T08:58:45.468131265Z (nanoseconds - 9 digits)
+ */
+function logGeneratedAtHeader(response: Response, method: string, path: string): void {
+    if (!DEBUG) {
+        return;
+    }
+
+    const generatedAt = response.headers.get('X-Generated-At');
+    const receivedAt = response.headers.get('X-Received-At');
+
+    if (generatedAt || receivedAt) {
+        try {
+            const logParts: string[] = [];
+            const currentTime = new Date();
+
+            // Parse and log X-Received-At
+            let receivedTime: Date | null = null;
+            if (receivedAt) {
+                receivedTime = parseTimestamp(receivedAt);
+                const timeSinceReceived = (currentTime.getTime() - receivedTime.getTime()) / 1000;
+                logParts.push(`X-Received-At: ${receivedAt}, time since received on backend: ${timeSinceReceived.toFixed(3)}s`);
+            }
+
+            // Parse and log X-Generated-At
+            let generatedTime: Date | null = null;
+            if (generatedAt) {
+                generatedTime = parseTimestamp(generatedAt);
+                const timeSinceGenerated = (currentTime.getTime() - generatedTime.getTime()) / 1000;
+                logParts.push(`X-Generated-At: ${generatedAt}, time since generated on backend: ${timeSinceGenerated.toFixed(3)}s`);
+            }
+
+            // Calculate processing time (X-Generated-At - X-Received-At)
+            if (receivedTime && generatedTime) {
+                const processingTime = (generatedTime.getTime() - receivedTime.getTime()) / 1000;
+                logParts.push(`processing time on backend: ${processingTime.toFixed(3)}s`);
+            }
+
+            if (logParts.length > 0) {
+                console.log(`${Date.now() / 1000}|${method} ${path} - ${logParts.join(', ')}`);
+            }
+        } catch (e) {
+            const errorMessage = e instanceof Error ? e.message : String(e);
+            console.log(`${Date.now() / 1000}|${method} ${path} - Header parse error: ${errorMessage}`);
+        }
+    }
+}
+
 // 👇 Internal view of PDFDancer methods, not exported
 interface PDFDancerInternals {
 
@@ -355,11 +448,14 @@ export class PDFDancer {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${resolvedToken}`,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-Generated-At': generateTimestamp()
                 },
                 body: JSON.stringify(createRequest.toDict()),
                 signal: resolvedTimeout > 0 ? AbortSignal.timeout(resolvedTimeout) : undefined
             });
+
+            logGeneratedAtHeader(response, 'POST', '/session/new');
 
             if (!response.ok) {
                 const errorText = await response.text();
@@ -497,11 +593,14 @@ export class PDFDancer {
             const response = await fetch(this._buildUrl('/session/create'), {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${this._token}`
+                    'Authorization': `Bearer ${this._token}`,
+                    'X-Generated-At': generateTimestamp()
                 },
                 body: formData,
                 signal: this._readTimeout > 0 ? AbortSignal.timeout(this._readTimeout) : undefined
             });
+
+            logGeneratedAtHeader(response, 'POST', '/session/create');
 
             if (!response.ok) {
                 const errorMessage = await this._extractErrorMessage(response);
@@ -553,7 +652,8 @@ export class PDFDancer {
         const headers: Record<string, string> = {
             'Authorization': `Bearer ${this._token}`,
             'X-Session-Id': this._sessionId,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-Generated-At': generateTimestamp()
         };
 
         try {
@@ -563,6 +663,8 @@ export class PDFDancer {
                 body: data ? JSON.stringify(data) : undefined,
                 signal: this._readTimeout > 0 ? AbortSignal.timeout(this._readTimeout) : undefined
             });
+
+            logGeneratedAtHeader(response, method, path);
 
             // Handle FontNotFoundException
             if (response.status === 404) {
@@ -607,7 +709,7 @@ export class PDFDancer {
         // Determine if we should use snapshot or fall back to HTTP
         // For paths with coordinates, we need to use HTTP (backend requirement)
         const isPathWithCoordinates = objectType === ObjectType.PATH &&
-                                      position?.shape === ShapeType.POINT;
+            position?.shape === ShapeType.POINT;
 
         if (isPathWithCoordinates) {
             // Fall back to HTTP for path coordinate queries
@@ -965,7 +1067,7 @@ export class PDFDancer {
                 const rect = el.position.boundingRect;
                 if (!rect) return false;
                 return x >= rect.x - tolerance && x <= rect.x + rect.width + tolerance &&
-                       y >= rect.y - tolerance && y <= rect.y + rect.height + tolerance;
+                    y >= rect.y - tolerance && y <= rect.y + rect.height + tolerance;
             });
         }
 
@@ -1235,11 +1337,14 @@ export class PDFDancer {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${this._token}`,
-                    'X-Session-Id': this._sessionId
+                    'X-Session-Id': this._sessionId,
+                    'X-Generated-At': generateTimestamp()
                 },
                 body: formData,
                 signal: AbortSignal.timeout(30000)
             });
+
+            logGeneratedAtHeader(response, 'POST', '/font/register');
 
             if (!response.ok) {
                 const errorMessage = await this._extractErrorMessage(response);
