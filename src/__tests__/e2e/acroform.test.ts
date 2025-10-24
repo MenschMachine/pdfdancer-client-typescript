@@ -15,7 +15,7 @@ describe('AcroForm Fields E2E Tests (v2 API)', () => {
         const fields = await pdf.selectFormFields();
         expect(fields).toHaveLength(10);
         expect(fields[0].type).toBe('TEXT_FIELD');
-        expect(fields[4].type).toBe('CHECK_BOX');
+        expect(fields[4].type).toBe('CHECKBOX');
         expect(fields[6].type).toBe('RADIO_BUTTON');
 
         let allAtOrigin = true;

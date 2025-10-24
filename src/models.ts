@@ -11,7 +11,7 @@ export enum ObjectType {
     PAGE = "PAGE",
     FORM_FIELD = "FORM_FIELD",
     TEXT_FIELD = "TEXT_FIELD",
-    CHECK_BOX = "CHECK_BOX",
+    CHECKBOX = "CHECKBOX",
     RADIO_BUTTON = "RADIO_BUTTON"
 }
 
@@ -832,6 +832,78 @@ export class CommandResult {
 
     static empty(commandName: string, elementId: string | null): CommandResult {
         return new CommandResult(commandName, elementId, null, true, null);
+    }
+}
+
+/**
+ * Represents a snapshot of a single page in a PDF document.
+ * Contains the page reference and all elements on that page.
+ */
+export class PageSnapshot {
+    constructor(
+        public pageRef: PageRef,
+        public elements: ObjectRef[]
+    ) {}
+
+    /**
+     * Filters elements by object type.
+     */
+    getElementsByType(type: ObjectType): ObjectRef[] {
+        return this.elements.filter(el => el.type === type);
+    }
+
+    /**
+     * Gets the page index from the page reference.
+     */
+    getPageIndex(): number | undefined {
+        return this.pageRef.position.pageIndex;
+    }
+
+    /**
+     * Returns the number of elements on this page.
+     */
+    getElementCount(): number {
+        return this.elements.length;
+    }
+}
+
+/**
+ * Represents a complete snapshot of a PDF document.
+ * Contains page count, font information, and snapshots of all pages.
+ */
+export class DocumentSnapshot {
+    constructor(
+        public pageCount: number,
+        public fonts: FontRecommendation[],
+        public pages: PageSnapshot[]
+    ) {}
+
+    /**
+     * Gets the snapshot for a specific page by index.
+     */
+    getPageSnapshot(pageIndex: number): PageSnapshot | undefined {
+        return this.pages.find(page => page.getPageIndex() === pageIndex);
+    }
+
+    /**
+     * Gets all elements across all pages.
+     */
+    getAllElements(): ObjectRef[] {
+        return this.pages.flatMap(page => page.elements);
+    }
+
+    /**
+     * Gets all elements of a specific type across all pages.
+     */
+    getElementsByType(type: ObjectType): ObjectRef[] {
+        return this.getAllElements().filter(el => el.type === type);
+    }
+
+    /**
+     * Returns the total number of elements across all pages.
+     */
+    getTotalElementCount(): number {
+        return this.pages.reduce((sum, page) => sum + page.getElementCount(), 0);
     }
 }
 

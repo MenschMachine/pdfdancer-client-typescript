@@ -19,6 +19,7 @@ import {
     CommandResult,
     CreatePdfRequest,
     DeleteRequest,
+    DocumentSnapshot,
     FindRequest,
     Font,
     FontRecommendation,
@@ -35,6 +36,7 @@ import {
     PageRef,
     PageSize,
     PageSizeInput,
+    PageSnapshot,
     Paragraph,
     Position,
     PositionMode,
@@ -199,6 +201,14 @@ class PageClient {
     // noinspection JSUnusedGlobalSymbols
     async selectTextLinesAt(x: number, y: number) {
         return this._internals.toTextLineObjects(await this._internals.findTextLines(Position.atPageCoordinates(this._pageIndex, x, y)));
+    }
+
+    /**
+     * Gets a snapshot of this page, including all elements.
+     * Optionally filter by object types.
+     */
+    async getSnapshot(types?: ObjectType[]): Promise<PageSnapshot> {
+        return this._client.getPageSnapshot(this._pageIndex, types);
     }
 }
 
@@ -744,6 +754,49 @@ export class PDFDancer {
         return await response.json() as boolean;
     }
 
+    // Snapshot Operations
+
+    /**
+     * Gets a snapshot of the entire PDF document.
+     * Returns page count, fonts, and snapshots of all pages with their elements.
+     *
+     * @param types Optional array of ObjectType to filter elements by type
+     * @returns DocumentSnapshot containing all document information
+     */
+    async getDocumentSnapshot(types?: ObjectType[]): Promise<DocumentSnapshot> {
+        const params: Record<string, string> = {};
+        if (types && types.length > 0) {
+            params.types = types.join(',');
+        }
+
+        const response = await this._makeRequest('GET', '/pdf/document/snapshot', undefined, params);
+        const data = await response.json() as any;
+
+        return this._parseDocumentSnapshot(data);
+    }
+
+    /**
+     * Gets a snapshot of a specific page.
+     * Returns the page reference and all elements on that page.
+     *
+     * @param pageIndex Zero-based page index
+     * @param types Optional array of ObjectType to filter elements by type
+     * @returns PageSnapshot containing page information and elements
+     */
+    async getPageSnapshot(pageIndex: number, types?: ObjectType[]): Promise<PageSnapshot> {
+        this._validatePageIndex(pageIndex, 'pageIndex');
+
+        const params: Record<string, string> = {};
+        if (types && types.length > 0) {
+            params.types = types.join(',');
+        }
+
+        const response = await this._makeRequest('GET', `/pdf/page/${pageIndex}/snapshot`, undefined, params);
+        const data = await response.json() as any;
+
+        return this._parsePageSnapshot(data);
+    }
+
     // Manipulation Operations
 
     /**
@@ -1194,6 +1247,54 @@ export class PDFDancer {
         }
 
         return position;
+    }
+
+    /**
+     * Parse JSON data into DocumentSnapshot instance.
+     */
+    private _parseDocumentSnapshot(data: any): DocumentSnapshot {
+        const pageCount = typeof data.pageCount === 'number' ? data.pageCount : 0;
+
+        // Parse fonts
+        const fonts: FontRecommendation[] = [];
+        if (Array.isArray(data.fonts)) {
+            for (const fontData of data.fonts) {
+                if (fontData && typeof fontData === 'object') {
+                    const fontName = fontData.fontName || '';
+                    const fontType = fontData.fontType as FontType || FontType.SYSTEM;
+                    const similarityScore = typeof fontData.similarityScore === 'number' ? fontData.similarityScore : 0;
+                    fonts.push(new FontRecommendation(fontName, fontType, similarityScore));
+                }
+            }
+        }
+
+        // Parse pages
+        const pages: PageSnapshot[] = [];
+        if (Array.isArray(data.pages)) {
+            for (const pageData of data.pages) {
+                pages.push(this._parsePageSnapshot(pageData));
+            }
+        }
+
+        return new DocumentSnapshot(pageCount, fonts, pages);
+    }
+
+    /**
+     * Parse JSON data into PageSnapshot instance.
+     */
+    private _parsePageSnapshot(data: any): PageSnapshot {
+        // Parse page reference
+        const pageRef = this._parsePageRef(data.pageRef || {});
+
+        // Parse elements
+        const elements: ObjectRef[] = [];
+        if (Array.isArray(data.elements)) {
+            for (const elementData of data.elements) {
+                elements.push(this._parseObjectRef(elementData));
+            }
+        }
+
+        return new PageSnapshot(pageRef, elements);
     }
 
     // Builder Pattern Support

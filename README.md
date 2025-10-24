@@ -330,7 +330,7 @@ try {
 - `PAGE` - Page objects
 - `FORM_FIELD` - Generic form field references
 - `TEXT_FIELD` - Text input fields
-- `CHECK_BOX` - Checkbox form fields
+- `CHECKBOX` - Checkbox form fields
 - `RADIO_BUTTON` - Radio button form fields
 
 ### PositionMode

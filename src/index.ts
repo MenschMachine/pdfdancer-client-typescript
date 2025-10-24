@@ -36,7 +36,9 @@ export {
   CommandResult,
   TextStatus,
   FontRecommendation,
-  FontType
+  FontType,
+  DocumentSnapshot,
+  PageSnapshot
 } from './models';
 
 export const VERSION = "1.0.0";
