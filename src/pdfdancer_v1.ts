@@ -230,6 +230,7 @@ export class PDFDancer {
     // Snapshot caches for optimizing find operations
     private _documentSnapshotCache: DocumentSnapshot | null = null;
     private _pageSnapshotCache: Map<number, PageSnapshot> = new Map();
+    private _pagesCache: PageRef[] | null = null;
 
     /**
      * Creates a new client with PDF data.
@@ -271,6 +272,7 @@ export class PDFDancer {
         // Initialize caches
         this._documentSnapshotCache = null;
         this._pageSnapshotCache = new Map();
+        this._pagesCache = null;
     }
 
     /**
@@ -379,6 +381,7 @@ export class PDFDancer {
             // Initialize caches
             client._documentSnapshotCache = null;
             client._pageSnapshotCache = new Map();
+            client._pagesCache = null;
             return client;
         } catch (error) {
             if (error instanceof HttpClientException || error instanceof SessionException || error instanceof ValidationException) {
@@ -728,30 +731,52 @@ export class PDFDancer {
 
     /**
      * Retrieves references to all pages in the PDF document.
+     * Now uses snapshot caching to avoid HTTP requests.
      */
     private async getPages(): Promise<PageRef[]> {
-        const response = await this._makeRequest('POST', '/pdf/page/find');
-        const pagesData = await response.json() as any[];
-        return pagesData.map((pageData: any) => this._parsePageRef(pageData));
+        // Check if we have cached pages
+        if (this._pagesCache) {
+            return this._pagesCache;
+        }
+
+        // Try to get from document snapshot cache first
+        if (this._documentSnapshotCache) {
+            this._pagesCache = this._documentSnapshotCache.pages.map(p => p.pageRef);
+            return this._pagesCache;
+        }
+
+        // Fetch document snapshot to get pages (this will cache it)
+        const docSnapshot = await this._getOrFetchDocumentSnapshot();
+        this._pagesCache = docSnapshot.pages.map(p => p.pageRef);
+        return this._pagesCache;
     }
 
     /**
      * Retrieves a reference to a specific page by its page index.
+     * Now uses snapshot caching to avoid HTTP requests.
      */
     private async _getPage(pageIndex: number): Promise<PageRef | null> {
         if (pageIndex < 0) {
             throw new ValidationException(`Page index must be >= 0, got ${pageIndex}`);
         }
 
-        const params = {pageIndex: pageIndex.toString()};
-        const response = await this._makeRequest('POST', '/pdf/page/find', undefined, params);
-
-        const pagesData = await response.json() as any[];
-        if (!pagesData || pagesData.length === 0) {
-            return null;
+        // Try page snapshot cache first
+        if (this._pageSnapshotCache.has(pageIndex)) {
+            return this._pageSnapshotCache.get(pageIndex)!.pageRef;
         }
 
-        return this._parsePageRef(pagesData[0]);
+        // Try document snapshot cache
+        if (this._documentSnapshotCache) {
+            const pageSnapshot = this._documentSnapshotCache.getPageSnapshot(pageIndex);
+            if (pageSnapshot) {
+                return pageSnapshot.pageRef;
+            }
+        }
+
+        // Fetch document snapshot to get page (this will cache it)
+        const docSnapshot = await this._getOrFetchDocumentSnapshot();
+        const pageSnapshot = docSnapshot.getPageSnapshot(pageIndex);
+        return pageSnapshot?.pageRef ?? null;
     }
 
     /**
@@ -912,6 +937,7 @@ export class PDFDancer {
     private _invalidateCache(): void {
         this._documentSnapshotCache = null;
         this._pageSnapshotCache.clear();
+        this._pagesCache = null;
     }
 
     /**
