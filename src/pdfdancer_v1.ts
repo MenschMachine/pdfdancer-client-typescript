@@ -47,6 +47,7 @@ import {
 import {ParagraphBuilder} from './paragraph-builder';
 import {FormFieldObject, FormXObject, ImageObject, ParagraphObject, PathObject, TextLineObject} from "./types";
 import {ImageBuilder} from "./image-builder";
+import {generateFingerprint} from "./fingerprint";
 import fs from "fs";
 import path from "node:path";
 
@@ -322,6 +323,8 @@ export class PDFDancer {
     private _readTimeout: number;
     private _pdfBytes: Uint8Array;
     private _sessionId!: string;
+    private _userId?: string;
+    private _fingerprintCache?: string;
 
     // Snapshot caches for optimizing find operations
     private _documentSnapshotCache: DocumentSnapshot | null = null;
@@ -446,13 +449,17 @@ export class PDFDancer {
             const endpoint = '/session/new'.replace(/^\/+/, '');
             const url = `${base}/${endpoint}`;
 
+            // Generate fingerprint for this request
+            const fingerprint = await generateFingerprint();
+
             // Make request to create endpoint
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${resolvedToken}`,
                     'Content-Type': 'application/json',
-                    'X-Generated-At': generateTimestamp()
+                    'X-Generated-At': generateTimestamp(),
+                    'X-Fingerprint': fingerprint
                 },
                 body: JSON.stringify(createRequest.toDict()),
                 signal: resolvedTimeout > 0 ? AbortSignal.timeout(resolvedTimeout) : undefined
@@ -593,11 +600,14 @@ export class PDFDancer {
                 formData.append('pdf', blob, 'document.pdf');
             }
 
+            const fingerprint = await this._getFingerprint();
+
             const response = await fetch(this._buildUrl('/session/create'), {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${this._token}`,
-                    'X-Generated-At': generateTimestamp()
+                    'X-Generated-At': generateTimestamp(),
+                    'X-Fingerprint': fingerprint
                 },
                 body: formData,
                 signal: this._readTimeout > 0 ? AbortSignal.timeout(this._readTimeout) : undefined
@@ -637,6 +647,16 @@ export class PDFDancer {
     }
 
     /**
+     * Get or generate the fingerprint for this client
+     */
+    private async _getFingerprint(): Promise<string> {
+        if (!this._fingerprintCache) {
+            this._fingerprintCache = await generateFingerprint(this._userId);
+        }
+        return this._fingerprintCache;
+    }
+
+    /**
      * Make HTTP request with session headers and error handling.
      */
     private async _makeRequest(
@@ -652,11 +672,14 @@ export class PDFDancer {
             });
         }
 
+        const fingerprint = await this._getFingerprint();
+
         const headers: Record<string, string> = {
             'Authorization': `Bearer ${this._token}`,
             'X-Session-Id': this._sessionId,
             'Content-Type': 'application/json',
-            'X-Generated-At': generateTimestamp()
+            'X-Generated-At': generateTimestamp(),
+            'X-Fingerprint': fingerprint
         };
 
         try {
@@ -1336,12 +1359,15 @@ export class PDFDancer {
             const blob = new Blob([fontData.buffer as ArrayBuffer], {type: 'font/ttf'});
             formData.append('ttfFile', blob, filename);
 
+            const fingerprint = await this._getFingerprint();
+
             const response = await fetch(this._buildUrl('/font/register'), {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${this._token}`,
                     'X-Session-Id': this._sessionId,
-                    'X-Generated-At': generateTimestamp()
+                    'X-Generated-At': generateTimestamp(),
+                    'X-Fingerprint': fingerprint
                 },
                 body: formData,
                 signal: AbortSignal.timeout(30000)
