@@ -147,8 +147,8 @@ describe('Paragraph E2E Tests (v2 API)', () => {
         expect(modified.objectRef().status?.isModified()).toBe(true);
 
         const assertions = await PDFAssertions.create(pdf);
-        await assertions.assertTextlineHasFont('Awesomely', 'IXKSWR+Poppins-Bold', 1, 0);
-        await assertions.assertTextlineHasFont('Obvious!', 'IXKSWR+Poppins-Bold', 1, 0);
+        await assertions.assertTextlineHasFont('Awesomely', 'IXKSWR+Poppins-Bold', 45, 0);
+        await assertions.assertTextlineHasFont('Obvious!', 'IXKSWR+Poppins-Bold', 45, 0);
         await assertions.assertTextlineHasColor('Awesomely', new Color(255, 255, 255), 0);
         await assertions.assertTextlineHasColor('Obvious!', new Color(255, 255, 255), 0);
     });
@@ -526,12 +526,12 @@ describe('Paragraph E2E Tests (v2 API)', () => {
         const [para] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
 
         await para.edit()
-            .moveTo(1, 1)
+            .moveTo(40, 40)
             .apply();
 
         const assertions = await PDFAssertions.create(pdf);
-        await assertions.assertTextlineHasFont('The Complete', 'IXKSWR+Poppins-Bold', 1, 0);
-        await assertions.assertTextlineIsAt('The Complete', 1, 1, 0, 0.22);
+        await assertions.assertTextlineHasFont('The Complete', 'IXKSWR+Poppins-Bold', 45, 0);
+        await assertions.assertParagraphIsAt('The Complete', 40, 40, 0, 0.22);
         await assertions.assertTextlineHasColor('The Complete', new Color(255, 255, 255), 0);
     });
 
@@ -543,8 +543,8 @@ describe('Paragraph E2E Tests (v2 API)', () => {
         await para.edit().replace('Awesomely\nObvious!').apply();
 
         const assertions = await PDFAssertions.create(pdf);
-        await assertions.assertTextlineHasFont('Awesomely', 'IXKSWR+Poppins-Bold', 1, 0);
-        await assertions.assertTextlineHasFont('Obvious!', 'IXKSWR+Poppins-Bold', 1, 0);
+        await assertions.assertTextlineHasFont('Awesomely', 'IXKSWR+Poppins-Bold', 45, 0);
+        await assertions.assertTextlineHasFont('Obvious!', 'IXKSWR+Poppins-Bold', 45, 0);
         await assertions.assertTextlineHasColor('Awesomely', new Color(255, 255, 255), 0);
         await assertions.assertTextlineHasColor('Obvious!', new Color(255, 255, 255), 0);
     });

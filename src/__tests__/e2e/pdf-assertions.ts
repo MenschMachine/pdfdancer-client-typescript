@@ -27,6 +27,7 @@ export class PDFAssertions {
 
         // Reopen the PDF with the same token and baseUrl
         const pdfData = fs.readFileSync(tempFile);
+        console.log(`PDF file saved to ${tempFile}`);
         const pdf = await PDFDancer.open(new Uint8Array(pdfData), token, baseUrl);
 
         return new PDFAssertions(pdf);
