@@ -42,7 +42,7 @@ export function readToken(): string | null {
 export async function serverUp(baseUrl: string): Promise<boolean> {
     try {
         const response = await fetch(`${baseUrl}/ping`, {
-            signal: AbortSignal.timeout(3000)
+            signal: AbortSignal.timeout(10000)
         });
         const text = await response.text();
         return response.status === 200 && text.includes('Pong');
