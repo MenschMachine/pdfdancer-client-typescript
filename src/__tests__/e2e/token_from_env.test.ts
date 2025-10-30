@@ -43,20 +43,6 @@ describe('Env Token E2E Tests', () => {
         restoreEnv();
     });
 
-    test('requires token from env or argument', async () => {
-        delete process.env.PDFDANCER_TOKEN;
-
-        await expect(async () => {
-            try {
-                await PDFDancer.open(pdfData, undefined, baseUrl);
-            } catch (error) {
-                expect(error).toBeInstanceOf(ValidationException);
-                expect((error as Error).message).toBe(MISSING_TOKEN_MESSAGE);
-                throw error;
-            }
-        }).rejects.toThrow(MISSING_TOKEN_MESSAGE);
-    });
-
     test('opens with token from env', async () => {
         process.env.PDFDANCER_TOKEN = validToken;
         const client = await PDFDancer.open(pdfData, undefined, baseUrl);

@@ -255,27 +255,24 @@ export enum FontType {
 }
 
 /**
- * Represents a font recommendation with similarity score.
+ * Represents font mapping information for a document font.
  */
-export class FontRecommendation {
+export class DocumentFontInfo {
     constructor(
-        public fontName: string,
-        public fontType: FontType,
-        public similarityScore: number
+        public documentFontName: string,
+        public systemFontName: string
     ) {}
 
-    getFontName(): string {
-        return this.fontName;
+    getDocumentFontName(): string {
+        return this.documentFontName;
     }
 
-    getFontType(): FontType {
-        return this.fontType;
-    }
-
-    getSimilarityScore(): number {
-        return this.similarityScore;
+    getSystemFontName(): string {
+        return this.systemFontName;
     }
 }
+
+export { DocumentFontInfo as FontRecommendation };
 
 /**
  * Status information for text objects.
@@ -285,7 +282,7 @@ export class TextStatus {
         public modified: boolean,
         public encodable: boolean,
         public fontType: FontType,
-        public fontRecommendation: FontRecommendation
+        public fontInfo?: DocumentFontInfo
     ) {}
 
     isModified(): boolean {
@@ -300,8 +297,15 @@ export class TextStatus {
         return this.fontType;
     }
 
-    getFontRecommendation(): FontRecommendation {
-        return this.fontRecommendation;
+    getFontInfo(): DocumentFontInfo | undefined {
+        return this.fontInfo;
+    }
+
+    /**
+     * @deprecated Use getFontInfo() instead.
+     */
+    getFontRecommendation(): DocumentFontInfo | undefined {
+        return this.getFontInfo();
     }
 }
 
@@ -986,7 +990,7 @@ export class PageSnapshot {
 export class DocumentSnapshot {
     constructor(
         public pageCount: number,
-        public fonts: FontRecommendation[],
+        public fonts: DocumentFontInfo[],
         public pages: PageSnapshot[]
     ) {}
 

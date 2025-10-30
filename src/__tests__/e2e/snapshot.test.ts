@@ -269,9 +269,10 @@ describe('Snapshot E2E Tests', () => {
         // If there are fonts, verify their structure
         if (snapshot.fonts.length > 0) {
             for (const font of snapshot.fonts) {
-                expect(font.fontName).toBeDefined();
-                expect(font.fontType).toBeDefined();
-                expect(typeof font.similarityScore).toBe('number');
+                expect(font.documentFontName).toBeDefined();
+                expect(font.systemFontName).toBeDefined();
+                expect(typeof font.documentFontName).toBe('string');
+                expect(typeof font.systemFontName).toBe('string');
             }
         }
     });
@@ -293,4 +294,3 @@ describe('Snapshot E2E Tests', () => {
         expect(Array.isArray(page0Snapshot!.elements)).toBe(true);
     });
 });
-

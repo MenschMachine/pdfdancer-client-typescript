@@ -23,7 +23,7 @@ import {
     DocumentSnapshot,
     FindRequest,
     Font,
-    FontRecommendation,
+    DocumentFontInfo,
     FontType,
     FormFieldRef,
     Image,
@@ -403,15 +403,15 @@ export class PDFDancer {
     }
 
     static async open(pdfData: Uint8Array, token?: string, baseUrl?: string, timeout?: number): Promise<PDFDancer> {
-        const resolvedToken = token ?? process.env.PDFDANCER_TOKEN;
         const resolvedBaseUrl =
             baseUrl ??
             process.env.PDFDANCER_BASE_URL ??
             "https://api.pdfdancer.com";
         const resolvedTimeout = timeout ?? 60000;
 
+        let resolvedToken = token?.trim() ?? process.env.PDFDANCER_TOKEN?.trim() ?? null;
         if (!resolvedToken) {
-            throw new ValidationException("Missing PDFDancer API token. Pass a token via the `token` argument or set the PDFDANCER_TOKEN environment variable.");
+            resolvedToken = await PDFDancer._obtainAnonymousToken(resolvedBaseUrl, resolvedTimeout);
         }
 
         const client = new PDFDancer(resolvedToken, pdfData, resolvedBaseUrl, resolvedTimeout);
@@ -439,15 +439,15 @@ export class PDFDancer {
         baseUrl?: string,
         timeout?: number
     ): Promise<PDFDancer> {
-        const resolvedToken = token ?? process.env.PDFDANCER_TOKEN;
         const resolvedBaseUrl =
             baseUrl ??
             process.env.PDFDANCER_BASE_URL ??
             "https://api.pdfdancer.com";
         const resolvedTimeout = timeout ?? 60000;
 
+        let resolvedToken = token?.trim() ?? process.env.PDFDANCER_TOKEN?.trim() ?? null;
         if (!resolvedToken) {
-            throw new ValidationException("Missing PDFDancer token (pass it explicitly or set PDFDANCER_TOKEN in environment).");
+            resolvedToken = await PDFDancer._obtainAnonymousToken(resolvedBaseUrl, resolvedTimeout);
         }
 
         let createRequest: CreatePdfRequest;
@@ -514,6 +514,47 @@ export class PDFDancer {
             }
             const errorMessage = error instanceof Error ? error.message : String(error);
             throw new HttpClientException(`Failed to create new PDF: ${errorMessage}`, undefined, error as Error);
+        }
+    }
+
+    private static async _obtainAnonymousToken(baseUrl: string, timeout: number = 60000): Promise<string> {
+        const normalizedBaseUrl = (baseUrl || "https://api.pdfdancer.com").replace(/\/+$/, '');
+        const url = `${normalizedBaseUrl}/keys/anon`;
+
+        try {
+            const fingerprint = await generateFingerprint();
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Fingerprint': fingerprint,
+                    'X-Generated-At': generateTimestamp()
+                },
+                signal: timeout > 0 ? AbortSignal.timeout(timeout) : undefined
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text().catch(() => '');
+                throw new HttpClientException(
+                    `Failed to obtain anonymous token: ${errorText || `HTTP ${response.status}`}`,
+                    response
+                );
+            }
+
+            const tokenPayload: any = await response.json().catch(() => null);
+            const tokenValue = typeof tokenPayload?.token === 'string' ? tokenPayload.token.trim() : '';
+
+            if (!tokenValue) {
+                throw new HttpClientException("Invalid anonymous token response format", response);
+            }
+
+            return tokenValue;
+        } catch (error) {
+            if (error instanceof HttpClientException) {
+                throw error;
+            }
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new HttpClientException(`Failed to obtain anonymous token: ${errorMessage}`, undefined, error as Error);
         }
     }
 
@@ -1534,25 +1575,30 @@ export class PDFDancer {
         let status: TextStatus | undefined;
         const statusData = objData.status;
         if (statusData && typeof statusData === 'object') {
-            // Parse font recommendation
-            const fontRecData = statusData.fontRecommendation;
-            let fontRec: FontRecommendation;
-            if (fontRecData && typeof fontRecData === 'object') {
-                fontRec = new FontRecommendation(
-                    fontRecData.fontName || '',
-                    (fontRecData.fontType as FontType) || FontType.SYSTEM,
-                    fontRecData.similarityScore || 0.0
-                );
-            } else {
-                // Create empty font recommendation if not provided
-                fontRec = new FontRecommendation('', FontType.SYSTEM, 0.0);
+            const fontInfoSource = statusData.fontInfoDto ?? statusData.fontRecommendation;
+            let fontInfo: DocumentFontInfo | undefined;
+            if (fontInfoSource && typeof fontInfoSource === 'object') {
+                const documentFontName = typeof fontInfoSource.documentFontName === 'string'
+                    ? fontInfoSource.documentFontName
+                    : (typeof fontInfoSource.fontName === 'string' ? fontInfoSource.fontName : '');
+                const systemFontName = typeof fontInfoSource.systemFontName === 'string'
+                    ? fontInfoSource.systemFontName
+                    : (typeof fontInfoSource.fontName === 'string' ? fontInfoSource.fontName : '');
+                fontInfo = new DocumentFontInfo(documentFontName, systemFontName);
             }
 
+            const modified = statusData.modified !== undefined ? Boolean(statusData.modified) : false;
+            const encodable = statusData.encodable !== undefined ? Boolean(statusData.encodable) : true;
+            const fontTypeValue = typeof statusData.fontType === 'string'
+                && (Object.values(FontType) as string[]).includes(statusData.fontType)
+                ? statusData.fontType as FontType
+                : FontType.SYSTEM;
+
             status = new TextStatus(
-                statusData.modified || false,
-                statusData.encodable !== undefined ? statusData.encodable : true,
-                (statusData.fontType as FontType) || FontType.SYSTEM,
-                fontRec
+                modified,
+                encodable,
+                fontTypeValue,
+                fontInfo
             );
         }
 
@@ -1704,14 +1750,17 @@ export class PDFDancer {
         const pageCount = typeof data.pageCount === 'number' ? data.pageCount : 0;
 
         // Parse fonts
-        const fonts: FontRecommendation[] = [];
+        const fonts: DocumentFontInfo[] = [];
         if (Array.isArray(data.fonts)) {
             for (const fontData of data.fonts) {
                 if (fontData && typeof fontData === 'object') {
-                    const fontName = fontData.fontName || '';
-                    const fontType = fontData.fontType as FontType || FontType.SYSTEM;
-                    const similarityScore = typeof fontData.similarityScore === 'number' ? fontData.similarityScore : 0;
-                    fonts.push(new FontRecommendation(fontName, fontType, similarityScore));
+                    const documentFontName = typeof fontData.documentFontName === 'string'
+                        ? fontData.documentFontName
+                        : (typeof fontData.fontName === 'string' ? fontData.fontName : '');
+                    const systemFontName = typeof fontData.systemFontName === 'string'
+                        ? fontData.systemFontName
+                        : (typeof fontData.fontName === 'string' ? fontData.fontName : '');
+                    fonts.push(new DocumentFontInfo(documentFontName, systemFontName));
                 }
             }
         }

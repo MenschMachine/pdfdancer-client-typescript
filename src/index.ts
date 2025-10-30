@@ -38,10 +38,12 @@ export {
   Orientation,
   CommandResult,
   TextStatus,
-  FontRecommendation,
+  DocumentFontInfo,
   FontType,
   DocumentSnapshot,
   PageSnapshot
 } from './models';
+
+export { DocumentFontInfo as FontRecommendation } from './models';
 
 export const VERSION = "1.0.0";

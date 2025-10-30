@@ -231,10 +231,12 @@ if (status) {
   console.log('Is modified:', status.isModified());       // true if text was changed
   console.log('Is encodable:', status.isEncodable());     // true if text can be rendered
 
-  // Get font recommendation if available
-  const recommendation = status.getFontRecommendation();
-  console.log('Recommended font:', recommendation.getFontName());
-  console.log('Similarity score:', recommendation.getSimilarityScore());
+  // Get font mapping information if available
+  const fontInfo = status.getFontInfo();
+  if (fontInfo) {
+    console.log('Document font:', fontInfo.getDocumentFontName());
+    console.log('System font:', fontInfo.getSystemFontName());
+  }
 }
 ```
 
@@ -374,9 +376,11 @@ interface TextStatus {
   modified: boolean;           // Whether text has been modified
   encodable: boolean;          // Whether text is encodable with current font
   fontType: FontType;         // Type of font being used
-  fontRecommendation: FontRecommendation;  // Recommended alternative font
+  fontInfo?: DocumentFontInfo; // Mapping between document font and available system font
 }
 ```
+
+The legacy `TextStatus.getFontRecommendation()` method is still available and returns the same `DocumentFontInfo` instance.
 
 ## Development
 
