@@ -870,18 +870,35 @@ export class CreatePdfRequest {
  */
 export class AddPageRequest {
     constructor(
-        public pageIndex: number,
-        public pageSize?: string,
-        public orientation?: string
+        public pageIndex?: number,
+        public pageSize?: PageSize,
+        public orientation?: Orientation | string
     ) {
     }
 
     toDict(): Record<string, any> {
-        return {
-            pageIndex: this.pageIndex,
-            pageSize: this.pageSize,
-            orientation: this.orientation
-        };
+        const payload: Record<string, any> = {};
+
+        if (this.pageIndex !== undefined) {
+            payload.pageIndex = this.pageIndex;
+        }
+
+        if (this.orientation !== undefined && this.orientation !== null) {
+            const value = typeof this.orientation === 'string'
+                ? this.orientation.trim().toUpperCase()
+                : this.orientation;
+            payload.orientation = typeof value === 'string' ? value : value;
+        }
+
+        if (this.pageSize) {
+            payload.pageSize = {
+                name: this.pageSize.name,
+                width: this.pageSize.width,
+                height: this.pageSize.height
+            };
+        }
+
+        return payload;
     }
 }
 

@@ -12,6 +12,7 @@ import {
     ValidationException
 } from './exceptions';
 import {
+    AddPageRequest,
     AddRequest,
     BoundingRect,
     ChangeFormFieldRequest,
@@ -45,11 +46,14 @@ import {
     TextStatus
 } from './models';
 import {ParagraphBuilder} from './paragraph-builder';
+import {PageBuilder} from './page-builder';
 import {FormFieldObject, FormXObject, ImageObject, ParagraphObject, PathObject, TextLineObject} from "./types";
 import {ImageBuilder} from "./image-builder";
 import {generateFingerprint} from "./fingerprint";
 import fs from "fs";
 import path from "node:path";
+
+const DEFAULT_TOLERANCE = 0.01;
 
 // Debug flag - set to true to enable timing logs
 const DEBUG =
@@ -255,6 +259,11 @@ class PageClient {
         return this._internals.toParagraphObjects(await this._internals.findParagraphs(Position.atPage(this._pageIndex)));
     }
 
+    async selectElements(types?: ObjectType[]) {
+        const snapshot = await this._client.getPageSnapshot(this._pageIndex, types);
+        return snapshot.elements;
+    }
+
     async selectParagraphsStartingWith(text: string) {
         let pos = Position.atPage(this._pageIndex);
         pos.textStartsWith = text;
@@ -267,8 +276,10 @@ class PageClient {
         return this._internals.toParagraphObjects(await this._internals.findParagraphs(pos));
     }
 
-    async selectParagraphsAt(x: number, y: number, tolerance: number = 0) {
-        return this._internals.toParagraphObjects(await this._internals.findParagraphs(Position.atPageCoordinates(this._pageIndex, x, y, tolerance)));
+    async selectParagraphsAt(x: number, y: number, tolerance: number = DEFAULT_TOLERANCE) {
+        return this._internals.toParagraphObjects(
+            await this._internals.findParagraphs(Position.atPageCoordinates(this._pageIndex, x, y, tolerance))
+        );
     }
 
     async selectTextLinesStartingWith(text: string) {
@@ -280,8 +291,14 @@ class PageClient {
     /**
      * Creates a new ParagraphBuilder for fluent paragraph construction.
      */
-    newParagraph(): ParagraphBuilder {
-        return new ParagraphBuilder(this._client, this.position.pageIndex);
+    newParagraph(pageIndex?: number): ParagraphBuilder {
+        const targetIndex = pageIndex ?? this.position.pageIndex;
+        return new ParagraphBuilder(this._client, targetIndex);
+    }
+
+    newImage(pageIndex?: number) {
+        const targetIndex = pageIndex ?? this.position.pageIndex;
+        return new ImageBuilder(this._client, targetIndex);
     }
 
     async selectTextLines() {
@@ -296,8 +313,10 @@ class PageClient {
     }
 
     // noinspection JSUnusedGlobalSymbols
-    async selectTextLinesAt(x: number, y: number, tolerance: number = 0) {
-        return this._internals.toTextLineObjects(await this._internals.findTextLines(Position.atPageCoordinates(this._pageIndex, x, y, tolerance)));
+    async selectTextLinesAt(x: number, y: number, tolerance: number = DEFAULT_TOLERANCE) {
+        return this._internals.toTextLineObjects(
+            await this._internals.findTextLines(Position.atPageCoordinates(this._pageIndex, x, y, tolerance))
+        );
     }
 
     /**
@@ -1108,7 +1127,7 @@ export class PDFDancer {
 
         // Filter by text pattern (regex)
         if (position.textPattern && filtered.length > 0) {
-            const regex = new RegExp(position.textPattern);
+            const regex = this._compileTextPattern(position.textPattern);
             filtered = filtered.filter(el => {
                 const textObj = el as TextObjectRef;
                 return textObj.text && regex.test(textObj.text);
@@ -1131,6 +1150,30 @@ export class PDFDancer {
      */
     private _filterFormFieldsByPosition(elements: FormFieldRef[], position?: Position): FormFieldRef[] {
         return this._filterByPosition(elements as ObjectRef[], position) as FormFieldRef[];
+    }
+
+    private _compileTextPattern(pattern: string): RegExp {
+        try {
+            return new RegExp(pattern);
+        } catch {
+            const inlineMatch = pattern.match(/^\(\?([a-z]+)\)/i);
+            if (inlineMatch) {
+                const supportedFlags = inlineMatch[1]
+                    .toLowerCase()
+                    .split('')
+                    .filter(flag => 'gimsuy'.includes(flag));
+                const flags = Array.from(new Set(supportedFlags)).join('');
+                const source = pattern.slice(inlineMatch[0].length);
+                try {
+                    return new RegExp(source, flags);
+                } catch {
+                    // fall through to literal fallback
+                }
+            }
+
+            const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            return new RegExp(escaped);
+        }
     }
 
     // Manipulation Operations
@@ -1231,6 +1274,21 @@ export class PDFDancer {
         }
 
         return this._addObject(paragraph);
+    }
+
+    /**
+     * Adds a page to the PDF document.
+     */
+    private async addPage(request?: AddPageRequest | null): Promise<PageRef> {
+        const payload = request ? request.toDict() : {};
+        const data = Object.keys(payload).length > 0 ? payload : undefined;
+        const response = await this._makeRequest('POST', '/pdf/page/add', data);
+        const result = await response.json();
+        const pageRef = this._parsePageRef(result);
+
+        this._invalidateCache();
+
+        return pageRef;
     }
 
     /**
@@ -1702,8 +1760,16 @@ export class PDFDancer {
         return objectRefs.map(ref => ImageObject.fromRef(this, ref));
     }
 
-    newImage() {
-        return new ImageBuilder(this);
+    newImage(pageIndex?: number) {
+        return new ImageBuilder(this, pageIndex);
+    }
+
+    newParagraph(pageIndex?: number) {
+        return new ParagraphBuilder(this, pageIndex);
+    }
+
+    newPage() {
+        return new PageBuilder(this);
     }
 
     page(pageIndex: number) {
@@ -1722,8 +1788,26 @@ export class PDFDancer {
         return objectRefs.map(ref => FormFieldObject.fromRef(this, ref));
     }
 
+    async selectElements(types?: ObjectType[]) {
+        const snapshot = await this.getDocumentSnapshot(types);
+        const elements: ObjectRef[] = [];
+        for (const pageSnapshot of snapshot.pages) {
+            elements.push(...pageSnapshot.elements);
+        }
+        return elements;
+    }
+
     async selectParagraphs() {
         return this.toParagraphObjects(await this.findParagraphs());
+    }
+
+    async selectParagraphsMatching(pattern: string) {
+        if (!pattern) {
+            throw new ValidationException('Pattern cannot be empty');
+        }
+        const position = new Position();
+        position.textPattern = pattern;
+        return this.toParagraphObjects(await this.findParagraphs(position));
     }
 
     private toParagraphObjects(objectRefs: TextObjectRef[]) {
@@ -1734,7 +1818,11 @@ export class PDFDancer {
         return objectRefs.map(ref => TextLineObject.fromRef(this, ref));
     }
 
-    async selectLines() {
+    async selectTextLines() {
         return this.toTextLineObjects(await this.findTextLines());
+    }
+
+    async selectLines() {
+        return this.selectTextLines();
     }
 }

@@ -8,13 +8,11 @@ interface PDFDancerInternals {
 }
 
 export class ImageBuilder {
-    private _client: PDFDancer;
     private _imageData: Uint8Array<ArrayBuffer> | undefined;
     private _position: Position | undefined;
-    private _internals: PDFDancerInternals;
+    private readonly _internals: PDFDancerInternals;
 
-    constructor(_client: PDFDancer) {
-        this._client = _client;
+    constructor(private _client: PDFDancer, private readonly _defaultPageIndex?: number) {
         // Cast to the internal interface to get access
         this._internals = this._client as unknown as PDFDancerInternals;
     }
@@ -33,8 +31,17 @@ export class ImageBuilder {
         return this;
     }
 
-    at(pageIndex: number, x: number, y: number) {
-        this._position = Position.atPageCoordinates(pageIndex, x, y);
+    at(x: number, y: number): this;
+    at(pageIndex: number, x: number, y: number): this;
+    at(pageIndexOrX: number, xOrY: number, maybeY?: number): this {
+        if (maybeY === undefined) {
+            if (this._defaultPageIndex === undefined) {
+                throw new Error('Page index must be provided when adding an image');
+            }
+            this._position = Position.atPageCoordinates(this._defaultPageIndex, pageIndexOrX, xOrY);
+        } else {
+            this._position = Position.atPageCoordinates(pageIndexOrX, xOrY, maybeY);
+        }
         return this;
     }
 

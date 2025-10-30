@@ -6,6 +6,7 @@
 
 export { PDFDancer } from './pdfdancer_v1';
 export { ParagraphBuilder } from './paragraph-builder';
+export { PageBuilder } from './page-builder';
 
 export {
   PdfDancerException,
@@ -33,6 +34,7 @@ export {
   ShapeType,
   Point,
   StandardFonts,
+  STANDARD_PAGE_SIZES,
   Orientation,
   CommandResult,
   TextStatus,

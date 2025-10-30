@@ -67,6 +67,12 @@ export class PDFAssertions {
         return this;
     }
 
+    async assertNumberOfPages(expected: number): Promise<this> {
+        const pages = await this.pdf.pages();
+        expect(pages.length).toBe(expected);
+        return this;
+    }
+
     async assertPageCount(expected: number): Promise<this> {
         const pages = await this.pdf.pages();
         expect(pages.length).toBe(expected);
