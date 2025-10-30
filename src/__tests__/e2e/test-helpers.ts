@@ -45,7 +45,11 @@ export async function serverUp(baseUrl: string): Promise<boolean> {
             signal: AbortSignal.timeout(60000)
         });
         const text = await response.text();
-        return response.status === 200 && text.includes('Pong');
+        let pongReceived = response.status === 200 && text.includes('Pong');
+        if (!pongReceived) {
+            console.error(`Server did not respond with Pong. Response: ${text}, status ${response.status}`);
+        }
+        return pongReceived;
     } catch (e) {
         console.error("Server down", e)
         return false;
