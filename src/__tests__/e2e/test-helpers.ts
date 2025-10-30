@@ -46,7 +46,8 @@ export async function serverUp(baseUrl: string): Promise<boolean> {
         });
         const text = await response.text();
         return response.status === 200 && text.includes('Pong');
-    } catch {
+    } catch (e) {
+        console.error("Server down", e)
         return false;
     }
 }
