@@ -1,6 +1,7 @@
-import {Color, CommandResult, FormFieldRef, ObjectRef, ObjectType, Position, TextObjectRef} from "./models";
+import {Color, CommandResult, Font, FormFieldRef, ObjectRef, ObjectType, Paragraph, Position, TextObjectRef} from "./models";
 import {PDFDancer} from "./pdfdancer_v1";
 import {ParagraphBuilder} from "./paragraph-builder";
+import {ValidationException} from "./exceptions";
 
 // 👇 Internal view of PDFDancer methods, not exported
 interface PDFDancerInternals {
@@ -11,6 +12,8 @@ interface PDFDancerInternals {
     changeFormField(formFieldRef: FormFieldRef, value: string): Promise<boolean>;
 
     modifyTextLine(objectRef: ObjectRef, newText: string): Promise<CommandResult>;
+
+    modifyParagraph(objectRef: ObjectRef, update: Paragraph | string | null): Promise<CommandResult>;
 }
 
 export class BaseObject<TRef extends ObjectRef = ObjectRef> {
@@ -109,7 +112,7 @@ export class ParagraphObject extends BaseObject<TextObjectRef> {
     }
 
     edit() {
-        return new ParagraphBuilder(this._client, this.ref());
+        return new ParagraphEditSession(this._client, this.objectRef());
     }
 
     objectRef() {
@@ -158,6 +161,146 @@ export class ParagraphObject extends BaseObject<TextObjectRef> {
 
     private setColor(color: Color | undefined) {
         this.color = color;
+    }
+}
+
+export class ParagraphEditSession {
+    private _newText?: string;
+    private _fontName?: string;
+    private _fontSize?: number;
+    private _color?: Color;
+    private _lineSpacing?: number;
+    private _newPosition?: { x: number; y: number };
+    private _hasChanges = false;
+    private readonly _internals: PDFDancerInternals;
+
+    constructor(private readonly _client: PDFDancer, private readonly _objectRef: TextObjectRef) {
+        this._internals = this._client as unknown as PDFDancerInternals;
+    }
+
+    replace(text: string) {
+        if (text === null || text === undefined) {
+            throw new ValidationException("Text cannot be null");
+        }
+        this._newText = text;
+        this._hasChanges = true;
+        return this;
+    }
+
+    text(text: string) {
+        return this.replace(text);
+    }
+
+    font(font: Font): this;
+    font(fontName: string, fontSize: number): this;
+    font(fontOrName: Font | string, fontSize?: number): this {
+        if (fontOrName instanceof Font) {
+            this._fontName = fontOrName.name;
+            this._fontSize = fontOrName.size;
+        } else {
+            if (!fontOrName) {
+                throw new ValidationException("Font name cannot be null");
+            }
+            if (fontSize == null) {
+                throw new ValidationException("Font size cannot be null");
+            }
+            this._fontName = fontOrName;
+            this._fontSize = fontSize;
+        }
+
+        this._hasChanges = true;
+        return this;
+    }
+
+    color(color: Color) {
+        if (!color) {
+            throw new ValidationException("Color cannot be null");
+        }
+        this._color = color;
+        this._hasChanges = true;
+        return this;
+    }
+
+    lineSpacing(spacing: number) {
+        if (spacing <= 0) {
+            throw new ValidationException(`Line spacing must be positive, got ${spacing}`);
+        }
+        this._lineSpacing = spacing;
+        this._hasChanges = true;
+        return this;
+    }
+
+    moveTo(x: number, y: number) {
+        if (x === null || x === undefined || y === null || y === undefined) {
+            throw new ValidationException("Coordinates cannot be null or undefined");
+        }
+        this._newPosition = {x, y};
+        this._hasChanges = true;
+        return this;
+    }
+
+    async apply(): Promise<CommandResult | boolean> {
+        if (!this._hasChanges) {
+            return this._internals.modifyParagraph(this._objectRef, null);
+        }
+
+        const onlyTextChanged = (
+            this._newText !== undefined &&
+            this._fontName === undefined &&
+            this._fontSize === undefined &&
+            this._color === undefined &&
+            this._lineSpacing === undefined &&
+            this._newPosition === undefined
+        );
+
+        if (onlyTextChanged) {
+            const result = await this._internals.modifyParagraph(this._objectRef, this._newText ?? '');
+            this._hasChanges = false;
+            return result;
+        }
+
+        const onlyMove = (
+            this._newPosition !== undefined &&
+            this._newText === undefined &&
+            this._fontName === undefined &&
+            this._fontSize === undefined &&
+            this._color === undefined &&
+            this._lineSpacing === undefined
+        );
+
+        if (onlyMove) {
+            const pageIndex = this._objectRef.position.pageIndex;
+            if (pageIndex === undefined) {
+                throw new ValidationException("Paragraph position must include a page index to move");
+            }
+            const position = Position.atPageCoordinates(pageIndex, this._newPosition!.x, this._newPosition!.y);
+            const result = await this._internals.move(this._objectRef, position);
+            this._hasChanges = false;
+            return result;
+        }
+
+        const builder = ParagraphBuilder.fromObjectRef(this._client, this._objectRef);
+        builder.setFontExplicitlyChanged(false);
+
+        if (this._newText !== undefined) {
+            builder.text(this._newText);
+        }
+        if (this._fontName !== undefined && this._fontSize !== undefined) {
+            builder.font(this._fontName, this._fontSize);
+        }
+        if (this._color !== undefined) {
+            builder.color(this._color);
+        }
+        if (this._lineSpacing !== undefined) {
+            builder.lineSpacing(this._lineSpacing);
+        }
+        if (this._newPosition !== undefined) {
+            builder.moveTo(this._newPosition.x, this._newPosition.y);
+        }
+
+        const result = await builder.modify(this._objectRef);
+        this._hasChanges = false;
+        return result;
     }
 }
 

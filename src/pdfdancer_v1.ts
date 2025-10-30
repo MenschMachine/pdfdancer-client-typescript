@@ -1252,7 +1252,7 @@ export class PDFDancer {
     /**
      * Modifies a paragraph object or its text content.
      */
-    private async modifyParagraph(objectRef: ObjectRef, newParagraph: Paragraph | string): Promise<CommandResult> {
+    private async modifyParagraph(objectRef: ObjectRef, newParagraph: Paragraph | string | null): Promise<CommandResult> {
         if (!objectRef) {
             throw new ValidationException("Object reference cannot be null");
         }
@@ -1458,6 +1458,7 @@ export class PDFDancer {
     private _isTextObjectData(objData: any, objectType: ObjectType): boolean {
         return objectType === ObjectType.PARAGRAPH ||
             objectType === ObjectType.TEXT_LINE ||
+            objectType === ObjectType.TEXT_ELEMENT ||
             typeof objData.text === 'string' ||
             typeof objData.fontName === 'string' ||
             Array.isArray(objData.children);
@@ -1511,10 +1512,15 @@ export class PDFDancer {
         );
 
         if (Array.isArray(objData.children) && objData.children.length > 0) {
-            textObject.children = objData.children.map((childData: any, index: number) => {
-                const childFallbackId = `${internalId || 'child'}-${index}`;
-                return this._parseTextObjectRef(childData, childFallbackId);
-            });
+            try {
+                textObject.children = objData.children.map((childData: any, index: number) => {
+                    const childFallbackId = `${internalId || 'child'}-${index}`;
+                    return this._parseTextObjectRef(childData, childFallbackId);
+                });
+            } catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                console.error(`Failed to parse children of ${internalId}: ${message}`);
+            }
         }
 
         return textObject;

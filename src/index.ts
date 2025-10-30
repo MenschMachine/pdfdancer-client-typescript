@@ -28,6 +28,7 @@ export {
   Image,
   BoundingRect,
   Paragraph,
+  TextLine,
   PositionMode,
   ShapeType,
   Point,

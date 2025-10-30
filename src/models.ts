@@ -8,12 +8,15 @@ export enum ObjectType {
     PATH = "PATH",
     PARAGRAPH = "PARAGRAPH",
     TEXT_LINE = "TEXT_LINE",
+    TEXT_ELEMENT = "TEXT_ELEMENT",
     PAGE = "PAGE",
     FORM_FIELD = "FORM_FIELD",
     TEXT_FIELD = "TEXT_FIELD",
     CHECKBOX = "CHECKBOX",
     RADIO_BUTTON = "RADIO_BUTTON"
 }
+
+const DEFAULT_LINE_SPACING = 1.2;
 
 /**
  * Defines how position matching should be performed when searching for objects.
@@ -484,10 +487,60 @@ export class Image {
 export class Paragraph {
     constructor(
         public position?: Position,
-        public textLines?: string[],
+        public textLines?: Array<TextLine | string>,
         public font?: Font,
         public color?: Color,
-        public lineSpacing: number = 1.2
+        public lineSpacing: number = DEFAULT_LINE_SPACING,
+        public lineSpacings?: number[] | null
+    ) {
+    }
+
+    getPosition(): Position | undefined {
+        return this.position;
+    }
+
+    setPosition(position: Position): void {
+        this.position = position;
+    }
+
+    clearLines(): void {
+        this.textLines = [];
+    }
+
+    addLine(textLine: TextLine | string): void {
+        if (!this.textLines) {
+            this.textLines = [];
+        }
+        this.textLines.push(textLine);
+    }
+
+    getLines(): Array<TextLine | string> {
+        if (!this.textLines) {
+            this.textLines = [];
+        }
+        return this.textLines;
+    }
+
+    setLines(lines: Array<TextLine | string>): void {
+        this.textLines = [...lines];
+    }
+
+    setLineSpacings(spacings?: number[] | null): void {
+        this.lineSpacings = spacings ? [...spacings] : spacings ?? null;
+    }
+
+    getLineSpacings(): number[] | null | undefined {
+        return this.lineSpacings ? [...this.lineSpacings] : this.lineSpacings;
+    }
+}
+
+export class TextLine {
+    constructor(
+        public position?: Position,
+        public font?: Font,
+        public color?: Color,
+        public lineSpacing: number = DEFAULT_LINE_SPACING,
+        public text: string = ""
     ) {
     }
 
@@ -591,38 +644,76 @@ export class AddRequest {
                 data: dataB64
             };
         } else if (obj instanceof Paragraph) {
+            const fontToDict = (font?: Font | null) => {
+                if (!font) {
+                    return null;
+                }
+                return {name: font.name, size: font.size};
+            };
+
+            const colorToDict = (color?: Color | null) => {
+                if (!color) {
+                    return null;
+                }
+                return {red: color.r, green: color.g, blue: color.b, alpha: color.a};
+            };
+
             const lines: any[] = [];
             if (obj.textLines) {
                 for (const line of obj.textLines) {
+                    let text: string;
+                    let font = obj.font;
+                    let color = obj.color;
+                    let position = obj.position;
+                    let spacing = obj.lineSpacing;
+
+                    if (line instanceof TextLine) {
+                        text = line.text;
+                        font = line.font ?? font;
+                        color = line.color ?? color;
+                        position = line.position ?? position;
+                        spacing = line.lineSpacing ?? spacing;
+                    } else {
+                        text = line;
+                    }
+
                     const textElement = {
-                        text: line,
-                        font: obj.font ? {name: obj.font.name, size: obj.font.size} : null,
-                        color: obj.color ? {red: obj.color.r, green: obj.color.g, blue: obj.color.b, alpha: obj.color.a} : null,
-                        position: obj.position ? positionToDict(obj.position) : null
+                        text,
+                        font: fontToDict(font),
+                        color: colorToDict(color),
+                        position: position ? positionToDict(position) : null
                     };
 
                     const textLine: any = {
                         textElements: [textElement]
                     };
 
-                    if (obj.color) {
-                        textLine.color = {red: obj.color.r, green: obj.color.g, blue: obj.color.b, alpha: obj.color.a};
+                    if (color) {
+                        textLine.color = colorToDict(color);
                     }
-                    if (obj.position) {
-                        textLine.position = positionToDict(obj.position);
+                    if (position) {
+                        textLine.position = positionToDict(position);
                     }
+                    if (spacing !== undefined && spacing !== null) {
+                        textLine.lineSpacing = spacing;
+                    }
+
                     lines.push(textLine);
                 }
             }
 
-            const lineSpacings = obj.lineSpacing !== undefined ? [obj.lineSpacing] : null;
+            const lineSpacings = obj.lineSpacings
+                ? [...obj.lineSpacings]
+                : (obj.lineSpacing !== undefined && obj.lineSpacing !== null
+                    ? [obj.lineSpacing]
+                    : null);
 
             return {
                 type: "PARAGRAPH",
                 position: obj.position ? positionToDict(obj.position) : null,
-                lines,
+                lines: lines.length ? lines : null,
                 lineSpacings,
-                font: obj.font ? {name: obj.font.name, size: obj.font.size} : null
+                font: fontToDict(obj.font)
             };
         } else {
             throw new Error(`Unsupported object type: ${typeof obj}`);
