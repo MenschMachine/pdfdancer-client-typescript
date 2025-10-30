@@ -4,7 +4,7 @@ import {requireEnvAndFixture} from './test-helpers';
 describe('Snapshot E2E Tests (Showcase)', () => {
     test('page snapshot matches select paragraphs', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const snapshot = await pdf.getPageSnapshot(0);
         const snapshotParagraphs = snapshot.elements.filter(e => e.type === ObjectType.PARAGRAPH);
@@ -18,7 +18,7 @@ describe('Snapshot E2E Tests (Showcase)', () => {
 
     test('page snapshot matches select images', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const snapshot = await pdf.getPageSnapshot(0);
         const snapshotImages = snapshot.elements.filter(e => e.type === ObjectType.IMAGE);
@@ -34,7 +34,7 @@ describe('Snapshot E2E Tests (Showcase)', () => {
 
     test('page snapshot matches select forms', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const snapshot = await pdf.getPageSnapshot(0);
         const snapshotForms = snapshot.elements.filter(e => e.type === ObjectType.FORM_X_OBJECT);
@@ -50,7 +50,7 @@ describe('Snapshot E2E Tests (Showcase)', () => {
 
     test('page snapshot matches select form fields', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const snapshot = await pdf.getPageSnapshot(0);
         const snapshotFields = snapshot.elements.filter(e => [
@@ -71,7 +71,7 @@ describe('Snapshot E2E Tests (Showcase)', () => {
 
     test('page snapshot contains all element types', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const snapshot = await pdf.getPageSnapshot(0);
         const paragraphCount = snapshot.elements.filter(e => e.type === ObjectType.PARAGRAPH).length;
@@ -87,7 +87,7 @@ describe('Snapshot E2E Tests (Showcase)', () => {
 
     test('document snapshot matches all pages', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const docSnapshot = await pdf.getDocumentSnapshot();
         for (let i = 0; i < docSnapshot.pageCount; i++) {
@@ -103,7 +103,7 @@ describe('Snapshot E2E Tests (Showcase)', () => {
 
     test('type filter matches select method', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const snapshot = await pdf.getPageSnapshot(0, [ObjectType.PARAGRAPH]);
         const selected = await pdf.page(0).selectParagraphs();
@@ -118,7 +118,7 @@ describe('Snapshot E2E Tests (Showcase)', () => {
 
     test('multiple type filters combined', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const snapshot = await pdf.getPageSnapshot(0, [ObjectType.PARAGRAPH, ObjectType.TEXT_LINE]);
         expect(snapshot.elements.every(e => e.type === ObjectType.PARAGRAPH || e.type === ObjectType.TEXT_LINE)).toBe(true);
@@ -130,7 +130,7 @@ describe('Snapshot E2E Tests (Showcase)', () => {
 
     test('total element count matches expected', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const elements = await pdf.selectElements();
         expect(elements.length).toBe(99);
@@ -143,7 +143,7 @@ describe('Snapshot E2E Tests (Showcase)', () => {
 
     test('snapshot consistency across multiple pages', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const docSnapshot = await pdf.getDocumentSnapshot();
         expect(docSnapshot.pageCount).toBeGreaterThan(1);

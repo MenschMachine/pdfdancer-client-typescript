@@ -9,7 +9,7 @@ describe('Snapshot E2E Tests', () => {
     
     test('get document snapshot', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const client = await PDFDancer.open(pdfData, token, baseUrl);
 
         const snapshot = await client.getDocumentSnapshot();
         
@@ -42,7 +42,7 @@ describe('Snapshot E2E Tests', () => {
 
     test('get document snapshot with type filter', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const client = await PDFDancer.open(pdfData, token, baseUrl);
 
         // Get snapshot filtered by paragraphs only
         const snapshot = await client.getDocumentSnapshot([ObjectType.PARAGRAPH]);
@@ -59,7 +59,7 @@ describe('Snapshot E2E Tests', () => {
 
     test('get document snapshot with multiple type filters', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const client = await PDFDancer.open(pdfData, token, baseUrl);
 
         // Get snapshot filtered by paragraphs and images
         const snapshot = await client.getDocumentSnapshot([ObjectType.PARAGRAPH, ObjectType.IMAGE]);
@@ -75,7 +75,7 @@ describe('Snapshot E2E Tests', () => {
 
     test('get page snapshot', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const client = await PDFDancer.open(pdfData, token, baseUrl);
 
         const pageSnapshot = await client.getPageSnapshot(0);
         
@@ -103,7 +103,7 @@ describe('Snapshot E2E Tests', () => {
 
     test('get page snapshot with type filter', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const client = await PDFDancer.open(pdfData, token, baseUrl);
 
         // Get page snapshot filtered by images only
         const pageSnapshot = await client.getPageSnapshot(0, [ObjectType.IMAGE]);
@@ -118,7 +118,7 @@ describe('Snapshot E2E Tests', () => {
 
     test('get page snapshot via PageClient', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const client = await PDFDancer.open(pdfData, token, baseUrl);
 
         const page = client.page(1);
         const pageSnapshot = await page.getSnapshot();
@@ -132,7 +132,7 @@ describe('Snapshot E2E Tests', () => {
 
     test('get page snapshot via PageClient with type filter', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const client = await PDFDancer.open(pdfData, token, baseUrl);
 
         const page = client.page(0);
         const pageSnapshot = await page.getSnapshot([ObjectType.PARAGRAPH]);
@@ -147,7 +147,7 @@ describe('Snapshot E2E Tests', () => {
 
     test('DocumentSnapshot helper methods', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const client = await PDFDancer.open(pdfData, token, baseUrl);
 
         const snapshot = await client.getDocumentSnapshot();
         
@@ -179,7 +179,7 @@ describe('Snapshot E2E Tests', () => {
 
     test('PageSnapshot helper methods', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const client = await PDFDancer.open(pdfData, token, baseUrl);
 
         const pageSnapshot = await client.getPageSnapshot(0);
         
@@ -200,7 +200,7 @@ describe('Snapshot E2E Tests', () => {
 
     test('snapshot with form fields', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('mixed-form-types.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const client = await PDFDancer.open(pdfData, token, baseUrl);
 
         // Form fields can be TEXT_FIELD, CHECKBOX, or RADIO_BUTTON
         const snapshot = await client.getDocumentSnapshot([
@@ -224,7 +224,7 @@ describe('Snapshot E2E Tests', () => {
 
     test('snapshot with paths', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const client = await PDFDancer.open(pdfData, token, baseUrl);
 
         const snapshot = await client.getDocumentSnapshot([ObjectType.PATH]);
         
@@ -242,7 +242,7 @@ describe('Snapshot E2E Tests', () => {
 
     test('compare snapshot with individual find operations', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const client = await PDFDancer.open(pdfData, token, baseUrl);
 
         // Get snapshot
         const snapshot = await client.getPageSnapshot(0);
@@ -258,7 +258,7 @@ describe('Snapshot E2E Tests', () => {
 
     test('snapshot fonts information', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const client = await PDFDancer.open(pdfData, token, baseUrl);
 
         const snapshot = await client.getDocumentSnapshot();
         
@@ -278,7 +278,7 @@ describe('Snapshot E2E Tests', () => {
 
     test('snapshot on empty page', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Empty.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const client = await PDFDancer.open(pdfData, token, baseUrl);
 
         const snapshot = await client.getDocumentSnapshot();
         

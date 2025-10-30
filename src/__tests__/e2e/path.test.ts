@@ -10,7 +10,7 @@ describe('Path E2E Tests (New API)', () => {
 
     test('select paths', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const paths = await pdf.selectPaths();
         expect(paths).toHaveLength(9);
@@ -25,7 +25,7 @@ describe('Path E2E Tests (New API)', () => {
 
     test('select paths by position', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const paths = await pdf.page(0).selectPathsAt(80, 720);
         expect(paths).toHaveLength(1);
@@ -34,7 +34,7 @@ describe('Path E2E Tests (New API)', () => {
 
     test('delete path', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         let paths = await pdf.page(0).selectPathsAt(80, 720);
         expect(paths).toHaveLength(1);
@@ -56,7 +56,7 @@ describe('Path E2E Tests (New API)', () => {
 
     test('move path', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const [path] = await pdf.page(0).selectPathsAt(80, 720);
         const pos = path.position;

@@ -12,7 +12,7 @@ describe('Image E2E Tests (v2 API)', () => {
 
     test('find images', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const images = await pdf.selectImages();
         expect(images).toHaveLength(3);
@@ -24,7 +24,7 @@ describe('Image E2E Tests (v2 API)', () => {
 
     test('delete images', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const images = await pdf.selectImages();
         expect(images).toHaveLength(3);
@@ -50,7 +50,7 @@ describe('Image E2E Tests (v2 API)', () => {
 
     test('move image', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const images = await pdf.selectImages();
         const image = images[2];
@@ -79,7 +79,7 @@ describe('Image E2E Tests (v2 API)', () => {
 
     test('find image by position', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const none = await pdf.page(11).selectImagesAt(0, 0);
         expect(none).toHaveLength(0);
@@ -91,7 +91,7 @@ describe('Image E2E Tests (v2 API)', () => {
 
     test('add image', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const before = await pdf.selectImages();
         expect(before).toHaveLength(3);
