@@ -11,7 +11,7 @@ describe('Page E2E Tests', () => {
 
     test('get pages', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const client = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         const pages = await client.pages();
         expect(pages).toBeDefined();
@@ -21,7 +21,7 @@ describe('Page E2E Tests', () => {
 
     test('get page', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const client = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         const page = client.page(2);
         expect(page).toBeDefined();
@@ -31,7 +31,7 @@ describe('Page E2E Tests', () => {
 
     test('delete page', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
-        const client = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const client = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         expect(await client.pages()).toHaveLength(12);
         const page3 = client.page(3);

@@ -139,7 +139,7 @@ const pdf = await PDFDancer.open(
   pdfData,     // Uint8Array, File, or ArrayBuffer
   token,       // Optional: defaults to process.env.PDFDANCER_TOKEN
   baseUrl,     // Optional: defaults to process.env.PDFDANCER_BASE_URL or https://api.pdfdancer.com
-  timeout      // Optional request timeout in ms (default: 30000)
+  timeout      // Optional request timeout in ms (default: 60000)
 );
 ```
 

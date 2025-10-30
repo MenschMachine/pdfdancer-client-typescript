@@ -5,7 +5,7 @@ import {PDFAssertions} from './pdf-assertions';
 describe('Page E2E Tests (Showcase)', () => {
     test('get all elements', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         const elements = await pdf.selectElements();
         expect(elements.length).toBe(99);
@@ -20,7 +20,7 @@ describe('Page E2E Tests (Showcase)', () => {
 
     test('get pages', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         const pages = await pdf.pages();
         expect(pages).toBeDefined();
@@ -30,7 +30,7 @@ describe('Page E2E Tests (Showcase)', () => {
 
     test('get page', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         const page = pdf.page(2);
         expect(page).toBeDefined();
@@ -40,7 +40,7 @@ describe('Page E2E Tests (Showcase)', () => {
 
     test('delete page', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         const page3 = pdf.page(3);
         await page3.delete();
@@ -54,7 +54,7 @@ describe('Page E2E Tests (Showcase)', () => {
 
     test('move page', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         const pagesBefore = await pdf.pages();
         expect(pagesBefore.length).toBe(7);
@@ -68,7 +68,7 @@ describe('Page E2E Tests (Showcase)', () => {
 
     test('add page', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         const pagesBefore = await pdf.pages();
         expect(pagesBefore.length).toBe(7);
@@ -83,7 +83,7 @@ describe('Page E2E Tests (Showcase)', () => {
 
     test('add page with builder default', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         expect((await pdf.pages()).length).toBe(7);
 
@@ -94,7 +94,7 @@ describe('Page E2E Tests (Showcase)', () => {
 
     test('add page with builder A4 portrait', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         expect((await pdf.pages()).length).toBe(7);
 
@@ -105,7 +105,7 @@ describe('Page E2E Tests (Showcase)', () => {
 
     test('add page with builder letter landscape', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         expect((await pdf.pages()).length).toBe(7);
 
@@ -116,7 +116,7 @@ describe('Page E2E Tests (Showcase)', () => {
 
     test('add page with builder at index', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         expect((await pdf.pages()).length).toBe(7);
 
@@ -132,7 +132,7 @@ describe('Page E2E Tests (Showcase)', () => {
 
     test('add page with builder custom size', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         expect((await pdf.pages()).length).toBe(7);
 
@@ -143,7 +143,7 @@ describe('Page E2E Tests (Showcase)', () => {
 
     test('add page with builder all options', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         expect((await pdf.pages()).length).toBe(7);
 

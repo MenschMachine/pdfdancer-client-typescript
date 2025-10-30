@@ -359,7 +359,7 @@ export class PDFDancer {
         token: string,
         pdfData: Uint8Array | File | ArrayBuffer,
         baseUrl: string | null = null,
-        readTimeout: number = 30000
+        readTimeout: number = 60000
     ) {
 
         if (!token || !token.trim()) {
@@ -408,7 +408,7 @@ export class PDFDancer {
             baseUrl ??
             process.env.PDFDANCER_BASE_URL ??
             "https://api.pdfdancer.com";
-        const resolvedTimeout = timeout ?? 30000;
+        const resolvedTimeout = timeout ?? 60000;
 
         if (!resolvedToken) {
             throw new ValidationException("Missing PDFDancer API token. Pass a token via the `token` argument or set the PDFDANCER_TOKEN environment variable.");
@@ -427,7 +427,7 @@ export class PDFDancer {
      * @param options.initialPageCount Number of initial pages (default: 1)
      * @param token Authentication token (optional, can use PDFDANCER_TOKEN env var)
      * @param baseUrl Base URL for the PDFDancer API (optional)
-     * @param timeout Request timeout in milliseconds (default: 30000)
+     * @param timeout Request timeout in milliseconds (default: 60000)
      */
     static async new(
         options?: {
@@ -444,7 +444,7 @@ export class PDFDancer {
             baseUrl ??
             process.env.PDFDANCER_BASE_URL ??
             "https://api.pdfdancer.com";
-        const resolvedTimeout = timeout ?? 30000;
+        const resolvedTimeout = timeout ?? 60000;
 
         if (!resolvedToken) {
             throw new ValidationException("Missing PDFDancer token (pass it explicitly or set PDFDANCER_TOKEN in environment).");
@@ -1428,7 +1428,7 @@ export class PDFDancer {
                     'X-Fingerprint': fingerprint
                 },
                 body: formData,
-                signal: AbortSignal.timeout(30000)
+                signal: AbortSignal.timeout(60000)
             });
 
             logGeneratedAtHeader(response, 'POST', '/font/register');

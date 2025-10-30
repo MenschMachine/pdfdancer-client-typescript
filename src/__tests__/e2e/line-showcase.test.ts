@@ -7,7 +7,7 @@ const SAMPLE_PARAGRAPH = 'This is regular Sans text showing alignment and styles
 describe('Text Line E2E Tests (Showcase)', () => {
     test('find lines by position multi', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         for (let i = 0; i < 10; i++) {
             const lines = await pdf.selectTextLines();
@@ -22,7 +22,7 @@ describe('Text Line E2E Tests (Showcase)', () => {
 
     test('find lines by position', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         const lines = await pdf.selectTextLines();
         expect(lines.length).toBe(36);
@@ -45,7 +45,7 @@ describe('Text Line E2E Tests (Showcase)', () => {
 
     test('find lines by text', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         const lines = await pdf.page(0).selectTextLinesStartingWith(SAMPLE_PARAGRAPH);
         expect(lines.length).toBe(1);
@@ -58,7 +58,7 @@ describe('Text Line E2E Tests (Showcase)', () => {
 
     test('delete line', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         const [line] = await pdf.page(0).selectTextLinesStartingWith(SAMPLE_PARAGRAPH);
         await line.delete();
@@ -72,7 +72,7 @@ describe('Text Line E2E Tests (Showcase)', () => {
 
     test('move line', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         const [line] = await pdf.page(0).selectTextLinesStartingWith(SAMPLE_PARAGRAPH);
         const pos = line.position;
@@ -94,7 +94,7 @@ describe('Text Line E2E Tests (Showcase)', () => {
 
     test('modify line', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         const [line] = await pdf.page(0).selectTextLinesStartingWith(SAMPLE_PARAGRAPH);
         await line.edit().text(' replaced ').apply();

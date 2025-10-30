@@ -6,7 +6,7 @@ import {PDFAssertions} from './pdf-assertions';
 describe('Image E2E Tests (Showcase)', () => {
     test('find images', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         const images = await pdf.selectImages();
         expect(images.length).toBe(12);
@@ -18,7 +18,7 @@ describe('Image E2E Tests (Showcase)', () => {
 
     test('delete all images', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         const images = await pdf.selectImages();
         expect(images.length).toBe(12);
@@ -36,7 +36,7 @@ describe('Image E2E Tests (Showcase)', () => {
 
     test('move image', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         const images = await pdf.selectImages();
         const image = images[10];
@@ -61,7 +61,7 @@ describe('Image E2E Tests (Showcase)', () => {
 
     test('find image by position', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         const none = await pdf.page(5).selectImagesAt(0, 0);
         expect(none.length).toBe(0);
@@ -73,7 +73,7 @@ describe('Image E2E Tests (Showcase)', () => {
 
     test('add image via document builder', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         expect(await pdf.selectImages()).toHaveLength(12);
         expect(await pdf.page(6).selectImages()).toHaveLength(1);
@@ -103,7 +103,7 @@ describe('Image E2E Tests (Showcase)', () => {
 
     test('add image via page builder', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 30000);
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl, 60000);
 
         expect(await pdf.selectImages()).toHaveLength(12);
         expect(await pdf.page(6).selectImages()).toHaveLength(1);
