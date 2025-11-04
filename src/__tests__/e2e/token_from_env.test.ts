@@ -3,7 +3,6 @@ import {PDFDancer} from "../../pdfdancer_v1";
 import {HttpClientException, ValidationException} from "../../exceptions";
 
 describe('Env Token E2E Tests', () => {
-    const MISSING_TOKEN_MESSAGE = "Missing PDFDancer API token. Pass a token via the `token` argument or set the PDFDANCER_TOKEN environment variable.";
     let originalToken: string | undefined;
     let originalBaseUrl: string | undefined;
     let baseUrl: string;

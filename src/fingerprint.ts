@@ -32,7 +32,7 @@ function getInstallSalt(): string {
 
         // Create directory if it doesn't exist
         if (!fs.existsSync(saltDir)) {
-            fs.mkdirSync(saltDir, { recursive: true, mode: 0o700 });
+            fs.mkdirSync(saltDir, {recursive: true, mode: 0o700});
         }
 
         // Read existing salt or generate new one
@@ -40,7 +40,7 @@ function getInstallSalt(): string {
             return fs.readFileSync(saltFile, 'utf8').trim();
         } else {
             const salt = crypto.randomBytes(16).toString('hex');
-            fs.writeFileSync(saltFile, salt, { mode: 0o600 });
+            fs.writeFileSync(saltFile, salt, {mode: 0o600});
             return salt;
         }
     } catch (error) {
@@ -54,13 +54,26 @@ function getInstallSalt(): string {
  * Note: This is limited on the client side and may not always be accurate
  */
 async function getClientIP(): Promise<string> {
-    try {
-        // In browser, we can't reliably get the real IP
-        // Return a placeholder that will be consistent per session
-        return 'client-unknown';
-    } catch {
+    // In the browser, just return a placeholder
+    if (typeof window !== 'undefined') {
         return 'client-unknown';
     }
+
+    // --- Running on server side ---
+    // Try to find a non-internal IPv4 address from network interfaces
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+        const netList = interfaces[name];
+        if (!netList) continue;
+        for (const net of netList) {
+            if (net.family === 'IPv4' && !net.internal) {
+                return net.address;
+            }
+        }
+    }
+
+    // Fallback if nothing found
+    return 'server-unknown';
 }
 
 /**

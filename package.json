@@ -10,7 +10,7 @@
     "test:unit": "jest --selectProjects unit",
     "test:e2e": "jest --selectProjects e2e",
     "test:watch": "jest --watch",
-    "lint": "eslint src/**/*.ts",
+    "lint": "eslint src/",
     "prepublishOnly": "npm run build",
     "release": "node scripts/release.js",
     "release:skip-tests": "node scripts/release.js --skip-tests",
