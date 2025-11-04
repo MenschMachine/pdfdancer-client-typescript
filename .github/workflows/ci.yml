@@ -8,11 +8,14 @@ on:
 
 jobs:
   test:
+    # Run minimal config on non-main branches
+    if: github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
-        node-version: [ 20.x, 22.x, 24.x ]
+        node-version: [ 20.x ]
 
     steps:
       - uses: actions/checkout@v4
@@ -33,5 +36,51 @@ jobs:
         run: npm run build
 
       - name: Run tests
-        run: PDFDANCER_BASE_URL=https://api-staging.pdfdancer.com PDFDANCER_TOKEN=42 npm run test
+        run: |
+          PDFDANCER_BASE_URL=https://api-staging.pdfdancer.com \
+          PDFDANCER_TOKEN=42 \
+          npm run test
 
+  test-full-matrix:
+    # Run full OS + Node version matrix only on main
+    if: github.ref == 'refs/heads/main'
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+        node-version: [ 20.x, 22.x, 24.x ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Run tests (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          PDFDANCER_BASE_URL=https://api-staging.pdfdancer.com \
+          PDFDANCER_TOKEN=42 \
+          npm run test
+
+      - name: Run tests (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          set PDFDANCER_BASE_URL=https://api-staging.pdfdancer.com
+          set PDFDANCER_TOKEN=42
+          npm run test
