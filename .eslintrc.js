@@ -8,6 +8,7 @@ module.exports = {
     env: {
         node: true,
         jest: true,
+        browser: true,
     },
     ignorePatterns: ['.eslintrc.js', 'dist/', 'node_modules/'],
     overrides: [
@@ -19,6 +20,7 @@ module.exports = {
                 '@typescript-eslint/explicit-module-boundary-types': 'off',
                 '@typescript-eslint/no-explicit-any': 'warn',
                 '@typescript-eslint/no-unused-vars': 'warn',
+                'no-dupe-class-members': 'off',
             }
         }
     ]
