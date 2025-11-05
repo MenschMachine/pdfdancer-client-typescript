@@ -8,6 +8,7 @@ module.exports = {
   env: {
     node: true,
     jest: true,
+    browser: true,
   },
   ignorePatterns: ['.eslintrc.js', 'dist/', 'node_modules/'],
   rules: {
@@ -15,5 +16,6 @@ module.exports = {
     '@typescript-eslint/explicit-function-return-type': 'off',
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     '@typescript-eslint/no-explicit-any': 'warn',
+    'no-dupe-class-members': 'off',
   },
 };
