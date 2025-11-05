@@ -4,6 +4,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import os from "os";
 
 /**
  * Get the base URL from environment variable or default
@@ -102,7 +103,12 @@ export async function requireEnvAndFixture(pdfFilename: string): Promise<[string
  * Helper to open temporary file path (for Node.js environment)
  */
 export function createTempPath(filename: string): string {
-    const tmpDir = process.env.TMPDIR || '/tmp';
+    const tmpDir =
+        process.env.TMPDIR ||
+        process.env.TEMP ||
+        process.env.TMP ||
+        os.tmpdir(); // reliable built-in fallback
+
     return path.join(tmpDir, filename);
 }
 
