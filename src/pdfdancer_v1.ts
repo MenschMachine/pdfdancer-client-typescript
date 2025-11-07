@@ -357,7 +357,7 @@ export class PDFDancer {
      */
     private constructor(
         token: string,
-        pdfData: Uint8Array | File | ArrayBuffer,
+        pdfData: Uint8Array | File | ArrayBuffer | string,
         baseUrl: string | null = null,
         readTimeout: number = 60000
     ) {
@@ -561,7 +561,7 @@ export class PDFDancer {
     /**
      * Process PDF data from various input types with strict validation.
      */
-    private _processPdfData(pdfData: Uint8Array | File | ArrayBuffer): Uint8Array {
+    private _processPdfData(pdfData: Uint8Array | File | ArrayBuffer | string): Uint8Array {
         if (!pdfData) {
             throw new ValidationException("PDF data cannot be null");
         }
@@ -581,6 +581,16 @@ export class PDFDancer {
             } else if (pdfData instanceof File) {
                 // Note: File reading will be handled asynchronously in the session creation
                 return new Uint8Array(); // Placeholder, will be replaced in _createSession
+            } else if (typeof pdfData === 'string') {
+                // Handle string as filepath
+                if (!fs.existsSync(pdfData)) {
+                    throw new ValidationException(`PDF file not found: ${pdfData}`);
+                }
+                const fileData = new Uint8Array(fs.readFileSync(pdfData));
+                if (fileData.length === 0) {
+                    throw new ValidationException("PDF file is empty");
+                }
+                return fileData;
             } else {
                 throw new ValidationException(`Unsupported PDF data type: ${typeof pdfData}`);
             }
