@@ -139,7 +139,8 @@ const pdf = await PDFDancer.open(
   pdfData,     // Uint8Array, File, or ArrayBuffer
   token,       // Optional: defaults to process.env.PDFDANCER_TOKEN
   baseUrl,     // Optional: defaults to process.env.PDFDANCER_BASE_URL or https://api.pdfdancer.com
-  timeout      // Optional request timeout in ms (default: 60000)
+  timeout,     // Optional request timeout in ms (default: 60000)
+  retryConfig  // Optional retry configuration
 );
 ```
 
@@ -147,6 +148,45 @@ const pdf = await PDFDancer.open(
 - Override the API host with `PDFDANCER_BASE_URL` (e.g., sandbox environments).
 - Tune HTTP read timeouts via the `timeout` argument on `PDFDancer.open()` and `PDFDancer.new()`.
 - Page indexes start at `0` throughout the API.
+
+### Retry Configuration
+
+The client includes a configurable retry mechanism for handling transient failures. By default, it retries on specific HTTP status codes (429, 500, 502, 503, 504) and network errors with exponential backoff.
+
+```typescript
+import { PDFDancer, RetryConfig } from 'pdfdancer-client-typescript';
+
+// Use default retry configuration (3 retries, exponential backoff)
+const pdf = await PDFDancer.open(pdfData);
+
+// Customize retry behavior
+const customRetryConfig: RetryConfig = {
+  maxRetries: 5,              // Maximum number of retry attempts (default: 3)
+  initialDelay: 1000,         // Initial delay in ms before first retry (default: 1000)
+  maxDelay: 10000,            // Maximum delay in ms between retries (default: 10000)
+  backoffMultiplier: 2,       // Exponential backoff multiplier (default: 2)
+  retryableStatusCodes: [429, 500, 502, 503, 504], // HTTP status codes to retry (default)
+  retryOnNetworkError: true,  // Retry on network errors (default: true)
+  useJitter: true             // Add random jitter to delays (default: true)
+};
+
+const pdf = await PDFDancer.open(pdfData, token, baseUrl, timeout, customRetryConfig);
+```
+
+**Default Retry Behavior:**
+- Retries up to 3 times on transient errors
+- Uses exponential backoff with jitter (1s, 2s, 4s base delays)
+- Retries on HTTP 429 (rate limit), 500, 502, 503, 504 (server errors)
+- Retries on network errors (connection failures, timeouts)
+- Does NOT retry on client errors (4xx except 429)
+
+**Disable Retries:**
+```typescript
+const noRetryConfig: RetryConfig = { maxRetries: 0 };
+const pdf = await PDFDancer.open(pdfData, token, baseUrl, timeout, noRetryConfig);
+```
+
+The retry mechanism applies to all REST API calls including session creation, document operations, and font registration.
 
 ## Working with Pages
 
