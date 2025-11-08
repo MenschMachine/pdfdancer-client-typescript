@@ -110,4 +110,38 @@ describe('Image E2E Tests (v2 API)', () => {
         await assertions.assertImageAt(50.1, 98.0, 6);
         await assertions.assertNumberOfImages(1, 6);
     });
+
+    // Tests for singular select methods
+    test('selectImage returns first image or null', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        // Test with results - page 11 has images
+        const image = await pdf.page(11).selectImage();
+        expect(image).not.toBeNull();
+        expect(image!.internalId).toBe('IMAGE_000003');
+
+        // Test with PDFDancer class
+        const imageFromPdf = await pdf.selectImage();
+        expect(imageFromPdf).not.toBeNull();
+        expect(imageFromPdf!.internalId).toBe('IMAGE_000001');
+
+        // Test page 0 also has images (2 images)
+        const imageOnPage0 = await pdf.page(0).selectImage();
+        expect(imageOnPage0).not.toBeNull();
+        expect(imageOnPage0!.internalId).toBe('IMAGE_000001');
+    });
+
+    test('selectImageAt returns first image at position or null', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const image = await pdf.page(11).selectImageAt(54, 300, 1);
+        expect(image).not.toBeNull();
+        expect(image!.internalId).toBe('IMAGE_000003');
+
+        // Test with no match
+        const noMatch = await pdf.page(11).selectImageAt(0, 0);
+        expect(noMatch).toBeNull();
+    });
 });

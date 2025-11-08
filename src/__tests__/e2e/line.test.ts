@@ -126,4 +126,64 @@ describe('Text Line E2E Tests (v2 API)', () => {
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextlineExists(' replaced ');
     });
+
+    // Tests for singular select methods
+    test('selectTextLine returns first line or null', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        // Test with results
+        const line = await pdf.page(1).selectTextLine();
+        expect(line).not.toBeNull();
+        expect(line!.internalId).toBe('TEXTLINE_000005');
+
+        // Test with PDFDancer class
+        const lineFromPdf = await pdf.selectTextLine();
+        expect(lineFromPdf).not.toBeNull();
+        expect(lineFromPdf!.internalId).toBe('TEXTLINE_000001');
+
+        // Test alias selectLine
+        const lineAlias = await pdf.selectLine();
+        expect(lineAlias).not.toBeNull();
+        expect(lineAlias!.internalId).toBe('TEXTLINE_000001');
+    });
+
+    test('selectTextLineStartingWith returns first match or null', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const line = await pdf.page(0).selectTextLineStartingWith('the complete');
+        expect(line).not.toBeNull();
+        expect(line!.internalId).toBe('TEXTLINE_000002');
+
+        // Test with no match
+        const noMatch = await pdf.page(0).selectTextLineStartingWith('NoMatch');
+        expect(noMatch).toBeNull();
+    });
+
+    test('selectTextLineMatching returns first match or null', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const line = await pdf.page(0).selectTextLineMatching('.*Complete.*');
+        expect(line).not.toBeNull();
+        expect(line!.internalId).toBe('TEXTLINE_000002');
+
+        // Test with no match
+        const noMatch = await pdf.page(0).selectTextLineMatching('.*NOT FOUND.*');
+        expect(noMatch).toBeNull();
+    });
+
+    test('selectTextLineAt returns first line at position or null', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const line = await pdf.page(0).selectTextLineAt(54, 606, 10);
+        expect(line).not.toBeNull();
+        expect(line!.internalId).toBe('TEXTLINE_000002');
+
+        // Test with no match
+        const noMatch = await pdf.page(0).selectTextLineAt(1000, 1000, 1);
+        expect(noMatch).toBeNull();
+    });
 });

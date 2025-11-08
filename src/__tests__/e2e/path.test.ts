@@ -76,4 +76,33 @@ describe('Path E2E Tests (New API)', () => {
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertPathIsAt('PATH_000001', 50.1, 100);
     });
+
+    // Tests for singular select methods
+    test('selectPath returns first path or null', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        // Test with PDFDancer class (document-level)
+        const pathFromPdf = await pdf.selectPath();
+        expect(pathFromPdf).not.toBeNull();
+        expect(pathFromPdf!.internalId).toBe('PATH_000001');
+
+        // Test with page-level using position since paths may require coordinates
+        const pathOnPage = await pdf.page(0).selectPathAt(80, 720);
+        expect(pathOnPage).not.toBeNull();
+        expect(pathOnPage!.internalId).toBe('PATH_000001');
+    });
+
+    test('selectPathAt returns first path at position or null', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const path = await pdf.page(0).selectPathAt(80, 720);
+        expect(path).not.toBeNull();
+        expect(path!.internalId).toBe('PATH_000001');
+
+        // Test with no match
+        const noMatch = await pdf.page(0).selectPathAt(1000, 1000);
+        expect(noMatch).toBeNull();
+    });
 });
