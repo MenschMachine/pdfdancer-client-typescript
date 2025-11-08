@@ -121,6 +121,7 @@ const DEFAULT_RETRY_CONFIG: Required<RetryConfig> = {
  */
 async function fetchWithRetry(
     url: string,
+    // eslint-disable-next-line no-undef
     options: RequestInit,
     retryConfig: Required<RetryConfig>,
     context: string = 'request'
@@ -1001,6 +1002,7 @@ export class PDFDancer {
      */
     private async _fetchWithRetry(
         url: string,
+        // eslint-disable-next-line no-undef
         options: RequestInit,
         context: string = 'request'
     ): Promise<Response> {
