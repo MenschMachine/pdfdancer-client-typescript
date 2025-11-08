@@ -2,8 +2,8 @@ name: Daily Tests
 
 on:
   schedule:
-    # Run daily at 2:00 AM UTC
-    - cron: '0 2 * * *'
+    # Run daily at 11:00 PM UTC
+    - cron: '0 23 * * *'
   workflow_dispatch: # Allow manual trigger
 
 jobs:
