@@ -82,15 +82,15 @@ describe('Path E2E Tests (New API)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        // Test with results
-        const path = await pdf.page(0).selectPath();
-        expect(path).not.toBeNull();
-        expect(path!.internalId).toBe('PATH_000001');
-
-        // Test with PDFDancer class
+        // Test with PDFDancer class (document-level)
         const pathFromPdf = await pdf.selectPath();
         expect(pathFromPdf).not.toBeNull();
         expect(pathFromPdf!.internalId).toBe('PATH_000001');
+
+        // Test with page-level using position since paths may require coordinates
+        const pathOnPage = await pdf.page(0).selectPathAt(80, 720);
+        expect(pathOnPage).not.toBeNull();
+        expect(pathOnPage!.internalId).toBe('PATH_000001');
     });
 
     test('selectPathAt returns first path at position or null', async () => {

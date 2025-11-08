@@ -154,8 +154,10 @@ describe('AcroForm Fields E2E Tests (v2 API)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('mixed-form-types.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const field = await pdf.page(0).selectFormFieldAt(100, 650, 20);
+        const field = await pdf.page(0).selectFormFieldAt(280, 455, 1);
         expect(field).not.toBeNull();
+        expect(field!.type).toBe('RADIO_BUTTON');
+        expect(field!.internalId).toBe('FORM_FIELD_000008');
 
         // Test with no match
         const noMatch = await pdf.page(0).selectFormFieldAt(1000, 1000, 1);

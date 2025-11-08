@@ -165,7 +165,7 @@ describe('Text Line E2E Tests (v2 API)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const line = await pdf.page(0).selectTextLineMatching('.*complete.*');
+        const line = await pdf.page(0).selectTextLineMatching('.*Complete.*');
         expect(line).not.toBeNull();
         expect(line!.internalId).toBe('TEXTLINE_000002');
 

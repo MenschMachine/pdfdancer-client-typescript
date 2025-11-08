@@ -116,7 +116,7 @@ describe('Image E2E Tests (v2 API)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        // Test with results
+        // Test with results - page 11 has images
         const image = await pdf.page(11).selectImage();
         expect(image).not.toBeNull();
         expect(image!.internalId).toBe('IMAGE_000003');
@@ -126,9 +126,10 @@ describe('Image E2E Tests (v2 API)', () => {
         expect(imageFromPdf).not.toBeNull();
         expect(imageFromPdf!.internalId).toBe('IMAGE_000001');
 
-        // Test page without images
-        const noImage = await pdf.page(0).selectImage();
-        expect(noImage).toBeNull();
+        // Test page 0 also has images (2 images)
+        const imageOnPage0 = await pdf.page(0).selectImage();
+        expect(imageOnPage0).not.toBeNull();
+        expect(imageOnPage0!.internalId).toBe('IMAGE_000001');
     });
 
     test('selectImageAt returns first image at position or null', async () => {
