@@ -1,0 +1,54 @@
+name: Daily Tests
+
+on:
+  schedule:
+    # Run daily at 11:00 PM UTC
+    - cron: '0 23 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  daily-test:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+        node-version: [ 20.x, 22.x, 24.x ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Run tests (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          PDFDANCER_BASE_URL=https://api-staging.pdfdancer.com \
+          PDFDANCER_TOKEN=42 \
+          npm run test
+
+      - name: Run tests (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          set PDFDANCER_BASE_URL=https://api-staging.pdfdancer.com
+          set PDFDANCER_TOKEN=42
+          npm run test
+
+      - name: Report failure
+        if: failure()
+        run: echo "Daily test run failed. Please check the logs for details."
