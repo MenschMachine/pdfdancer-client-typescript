@@ -10,7 +10,7 @@ import os from "os";
  * Get the base URL from environment variable or default
  */
 export function getBaseUrl(): string {
-    return process.env.PDFDANCER_BASE_URL || 'http://localhost:8080';
+    return (process.env.PDFDANCER_BASE_URL || 'http://localhost:8080').trim();
 }
 
 /**

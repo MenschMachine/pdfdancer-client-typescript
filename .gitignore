@@ -25,3 +25,4 @@ coverage/
 .env.test
 jwt-token*.txt
 .aider*
+/.run/
