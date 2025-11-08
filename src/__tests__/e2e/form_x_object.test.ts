@@ -55,4 +55,33 @@ describe('Form E2E Tests (v2 API)', () => {
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertNumberOfFormXObjects(0);
     });
+
+    // Tests for singular select methods
+    test('selectForm returns first form or null', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('form-xobject-example.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        // Test with results
+        const form = await pdf.page(0).selectForm();
+        expect(form).not.toBeNull();
+        expect(form!.internalId).toBe('FORM_000001');
+
+        // Test with PDFDancer class
+        const formFromPdf = await pdf.selectForm();
+        expect(formFromPdf).not.toBeNull();
+        expect(formFromPdf!.internalId).toBe('FORM_000001');
+    });
+
+    test('selectFormAt returns first form at position or null', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('form-xobject-example.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const form = await pdf.page(0).selectFormAt(321, 601, 1);
+        expect(form).not.toBeNull();
+        expect(form!.internalId).toBe('FORM_000005');
+
+        // Test with no match
+        const noMatch = await pdf.page(0).selectFormAt(0, 0);
+        expect(noMatch).toBeNull();
+    });
 });

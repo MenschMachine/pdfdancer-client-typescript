@@ -326,6 +326,93 @@ class PageClient {
     async getSnapshot(types?: ObjectType[]): Promise<PageSnapshot> {
         return this._client.getPageSnapshot(this._pageIndex, types);
     }
+
+    // Singular convenience methods - return the first element or null
+
+    async selectPath() {
+        const paths = await this.selectPaths();
+        return paths.length > 0 ? paths[0] : null;
+    }
+
+    async selectPathAt(x: number, y: number, tolerance: number = 0) {
+        const paths = await this.selectPathsAt(x, y, tolerance);
+        return paths.length > 0 ? paths[0] : null;
+    }
+
+    async selectImage() {
+        const images = await this.selectImages();
+        return images.length > 0 ? images[0] : null;
+    }
+
+    async selectImageAt(x: number, y: number, tolerance: number = 0) {
+        const images = await this.selectImagesAt(x, y, tolerance);
+        return images.length > 0 ? images[0] : null;
+    }
+
+    async selectForm() {
+        const forms = await this.selectForms();
+        return forms.length > 0 ? forms[0] : null;
+    }
+
+    async selectFormAt(x: number, y: number, tolerance: number = 0) {
+        const forms = await this.selectFormsAt(x, y, tolerance);
+        return forms.length > 0 ? forms[0] : null;
+    }
+
+    async selectFormField() {
+        const fields = await this.selectFormFields();
+        return fields.length > 0 ? fields[0] : null;
+    }
+
+    async selectFormFieldAt(x: number, y: number, tolerance: number = 0) {
+        const fields = await this.selectFormFieldsAt(x, y, tolerance);
+        return fields.length > 0 ? fields[0] : null;
+    }
+
+    async selectFormFieldByName(fieldName: string) {
+        const fields = await this.selectFormFieldsByName(fieldName);
+        return fields.length > 0 ? fields[0] : null;
+    }
+
+    async selectParagraph() {
+        const paragraphs = await this.selectParagraphs();
+        return paragraphs.length > 0 ? paragraphs[0] : null;
+    }
+
+    async selectParagraphStartingWith(text: string) {
+        const paragraphs = await this.selectParagraphsStartingWith(text);
+        return paragraphs.length > 0 ? paragraphs[0] : null;
+    }
+
+    async selectParagraphMatching(pattern: string) {
+        const paragraphs = await this.selectParagraphsMatching(pattern);
+        return paragraphs.length > 0 ? paragraphs[0] : null;
+    }
+
+    async selectParagraphAt(x: number, y: number, tolerance: number = DEFAULT_TOLERANCE) {
+        const paragraphs = await this.selectParagraphsAt(x, y, tolerance);
+        return paragraphs.length > 0 ? paragraphs[0] : null;
+    }
+
+    async selectTextLine() {
+        const lines = await this.selectTextLines();
+        return lines.length > 0 ? lines[0] : null;
+    }
+
+    async selectTextLineStartingWith(text: string) {
+        const lines = await this.selectTextLinesStartingWith(text);
+        return lines.length > 0 ? lines[0] : null;
+    }
+
+    async selectTextLineMatching(pattern: string) {
+        const lines = await this.selectTextLinesMatching(pattern);
+        return lines.length > 0 ? lines[0] : null;
+    }
+
+    async selectTextLineAt(x: number, y: number, tolerance: number = DEFAULT_TOLERANCE) {
+        const lines = await this.selectTextLinesAt(x, y, tolerance);
+        return lines.length > 0 ? lines[0] : null;
+    }
 }
 
 // noinspection ExceptionCaughtLocallyJS,JSUnusedLocalSymbols
@@ -1883,5 +1970,51 @@ export class PDFDancer {
 
     async selectLines() {
         return this.selectTextLines();
+    }
+
+    // Singular convenience methods - return the first element or null
+
+    async selectImage() {
+        const images = await this.selectImages();
+        return images.length > 0 ? images[0] : null;
+    }
+
+    async selectPath() {
+        const paths = await this.selectPaths();
+        return paths.length > 0 ? paths[0] : null;
+    }
+
+    async selectForm() {
+        const forms = await this.selectForms();
+        return forms.length > 0 ? forms[0] : null;
+    }
+
+    async selectFormField() {
+        const fields = await this.selectFormFields();
+        return fields.length > 0 ? fields[0] : null;
+    }
+
+    async selectFieldByName(fieldName: string) {
+        const fields = await this.selectFieldsByName(fieldName);
+        return fields.length > 0 ? fields[0] : null;
+    }
+
+    async selectParagraph() {
+        const paragraphs = await this.selectParagraphs();
+        return paragraphs.length > 0 ? paragraphs[0] : null;
+    }
+
+    async selectParagraphMatching(pattern: string) {
+        const paragraphs = await this.selectParagraphsMatching(pattern);
+        return paragraphs.length > 0 ? paragraphs[0] : null;
+    }
+
+    async selectTextLine() {
+        const lines = await this.selectTextLines();
+        return lines.length > 0 ? lines[0] : null;
+    }
+
+    async selectLine() {
+        return this.selectTextLine();
     }
 }

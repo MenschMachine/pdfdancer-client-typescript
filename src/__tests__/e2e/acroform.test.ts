@@ -105,4 +105,60 @@ describe('AcroForm Fields E2E Tests (v2 API)', () => {
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertNumberOfFormFields(10);
     });
+
+    // Tests for singular select methods
+    test('selectFormField returns first field or null', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('mixed-form-types.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        // Test with results
+        const field = await pdf.page(0).selectFormField();
+        expect(field).not.toBeNull();
+        expect(field!.internalId).toBe('FORM_FIELD_000001');
+
+        // Test with PDFDancer class
+        const fieldFromPdf = await pdf.selectFormField();
+        expect(fieldFromPdf).not.toBeNull();
+        expect(fieldFromPdf!.internalId).toBe('FORM_FIELD_000001');
+    });
+
+    test('selectFormFieldByName returns first field by name or null', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('mixed-form-types.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const field = await pdf.page(0).selectFormFieldByName('firstName');
+        expect(field).not.toBeNull();
+        expect(field!.name).toBe('firstName');
+        expect(field!.internalId).toBe('FORM_FIELD_000001');
+
+        // Test with no match
+        const noMatch = await pdf.page(0).selectFormFieldByName('nonExistent');
+        expect(noMatch).toBeNull();
+    });
+
+    test('selectFieldByName returns first field by name or null', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('mixed-form-types.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const field = await pdf.selectFieldByName('firstName');
+        expect(field).not.toBeNull();
+        expect(field!.name).toBe('firstName');
+        expect(field!.internalId).toBe('FORM_FIELD_000001');
+
+        // Test with no match
+        const noMatch = await pdf.selectFieldByName('nonExistent');
+        expect(noMatch).toBeNull();
+    });
+
+    test('selectFormFieldAt returns first field at position or null', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('mixed-form-types.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const field = await pdf.page(0).selectFormFieldAt(100, 650, 20);
+        expect(field).not.toBeNull();
+
+        // Test with no match
+        const noMatch = await pdf.page(0).selectFormFieldAt(1000, 1000, 1);
+        expect(noMatch).toBeNull();
+    });
 });

@@ -621,4 +621,63 @@ describe('Paragraph E2E Tests (v2 API)', () => {
         expect(StandardFonts.ZAPF_DINGBATS).toBe('ZapfDingbats');
     });
 
+    // Tests for singular select methods
+    test('selectParagraph returns first paragraph or null', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        // Test with results
+        const para = await pdf.page(0).selectParagraph();
+        expect(para).not.toBeNull();
+        expect(para!.internalId).toBe('PARAGRAPH_000003');
+
+        // Test with PDFDancer class
+        const paraFromPdf = await pdf.selectParagraph();
+        expect(paraFromPdf).not.toBeNull();
+        expect(paraFromPdf!.internalId).toBe('PARAGRAPH_000003');
+    });
+
+    test('selectParagraphStartingWith returns first match or null', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const para = await pdf.page(0).selectParagraphStartingWith('The Complete');
+        expect(para).not.toBeNull();
+        expect(para!.internalId).toBe('PARAGRAPH_000004');
+
+        // Test with no match
+        const noMatch = await pdf.page(0).selectParagraphStartingWith('NoMatch');
+        expect(noMatch).toBeNull();
+    });
+
+    test('selectParagraphMatching returns first match or null', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const para = await pdf.page(0).selectParagraphMatching('.*Complete.*');
+        expect(para).not.toBeNull();
+        expect(para!.internalId).toBe('PARAGRAPH_000004');
+
+        // Test with PDFDancer class
+        const paraFromPdf = await pdf.selectParagraphMatching('.*Complete.*');
+        expect(paraFromPdf).not.toBeNull();
+
+        // Test with no match
+        const noMatch = await pdf.page(0).selectParagraphMatching('.*NOT FOUND.*');
+        expect(noMatch).toBeNull();
+    });
+
+    test('selectParagraphAt returns first paragraph at position or null', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const para = await pdf.page(0).selectParagraphAt(54, 496, 10);
+        expect(para).not.toBeNull();
+        expect(para!.internalId).toBe('PARAGRAPH_000004');
+
+        // Test with no match
+        const noMatch = await pdf.page(0).selectParagraphAt(1000, 1000, 1);
+        expect(noMatch).toBeNull();
+    });
+
 });
