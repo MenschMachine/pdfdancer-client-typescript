@@ -283,7 +283,7 @@ describe('Retry Mechanism', () => {
             global.setTimeout = jest.fn((callback: () => void, delay?: number) => {
                 if (delay) delays.push(delay);
                 return originalSetTimeout(callback, 0);
-            }) as typeof setTimeout;
+            }) as unknown as typeof setTimeout;
 
             mockFetch
                 .mockResolvedValueOnce(createMockResponse(503, 'Unavailable'))
@@ -323,7 +323,7 @@ describe('Retry Mechanism', () => {
             global.setTimeout = jest.fn((callback: () => void, delay?: number) => {
                 if (delay) delays.push(delay);
                 return originalSetTimeout(callback, 0);
-            }) as typeof setTimeout;
+            }) as unknown as typeof setTimeout;
 
             mockFetch
                 .mockResolvedValueOnce(createMockResponse(503, 'Unavailable'))
@@ -360,7 +360,7 @@ describe('Retry Mechanism', () => {
             global.setTimeout = jest.fn((callback: () => void, delay?: number) => {
                 if (delay) delays.push(delay);
                 return originalSetTimeout(callback, 0);
-            }) as typeof setTimeout;
+            }) as unknown as typeof setTimeout;
 
             mockFetch
                 .mockResolvedValueOnce(createMockResponse(503, 'Unavailable'))
@@ -392,7 +392,7 @@ describe('Retry Mechanism', () => {
             global.setTimeout = jest.fn((callback: () => void, delay?: number) => {
                 if (delay) delays.push(delay);
                 return originalSetTimeout(callback, 0);
-            }) as typeof setTimeout;
+            }) as unknown as typeof setTimeout;
 
             mockFetch
                 .mockResolvedValueOnce(createMockResponse(503, 'Unavailable'))
