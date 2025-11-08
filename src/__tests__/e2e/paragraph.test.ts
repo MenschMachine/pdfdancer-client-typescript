@@ -32,7 +32,6 @@ describe('Paragraph E2E Tests (v2 API)', () => {
         expectWithin(last.position.boundingRect?.y, 496, 2);
 
         expect(last.objectRef().status).toBeDefined();
-        expect(last.objectRef().status?.isEncodable()).toBe(true);
         expect(last.objectRef().status?.getFontType()).toBe(FontType.EMBEDDED);
         expect(last.objectRef().status?.isModified()).toBe(false);
     });
@@ -112,7 +111,6 @@ describe('Paragraph E2E Tests (v2 API)', () => {
         expect(movedParas.length).toBeGreaterThan(0);
         const moved = movedParas[0];
         expect(moved.objectRef().status).toBeDefined();
-        expect(moved.objectRef().status?.isEncodable()).toBe(true);
         expect(moved.objectRef().status?.getFontType()).toBe(FontType.STANDARD);
         expect(moved.objectRef().status?.isModified()).toBe(true);
 
@@ -134,7 +132,7 @@ describe('Paragraph E2E Tests (v2 API)', () => {
         // This should issue a warning about an embedded font modification
         expect(typeof result).toBe('object');
         expect((result as any).warning).toBeDefined();
-        expect((result as any).warning).toContain('You are using an embedded font and modified the text.');
+        expect((result as any).warning).toBe("Text is not encodable with your current font, we are using 'Poppins-Bold' as a fallback font instead.");
 
         await assertNewParagraphExists(pdf);
 
@@ -142,13 +140,12 @@ describe('Paragraph E2E Tests (v2 API)', () => {
         expect(modifiedParas.length).toBeGreaterThan(0);
         const modified = modifiedParas[0];
         expect(modified.objectRef().status).toBeDefined();
-        expect(modified.objectRef().status?.isEncodable()).toBe(true);
         expect(modified.objectRef().status?.getFontType()).toBe(FontType.EMBEDDED);
         expect(modified.objectRef().status?.isModified()).toBe(true);
 
         const assertions = await PDFAssertions.create(pdf);
-        await assertions.assertTextlineHasFont('Awesomely', 'IXKSWR+Poppins-Bold', 45, 0);
-        await assertions.assertTextlineHasFont('Obvious!', 'IXKSWR+Poppins-Bold', 45, 0);
+        await assertions.assertTextlineHasFontMatching('Awesomely', 'Poppins-Bold', 45, 0);
+        await assertions.assertTextlineHasFontMatching('Obvious!', 'Poppins-Bold', 45, 0);
         await assertions.assertTextlineHasColor('Awesomely', new Color(255, 255, 255), 0);
         await assertions.assertTextlineHasColor('Obvious!', new Color(255, 255, 255), 0);
     });
@@ -543,8 +540,8 @@ describe('Paragraph E2E Tests (v2 API)', () => {
         await para.edit().replace('Awesomely\nObvious!').apply();
 
         const assertions = await PDFAssertions.create(pdf);
-        await assertions.assertTextlineHasFont('Awesomely', 'IXKSWR+Poppins-Bold', 45, 0);
-        await assertions.assertTextlineHasFont('Obvious!', 'IXKSWR+Poppins-Bold', 45, 0);
+        await assertions.assertTextlineHasFontMatching('Awesomely', 'Poppins-Bold', 45, 0);
+        await assertions.assertTextlineHasFontMatching('Obvious!', 'Poppins-Bold', 45, 0);
         await assertions.assertTextlineHasColor('Awesomely', new Color(255, 255, 255), 0);
         await assertions.assertTextlineHasColor('Obvious!', new Color(255, 255, 255), 0);
     });

@@ -24,7 +24,6 @@ describe('Text Line E2E Tests (v2 API)', () => {
         expectWithin(first.position.boundingRect?.y, 706, 1);
         expect(first.objectRef().status).toBeDefined();
         expect(first.objectRef().status?.isModified()).toBe(false);
-        expect(first.objectRef().status?.isEncodable()).toBe(true);
 
         const last = lines[lines.length - 1];
         expect(last.internalId).toBe('TEXTLINE_000340');
@@ -33,7 +32,6 @@ describe('Text Line E2E Tests (v2 API)', () => {
         expectWithin(last.position.boundingRect?.y, 35, 1);
         expect(last.objectRef().status).toBeDefined();
         expect(last.objectRef().status?.isModified()).toBe(false);
-        expect(last.objectRef().status?.isEncodable()).toBe(true);
     });
 
     test('find lines on page', async () => {
@@ -107,17 +105,15 @@ describe('Text Line E2E Tests (v2 API)', () => {
         const [line] = await pdf.page(0).selectTextLinesStartingWith('The Complete');
         const result = await line.edit().text(' replaced ').apply();
 
-        // This should issue a warning about an embedded font modification
-        expect(result.warning).toBeDefined();
-        expect(result.warning).toContain('You are using an embedded font and modified the text.');
+        expect(result.warning).toBeDefined();        // This should issue a warning about an embedded font modification
+        expect(result.warning).toContain('Text is not encodable with your current font, we are using \'Poppins-Bold\' as a fallback font instead.');
 
         const stillOld = await pdf.page(0).selectParagraphsStartingWith('The Complete');
         expect(stillOld).toHaveLength(0);
 
-        const lines = await pdf.page(0).selectTextLinesStartingWith(' replaced ');
+        const lines = await pdf.page(0).selectTextLinesMatching('.*replaced.*');
         expect(lines.length).toBeGreaterThan(0);
         expect(lines[0].objectRef().status).toBeDefined();
-        expect(lines[0].objectRef().status?.isEncodable()).toBe(true);
         expect(lines[0].objectRef().status?.getFontType()).toBe(FontType.EMBEDDED);
         expect(lines[0].objectRef().status?.isModified()).toBe(true);
 

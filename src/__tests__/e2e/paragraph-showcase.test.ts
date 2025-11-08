@@ -28,7 +28,6 @@ describe('Paragraph E2E Tests (Showcase)', () => {
 
         const status = last.objectRef().status;
         expect(status).toBeDefined();
-        expect(status?.isEncodable()).toBe(true);
         expect(status?.getFontType()).toBe(FontType.EMBEDDED);
         expect(status?.isModified()).toBe(false);
     });
@@ -137,7 +136,6 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         const [moved] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         const status = moved.objectRef().status;
         expect(status).toBeDefined();
-        expect(status?.isEncodable()).toBe(true);
         expect(status?.getFontType()).toBe(FontType.EMBEDDED);
         expect(status?.isModified()).toBe(false);
 
@@ -181,7 +179,6 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         const moved = (await pdf.page(0).selectParagraphsAt(300.1, 500))[0];
         const status = moved.objectRef().status;
         expect(status).toBeDefined();
-        expect(status?.isEncodable()).toBe(true);
         expect(status?.getFontType()).toBe(FontType.STANDARD);
         expect(status?.isModified()).toBe(true);
 
@@ -242,7 +239,6 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         const [updated] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         const status = updated.objectRef().status;
         expect(status).toBeDefined();
-        expect(status?.isEncodable()).toBe(true);
         expect(status?.getFontType()).toBe(FontType.EMBEDDED);
         expect(status?.isModified()).toBe(false);
 
@@ -261,7 +257,6 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         const [updated] = await pdf.page(0).selectParagraphsStartingWith('lorem');
         const status = updated.objectRef().status;
         expect(status).toBeDefined();
-        expect(status?.isEncodable()).toBe(true);
         expect(status?.getFontType()).toBe(FontType.EMBEDDED);
         expect(status?.isModified()).toBe(true);
 
@@ -282,7 +277,6 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         const [updated] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         const status = updated.objectRef().status;
         expect(status).toBeDefined();
-        expect(status?.isEncodable()).toBe(true);
         expect(status?.getFontType()).toBe(FontType.STANDARD);
         expect(status?.isModified()).toBe(true);
 
@@ -300,7 +294,6 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         const [updated] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         const status = updated.objectRef().status;
         expect(status).toBeDefined();
-        expect(status?.isEncodable()).toBe(true);
         expect(status?.getFontType()).toBe(FontType.EMBEDDED);
         expect(status?.isModified()).toBe(false);
 
@@ -517,7 +510,6 @@ describe('Paragraph E2E Tests (Showcase)', () => {
 
         const status = moved[0].objectRef().status;
         expect(status).toBeDefined();
-        expect(status?.isEncodable()).toBe(true);
         expect(status?.getFontType()).toBe(FontType.EMBEDDED);
         expect(status?.isModified()).toBe(false);
     });

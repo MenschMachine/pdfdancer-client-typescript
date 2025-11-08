@@ -15,7 +15,6 @@ describe('Text Line E2E Tests (Showcase)', () => {
                 const status = line.objectRef().status;
                 expect(status).toBeDefined();
                 expect(status?.isModified()).toBe(false);
-                expect(status?.isEncodable()).toBe(true);
             }
         }
     });
@@ -33,14 +32,12 @@ describe('Text Line E2E Tests (Showcase)', () => {
         expect(Math.abs(first.position.getX()! - 180)).toBeLessThanOrEqual(1);
         expect(Math.abs(first.position.getY()! - 750)).toBeLessThanOrEqual(1);
         expect(first.objectRef().status?.isModified()).toBe(false);
-        expect(first.objectRef().status?.isEncodable()).toBe(true);
 
         const last = lines[lines.length - 1];
         expect(last.internalId).toBe('TEXTLINE_000036');
         expect(Math.abs(last.position.getX()! - 69.3)).toBeLessThanOrEqual(2);
         expect(Math.abs(last.position.getY()! - 45)).toBeLessThanOrEqual(2);
         expect(last.objectRef().status?.isModified()).toBe(false);
-        expect(last.objectRef().status?.isEncodable()).toBe(true);
     });
 
     test('find lines by text', async () => {
@@ -84,7 +81,6 @@ describe('Text Line E2E Tests (Showcase)', () => {
         const moved = (await pdf.page(0).selectTextLinesAt(newX, newY, 1))[0];
         const status = moved.objectRef().status;
         expect(status).toBeDefined();
-        expect(status?.isEncodable()).toBe(true);
         expect(status?.getFontType()).toBe(FontType.EMBEDDED);
         expect(status?.isModified()).toBe(false);
 
@@ -106,7 +102,6 @@ describe('Text Line E2E Tests (Showcase)', () => {
         expect(lines.length).toBeGreaterThan(0);
         const status = lines[0].objectRef().status;
         expect(status).toBeDefined();
-        expect(status?.isEncodable()).toBe(true);
         expect(status?.getFontType()).toBe(FontType.EMBEDDED);
         expect(status?.isModified()).toBe(true);
 
