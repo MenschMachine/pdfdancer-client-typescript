@@ -9,14 +9,14 @@ import {RetryConfig} from '../pdfdancer_v1';
 global.fetch = jest.fn();
 
 // Helper to create a mock response
-function createMockResponse(status: number, body: any = {}): Response {
+function createMockResponse(status: number, body: unknown = {}): Response {
     return {
         ok: status >= 200 && status < 300,
         status,
         statusText: status === 200 ? 'OK' : 'Error',
         headers: new Headers(),
         text: async () => typeof body === 'string' ? body : JSON.stringify(body),
-        json: async () => typeof body === 'object' ? body : JSON.parse(body),
+        json: async () => typeof body === 'object' ? body : JSON.parse(body as string),
         arrayBuffer: async () => new ArrayBuffer(0),
         blob: async () => new Blob(),
         formData: async () => new FormData(),
@@ -24,7 +24,7 @@ function createMockResponse(status: number, body: any = {}): Response {
         body: null,
         bodyUsed: false,
         redirected: false,
-        type: 'basic' as ResponseType,
+        type: 'basic',
         url: ''
     } as Response;
 }
@@ -280,10 +280,10 @@ describe('Retry Mechanism', () => {
             const originalSetTimeout = global.setTimeout;
 
             // Mock setTimeout to capture delays
-            global.setTimeout = jest.fn((callback: any, delay?: number) => {
+            global.setTimeout = jest.fn((callback: () => void, delay?: number) => {
                 if (delay) delays.push(delay);
                 return originalSetTimeout(callback, 0);
-            }) as any;
+            }) as typeof setTimeout;
 
             mockFetch
                 .mockResolvedValueOnce(createMockResponse(503, 'Unavailable'))
@@ -320,10 +320,10 @@ describe('Retry Mechanism', () => {
             const delays: number[] = [];
             const originalSetTimeout = global.setTimeout;
 
-            global.setTimeout = jest.fn((callback: any, delay?: number) => {
+            global.setTimeout = jest.fn((callback: () => void, delay?: number) => {
                 if (delay) delays.push(delay);
                 return originalSetTimeout(callback, 0);
-            }) as any;
+            }) as typeof setTimeout;
 
             mockFetch
                 .mockResolvedValueOnce(createMockResponse(503, 'Unavailable'))
@@ -357,10 +357,10 @@ describe('Retry Mechanism', () => {
             const delays: number[] = [];
             const originalSetTimeout = global.setTimeout;
 
-            global.setTimeout = jest.fn((callback: any, delay?: number) => {
+            global.setTimeout = jest.fn((callback: () => void, delay?: number) => {
                 if (delay) delays.push(delay);
                 return originalSetTimeout(callback, 0);
-            }) as any;
+            }) as typeof setTimeout;
 
             mockFetch
                 .mockResolvedValueOnce(createMockResponse(503, 'Unavailable'))
@@ -389,10 +389,10 @@ describe('Retry Mechanism', () => {
             const delays: number[] = [];
             const originalSetTimeout = global.setTimeout;
 
-            global.setTimeout = jest.fn((callback: any, delay?: number) => {
+            global.setTimeout = jest.fn((callback: () => void, delay?: number) => {
                 if (delay) delays.push(delay);
                 return originalSetTimeout(callback, 0);
-            }) as any;
+            }) as typeof setTimeout;
 
             mockFetch
                 .mockResolvedValueOnce(createMockResponse(503, 'Unavailable'))
