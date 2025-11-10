@@ -62,6 +62,154 @@ const DEBUG =
     (process.env.PDFDANCER_CLIENT_DEBUG ?? '').toLowerCase() === 'yes';
 
 /**
+ * Configuration for retry mechanism on REST API calls.
+ */
+export interface RetryConfig {
+    /**
+     * Maximum number of retry attempts (default: 3)
+     */
+    maxRetries?: number;
+
+    /**
+     * Initial delay in milliseconds before first retry (default: 1000)
+     * Subsequent delays use exponential backoff
+     */
+    initialDelay?: number;
+
+    /**
+     * Maximum delay in milliseconds between retries (default: 10000)
+     */
+    maxDelay?: number;
+
+    /**
+     * HTTP status codes that should trigger a retry (default: [429, 500, 502, 503, 504])
+     */
+    retryableStatusCodes?: number[];
+
+    /**
+     * Whether to retry on network errors (connection failures, timeouts) (default: true)
+     */
+    retryOnNetworkError?: boolean;
+
+    /**
+     * Exponential backoff multiplier (default: 2)
+     */
+    backoffMultiplier?: number;
+
+    /**
+     * Whether to add random jitter to retry delays to prevent thundering herd (default: true)
+     */
+    useJitter?: boolean;
+}
+
+/**
+ * Default retry configuration
+ */
+const DEFAULT_RETRY_CONFIG: Required<RetryConfig> = {
+    maxRetries: 3,
+    initialDelay: 1000,
+    maxDelay: 10000,
+    retryableStatusCodes: [429, 500, 502, 503, 504],
+    retryOnNetworkError: true,
+    backoffMultiplier: 2,
+    useJitter: true
+};
+
+/**
+ * Static helper function for retry logic with exponential backoff.
+ * Used by static methods that don't have access to instance retry config.
+ */
+async function fetchWithRetry(
+    url: string,
+    // eslint-disable-next-line no-undef
+    options: RequestInit,
+    retryConfig: Required<RetryConfig>,
+    context: string = 'request'
+): Promise<Response> {
+    let lastError: Error | null = null;
+    let lastResponse: Response | null = null;
+
+    for (let attempt = 0; attempt <= retryConfig.maxRetries; attempt++) {
+        try {
+            const response = await fetch(url, options);
+
+            // Check if we should retry based on status code
+            if (!response.ok && retryConfig.retryableStatusCodes.includes(response.status)) {
+                lastResponse = response;
+
+                // If this is not the last attempt, wait and retry
+                if (attempt < retryConfig.maxRetries) {
+                    const delay = calculateRetryDelay(attempt, retryConfig);
+                    if (DEBUG) {
+                        console.log(`${Date.now() / 1000}|Retry attempt ${attempt + 1}/${retryConfig.maxRetries} for ${context} after ${delay}ms (status: ${response.status})`);
+                    }
+                    await sleep(delay);
+                    continue;
+                }
+            }
+
+            // Request succeeded or non-retryable error
+            return response;
+
+        } catch (error) {
+            lastError = error as Error;
+
+            // Check if this is a network error and we should retry
+            if (retryConfig.retryOnNetworkError && attempt < retryConfig.maxRetries) {
+                const delay = calculateRetryDelay(attempt, retryConfig);
+                if (DEBUG) {
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    console.log(`${Date.now() / 1000}|Retry attempt ${attempt + 1}/${retryConfig.maxRetries} for ${context} after ${delay}ms (error: ${errorMessage})`);
+                }
+                await sleep(delay);
+                continue;
+            }
+
+            // Non-retryable error or last attempt
+            throw error;
+        }
+    }
+
+    // If we exhausted all retries due to retryable status codes, return the last response
+    if (lastResponse) {
+        return lastResponse;
+    }
+
+    // If we exhausted all retries due to network errors, throw the last error
+    if (lastError) {
+        throw lastError;
+    }
+
+    // This should never happen, but just in case
+    throw new Error('Unexpected retry exhaustion');
+}
+
+/**
+ * Calculates the delay for the next retry attempt using exponential backoff.
+ */
+function calculateRetryDelay(attemptNumber: number, retryConfig: Required<RetryConfig>): number {
+    // Calculate base delay: initialDelay * (backoffMultiplier ^ attemptNumber)
+    let delay = retryConfig.initialDelay * Math.pow(retryConfig.backoffMultiplier, attemptNumber);
+
+    // Cap at maxDelay
+    delay = Math.min(delay, retryConfig.maxDelay);
+
+    // Add jitter if enabled (randomize between 50% and 100% of calculated delay)
+    if (retryConfig.useJitter) {
+        delay = delay * (0.5 + Math.random() * 0.5);
+    }
+
+    return Math.floor(delay);
+}
+
+/**
+ * Sleep for the specified number of milliseconds.
+ */
+function sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
  * Generate a timestamp string in the format expected by the API.
  * Format: YYYY-MM-DDTHH:MM:SS.ffffffZ (with microseconds)
  */
@@ -431,6 +579,7 @@ export class PDFDancer {
     private _sessionId!: string;
     private _userId?: string;
     private _fingerprintCache?: string;
+    private _retryConfig: Required<RetryConfig>;
 
     // Snapshot caches for optimizing find operations
     private _documentSnapshotCache: DocumentSnapshot | null = null;
@@ -446,7 +595,8 @@ export class PDFDancer {
         token: string,
         pdfData: Uint8Array | File | ArrayBuffer | string,
         baseUrl: string | null = null,
-        readTimeout: number = 60000
+        readTimeout: number = 60000,
+        retryConfig?: RetryConfig
     ) {
 
         if (!token || !token.trim()) {
@@ -471,6 +621,12 @@ export class PDFDancer {
         this._baseUrl = resolvedBaseUrl.replace(/\/$/, ''); // Remove trailing slash
         this._readTimeout = readTimeout;
 
+        // Merge retry config with defaults
+        this._retryConfig = {
+            ...DEFAULT_RETRY_CONFIG,
+            ...retryConfig
+        };
+
         // Process PDF data with validation
         this._pdfBytes = this._processPdfData(pdfData);
 
@@ -489,7 +645,13 @@ export class PDFDancer {
         return this;
     }
 
-    static async open(pdfData: Uint8Array, token?: string, baseUrl?: string, timeout?: number): Promise<PDFDancer> {
+    static async open(
+        pdfData: Uint8Array,
+        token?: string,
+        baseUrl?: string,
+        timeout?: number,
+        retryConfig?: RetryConfig
+    ): Promise<PDFDancer> {
         const resolvedBaseUrl =
             baseUrl ??
             process.env.PDFDANCER_BASE_URL ??
@@ -501,7 +663,7 @@ export class PDFDancer {
             resolvedToken = await PDFDancer._obtainAnonymousToken(resolvedBaseUrl, resolvedTimeout);
         }
 
-        const client = new PDFDancer(resolvedToken, pdfData, resolvedBaseUrl, resolvedTimeout);
+        const client = new PDFDancer(resolvedToken, pdfData, resolvedBaseUrl, resolvedTimeout, retryConfig);
         return await client.init();
     }
 
@@ -515,6 +677,7 @@ export class PDFDancer {
      * @param token Authentication token (optional, can use PDFDANCER_TOKEN env var)
      * @param baseUrl Base URL for the PDFDancer API (optional)
      * @param timeout Request timeout in milliseconds (default: 60000)
+     * @param retryConfig Retry configuration (optional, uses defaults if not specified)
      */
     static async new(
         options?: {
@@ -524,7 +687,8 @@ export class PDFDancer {
         },
         token?: string,
         baseUrl?: string,
-        timeout?: number
+        timeout?: number,
+        retryConfig?: RetryConfig
     ): Promise<PDFDancer> {
         const resolvedBaseUrl =
             baseUrl ??
@@ -558,18 +722,23 @@ export class PDFDancer {
             // Generate fingerprint for this request
             const fingerprint = await generateFingerprint();
 
-            // Make request to create endpoint
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${resolvedToken}`,
-                    'Content-Type': 'application/json',
-                    'X-Generated-At': generateTimestamp(),
-                    'X-Fingerprint': fingerprint
+            // Make request to create endpoint with retry logic
+            const response = await fetchWithRetry(
+                url,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${resolvedToken}`,
+                        'Content-Type': 'application/json',
+                        'X-Generated-At': generateTimestamp(),
+                        'X-Fingerprint': fingerprint
+                    },
+                    body: JSON.stringify(createRequest.toDict()),
+                    signal: resolvedTimeout > 0 ? AbortSignal.timeout(resolvedTimeout) : undefined
                 },
-                body: JSON.stringify(createRequest.toDict()),
-                signal: resolvedTimeout > 0 ? AbortSignal.timeout(resolvedTimeout) : undefined
-            });
+                DEFAULT_RETRY_CONFIG,
+                'POST /session/new'
+            );
 
             logGeneratedAtHeader(response, 'POST', '/session/new');
 
@@ -590,6 +759,11 @@ export class PDFDancer {
             client._readTimeout = resolvedTimeout;
             client._pdfBytes = new Uint8Array();
             client._sessionId = sessionId;
+            // Initialize retry config
+            client._retryConfig = {
+                ...DEFAULT_RETRY_CONFIG,
+                ...retryConfig
+            };
             // Initialize caches
             client._documentSnapshotCache = null;
             client._pageSnapshotCache = new Map();
@@ -610,15 +784,20 @@ export class PDFDancer {
 
         try {
             const fingerprint = await generateFingerprint();
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Fingerprint': fingerprint,
-                    'X-Generated-At': generateTimestamp()
+            const response = await fetchWithRetry(
+                url,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Fingerprint': fingerprint,
+                        'X-Generated-At': generateTimestamp()
+                    },
+                    signal: timeout > 0 ? AbortSignal.timeout(timeout) : undefined
                 },
-                signal: timeout > 0 ? AbortSignal.timeout(timeout) : undefined
-            });
+                DEFAULT_RETRY_CONFIG,
+                'POST /keys/anon'
+            );
 
             if (!response.ok) {
                 const errorText = await response.text().catch(() => '');
@@ -759,16 +938,20 @@ export class PDFDancer {
 
             const fingerprint = await this._getFingerprint();
 
-            const response = await fetch(this._buildUrl('/session/create'), {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this._token}`,
-                    'X-Generated-At': generateTimestamp(),
-                    'X-Fingerprint': fingerprint
+            const response = await this._fetchWithRetry(
+                this._buildUrl('/session/create'),
+                {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${this._token}`,
+                        'X-Generated-At': generateTimestamp(),
+                        'X-Fingerprint': fingerprint
+                    },
+                    body: formData,
+                    signal: this._readTimeout > 0 ? AbortSignal.timeout(this._readTimeout) : undefined
                 },
-                body: formData,
-                signal: this._readTimeout > 0 ? AbortSignal.timeout(this._readTimeout) : undefined
-            });
+                'POST /session/create'
+            );
 
             logGeneratedAtHeader(response, 'POST', '/session/create');
 
@@ -814,6 +997,19 @@ export class PDFDancer {
     }
 
     /**
+     * Executes a fetch request with retry logic based on the configured retry policy.
+     * Implements exponential backoff with optional jitter.
+     */
+    private async _fetchWithRetry(
+        url: string,
+        // eslint-disable-next-line no-undef
+        options: RequestInit,
+        context: string = 'request'
+    ): Promise<Response> {
+        return fetchWithRetry(url, options, this._retryConfig, context);
+    }
+
+    /**
      * Make HTTP request with session headers and error handling.
      */
     private async _makeRequest(
@@ -840,12 +1036,16 @@ export class PDFDancer {
         };
 
         try {
-            const response = await fetch(url.toString(), {
-                method,
-                headers,
-                body: data ? JSON.stringify(data) : undefined,
-                signal: this._readTimeout > 0 ? AbortSignal.timeout(this._readTimeout) : undefined
-            });
+            const response = await this._fetchWithRetry(
+                url.toString(),
+                {
+                    method,
+                    headers,
+                    body: data ? JSON.stringify(data) : undefined,
+                    signal: this._readTimeout > 0 ? AbortSignal.timeout(this._readTimeout) : undefined
+                },
+                `${method} ${path}`
+            );
 
             logGeneratedAtHeader(response, method, path);
 
@@ -1557,17 +1757,21 @@ export class PDFDancer {
 
             const fingerprint = await this._getFingerprint();
 
-            const response = await fetch(this._buildUrl('/font/register'), {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this._token}`,
-                    'X-Session-Id': this._sessionId,
-                    'X-Generated-At': generateTimestamp(),
-                    'X-Fingerprint': fingerprint
+            const response = await this._fetchWithRetry(
+                this._buildUrl('/font/register'),
+                {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${this._token}`,
+                        'X-Session-Id': this._sessionId,
+                        'X-Generated-At': generateTimestamp(),
+                        'X-Fingerprint': fingerprint
+                    },
+                    body: formData,
+                    signal: AbortSignal.timeout(60000)
                 },
-                body: formData,
-                signal: AbortSignal.timeout(60000)
-            });
+                'POST /font/register'
+            );
 
             logGeneratedAtHeader(response, 'POST', '/font/register');
 
