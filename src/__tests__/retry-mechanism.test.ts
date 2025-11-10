@@ -10,17 +10,20 @@ global.fetch = jest.fn();
 
 // Helper to create a mock response
 function createMockResponse(status: number, body: unknown = {}): Response {
+    const bodyString = typeof body === 'string' ? body : JSON.stringify(body);
     return {
         ok: status >= 200 && status < 300,
         status,
         statusText: status === 200 ? 'OK' : 'Error',
         headers: new Headers(),
-        text: async () => typeof body === 'string' ? body : JSON.stringify(body),
+        text: async () => bodyString,
         json: async () => typeof body === 'object' ? body : JSON.parse(body as string),
         arrayBuffer: async () => new ArrayBuffer(0),
         blob: async () => new Blob(),
         formData: async () => new FormData(),
-        clone: function() { return this; },
+        clone: function() {
+            return createMockResponse(status, body);
+        },
         body: null,
         bodyUsed: false,
         redirected: false,
@@ -32,7 +35,7 @@ function createMockResponse(status: number, body: unknown = {}): Response {
 describe('Retry Mechanism', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        (global.fetch as jest.Mock).mockClear();
+        (global.fetch as jest.Mock).mockReset();
     });
 
     describe('RetryConfig', () => {
