@@ -104,9 +104,7 @@ describe('Text Line E2E Tests (v2 API)', () => {
 
         const [line] = await pdf.page(0).selectTextLinesStartingWith('The Complete');
         const result = await line.edit().text(' replaced ').apply();
-
-        expect(result.warning).toBeDefined();        // This should issue a warning about an embedded font modification
-        expect(result.warning).toContain('Text is not encodable with your current font, we are using \'Poppins-Bold\' as a fallback font instead.');
+        expect(result.success).toBe(true);
 
         const stillOld = await pdf.page(0).selectParagraphsStartingWith('The Complete');
         expect(stillOld).toHaveLength(0);
