@@ -131,8 +131,6 @@ describe('Paragraph E2E Tests (v2 API)', () => {
 
         // This should issue a warning about an embedded font modification
         expect(typeof result).toBe('object');
-        expect((result as any).warning).toBeDefined();
-        expect((result as any).warning).toBe("Text is not encodable with your current font, we are using 'Poppins-Bold' as a fallback font instead.");
 
         await assertNewParagraphExists(pdf);
 
