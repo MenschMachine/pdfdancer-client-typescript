@@ -104,6 +104,7 @@ describe('Text Line E2E Tests (v2 API)', () => {
 
         const [line] = await pdf.page(0).selectTextLinesStartingWith('The Complete');
         const result = await line.edit().text(' replaced ').apply();
+        expect(result).toBe(true);
 
         const stillOld = await pdf.page(0).selectParagraphsStartingWith('The Complete');
         expect(stillOld).toHaveLength(0);
