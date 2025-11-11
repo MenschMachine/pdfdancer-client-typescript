@@ -9,20 +9,21 @@ import {RetryConfig} from '../pdfdancer_v1';
 global.fetch = jest.fn();
 
 // Helper to create a mock response
-function createMockResponse(status: number, body: unknown = {}): Response {
+function createMockResponse(status: number, body: unknown = {}, headers?: Record<string, string>): Response {
     const bodyString = typeof body === 'string' ? body : JSON.stringify(body);
+    const responseHeaders = new Headers(headers);
     return {
         ok: status >= 200 && status < 300,
         status,
         statusText: status === 200 ? 'OK' : 'Error',
-        headers: new Headers(),
+        headers: responseHeaders,
         text: async () => bodyString,
         json: async () => typeof body === 'object' ? body : JSON.parse(body as string),
         arrayBuffer: async () => new ArrayBuffer(0),
         blob: async () => new Blob(),
         formData: async () => new FormData(),
         clone: function() {
-            return createMockResponse(status, body);
+            return createMockResponse(status, body, headers);
         },
         body: null,
         bodyUsed: false,
@@ -415,6 +416,227 @@ describe('Retry Mechanism', () => {
 
             // Without jitter, delay should be exactly the calculated value
             expect(delays[0]).toBe(1000);
+        });
+    });
+
+    describe('Retry-After Header', () => {
+        test('should respect Retry-After header with seconds format', async () => {
+            const mockFetch = global.fetch as jest.Mock;
+            const delays: number[] = [];
+            const originalSetTimeout = global.setTimeout;
+
+            global.setTimeout = jest.fn((callback: () => void, delay?: number) => {
+                if (delay) delays.push(delay);
+                return originalSetTimeout(callback, 0);
+            }) as unknown as typeof setTimeout;
+
+            // Return 429 with Retry-After: 5 seconds
+            mockFetch
+                .mockResolvedValueOnce(createMockResponse(429, 'Rate limit exceeded', {'Retry-After': '5'}))
+                .mockResolvedValueOnce(createMockResponse(200, 'session-123'));
+
+            const pdfData = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
+            const retryConfig: RetryConfig = {
+                maxRetries: 2,
+                initialDelay: 1000,
+                respectRetryAfter: true,
+                useJitter: false
+            };
+
+            await PDFDancer.open(pdfData, 'test-token', undefined, undefined, retryConfig);
+
+            global.setTimeout = originalSetTimeout;
+
+            // Delay should be 5000ms (5 seconds from Retry-After header)
+            expect(delays[0]).toBe(5000);
+        });
+
+        test('should respect Retry-After header with HTTP-date format', async () => {
+            const mockFetch = global.fetch as jest.Mock;
+            const delays: number[] = [];
+            const originalSetTimeout = global.setTimeout;
+
+            global.setTimeout = jest.fn((callback: () => void, delay?: number) => {
+                if (delay) delays.push(delay);
+                return originalSetTimeout(callback, 0);
+            }) as unknown as typeof setTimeout;
+
+            // Set Retry-After to 3 seconds in the future
+            const retryDate = new Date(Date.now() + 3000);
+            mockFetch
+                .mockResolvedValueOnce(createMockResponse(429, 'Rate limit exceeded', {'Retry-After': retryDate.toUTCString()}))
+                .mockResolvedValueOnce(createMockResponse(200, 'session-123'));
+
+            const pdfData = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
+            const retryConfig: RetryConfig = {
+                maxRetries: 2,
+                initialDelay: 1000,
+                respectRetryAfter: true,
+                useJitter: false
+            };
+
+            await PDFDancer.open(pdfData, 'test-token', undefined, undefined, retryConfig);
+
+            global.setTimeout = originalSetTimeout;
+
+            // Delay should be around 3000ms (may vary by more due to test execution time)
+            // We allow a wider range since there's latency between date creation and parsing
+            expect(delays[0]).toBeGreaterThanOrEqual(2000);
+            expect(delays[0]).toBeLessThanOrEqual(3100);
+        });
+
+        test('should ignore Retry-After when respectRetryAfter is false', async () => {
+            const mockFetch = global.fetch as jest.Mock;
+            const delays: number[] = [];
+            const originalSetTimeout = global.setTimeout;
+
+            global.setTimeout = jest.fn((callback: () => void, delay?: number) => {
+                if (delay) delays.push(delay);
+                return originalSetTimeout(callback, 0);
+            }) as unknown as typeof setTimeout;
+
+            mockFetch
+                .mockResolvedValueOnce(createMockResponse(429, 'Rate limit exceeded', {'Retry-After': '60'}))
+                .mockResolvedValueOnce(createMockResponse(200, 'session-123'));
+
+            const pdfData = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
+            const retryConfig: RetryConfig = {
+                maxRetries: 2,
+                initialDelay: 1000,
+                respectRetryAfter: false,
+                useJitter: false
+            };
+
+            await PDFDancer.open(pdfData, 'test-token', undefined, undefined, retryConfig);
+
+            global.setTimeout = originalSetTimeout;
+
+            // Should use exponential backoff (1000ms) instead of Retry-After (60000ms)
+            expect(delays[0]).toBe(1000);
+        });
+
+        test('should cap Retry-After delay at maxDelay', async () => {
+            const mockFetch = global.fetch as jest.Mock;
+            const delays: number[] = [];
+            const originalSetTimeout = global.setTimeout;
+
+            global.setTimeout = jest.fn((callback: () => void, delay?: number) => {
+                if (delay) delays.push(delay);
+                return originalSetTimeout(callback, 0);
+            }) as unknown as typeof setTimeout;
+
+            // Retry-After specifies 60 seconds
+            mockFetch
+                .mockResolvedValueOnce(createMockResponse(429, 'Rate limit exceeded', {'Retry-After': '60'}))
+                .mockResolvedValueOnce(createMockResponse(200, 'session-123'));
+
+            const pdfData = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
+            const retryConfig: RetryConfig = {
+                maxRetries: 2,
+                initialDelay: 1000,
+                maxDelay: 5000, // Cap at 5 seconds
+                respectRetryAfter: true,
+                useJitter: false
+            };
+
+            await PDFDancer.open(pdfData, 'test-token', undefined, undefined, retryConfig);
+
+            global.setTimeout = originalSetTimeout;
+
+            // Should be capped at maxDelay (5000ms) instead of 60000ms
+            expect(delays[0]).toBe(5000);
+        });
+
+        test('should fall back to exponential backoff when Retry-After is invalid', async () => {
+            const mockFetch = global.fetch as jest.Mock;
+            const delays: number[] = [];
+            const originalSetTimeout = global.setTimeout;
+
+            global.setTimeout = jest.fn((callback: () => void, delay?: number) => {
+                if (delay) delays.push(delay);
+                return originalSetTimeout(callback, 0);
+            }) as unknown as typeof setTimeout;
+
+            mockFetch
+                .mockResolvedValueOnce(createMockResponse(429, 'Rate limit exceeded', {'Retry-After': 'invalid'}))
+                .mockResolvedValueOnce(createMockResponse(200, 'session-123'));
+
+            const pdfData = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
+            const retryConfig: RetryConfig = {
+                maxRetries: 2,
+                initialDelay: 1000,
+                respectRetryAfter: true,
+                useJitter: false
+            };
+
+            await PDFDancer.open(pdfData, 'test-token', undefined, undefined, retryConfig);
+
+            global.setTimeout = originalSetTimeout;
+
+            // Should fall back to exponential backoff (1000ms)
+            expect(delays[0]).toBe(1000);
+        });
+
+        test('should fall back to exponential backoff when Retry-After header is missing', async () => {
+            const mockFetch = global.fetch as jest.Mock;
+            const delays: number[] = [];
+            const originalSetTimeout = global.setTimeout;
+
+            global.setTimeout = jest.fn((callback: () => void, delay?: number) => {
+                if (delay) delays.push(delay);
+                return originalSetTimeout(callback, 0);
+            }) as unknown as typeof setTimeout;
+
+            mockFetch
+                .mockResolvedValueOnce(createMockResponse(429, 'Rate limit exceeded'))
+                .mockResolvedValueOnce(createMockResponse(200, 'session-123'));
+
+            const pdfData = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
+            const retryConfig: RetryConfig = {
+                maxRetries: 2,
+                initialDelay: 1000,
+                respectRetryAfter: true,
+                useJitter: false
+            };
+
+            await PDFDancer.open(pdfData, 'test-token', undefined, undefined, retryConfig);
+
+            global.setTimeout = originalSetTimeout;
+
+            // Should fall back to exponential backoff (1000ms)
+            expect(delays[0]).toBe(1000);
+        });
+
+        test('should use 0ms delay when Retry-After date is in the past', async () => {
+            const mockFetch = global.fetch as jest.Mock;
+            const delays: number[] = [];
+            const originalSetTimeout = global.setTimeout;
+
+            global.setTimeout = jest.fn((callback: () => void, delay?: number) => {
+                if (delay !== undefined) delays.push(delay);
+                return originalSetTimeout(callback, 0);
+            }) as unknown as typeof setTimeout;
+
+            // Set Retry-After to 1 second in the past
+            const retryDate = new Date(Date.now() - 1000);
+            mockFetch
+                .mockResolvedValueOnce(createMockResponse(429, 'Rate limit exceeded', {'Retry-After': retryDate.toUTCString()}))
+                .mockResolvedValueOnce(createMockResponse(200, 'session-123'));
+
+            const pdfData = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
+            const retryConfig: RetryConfig = {
+                maxRetries: 2,
+                initialDelay: 1000,
+                respectRetryAfter: true,
+                useJitter: false
+            };
+
+            await PDFDancer.open(pdfData, 'test-token', undefined, undefined, retryConfig);
+
+            global.setTimeout = originalSetTimeout;
+
+            // Should use 0ms delay (immediate retry)
+            expect(delays[0]).toBe(0);
         });
     });
 });

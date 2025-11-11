@@ -151,12 +151,12 @@ const pdf = await PDFDancer.open(
 
 ### Retry Configuration
 
-The client includes a configurable retry mechanism for handling transient failures. By default, it retries on specific HTTP status codes (429, 500, 502, 503, 504) and network errors with exponential backoff.
+The client includes a configurable retry mechanism for handling transient failures. By default, it retries on specific HTTP status codes (429, 500, 502, 503, 504) and network errors with exponential backoff. It also respects `Retry-After` headers from the server when available.
 
 ```typescript
 import { PDFDancer, RetryConfig } from 'pdfdancer-client-typescript';
 
-// Use default retry configuration (3 retries, exponential backoff)
+// Use default retry configuration (3 retries, exponential backoff, Retry-After support)
 const pdf = await PDFDancer.open(pdfData);
 
 // Customize retry behavior
@@ -167,7 +167,8 @@ const customRetryConfig: RetryConfig = {
   backoffMultiplier: 2,       // Exponential backoff multiplier (default: 2)
   retryableStatusCodes: [429, 500, 502, 503, 504], // HTTP status codes to retry (default)
   retryOnNetworkError: true,  // Retry on network errors (default: true)
-  useJitter: true             // Add random jitter to delays (default: true)
+  useJitter: true,            // Add random jitter to delays (default: true)
+  respectRetryAfter: true     // Respect Retry-After headers from server (default: true)
 };
 
 const pdf = await PDFDancer.open(pdfData, token, baseUrl, timeout, customRetryConfig);
@@ -176,6 +177,8 @@ const pdf = await PDFDancer.open(pdfData, token, baseUrl, timeout, customRetryCo
 **Default Retry Behavior:**
 - Retries up to 3 times on transient errors
 - Uses exponential backoff with jitter (1s, 2s, 4s base delays)
+- Respects `Retry-After` headers (supports both seconds and HTTP-date formats)
+- Falls back to exponential backoff if `Retry-After` is missing or invalid
 - Retries on HTTP 429 (rate limit), 500, 502, 503, 504 (server errors)
 - Retries on network errors (connection failures, timeouts)
 - Does NOT retry on client errors (4xx except 429)

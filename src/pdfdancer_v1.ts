@@ -100,6 +100,13 @@ export interface RetryConfig {
      * Whether to add random jitter to retry delays to prevent thundering herd (default: true)
      */
     useJitter?: boolean;
+
+    /**
+     * Whether to respect Retry-After headers from server responses (default: true)
+     * When enabled, the client will use the server-specified delay instead of exponential backoff
+     * for responses that include a Retry-After header (typically 429 or 503 responses)
+     */
+    respectRetryAfter?: boolean;
 }
 
 /**
@@ -112,7 +119,8 @@ const DEFAULT_RETRY_CONFIG: Required<RetryConfig> = {
     retryableStatusCodes: [429, 500, 502, 503, 504],
     retryOnNetworkError: true,
     backoffMultiplier: 2,
-    useJitter: true
+    useJitter: true,
+    respectRetryAfter: true
 };
 
 /**
@@ -139,9 +147,27 @@ async function fetchWithRetry(
 
                 // If this is not the last attempt, wait and retry
                 if (attempt < retryConfig.maxRetries) {
-                    const delay = calculateRetryDelay(attempt, retryConfig);
+                    let delay: number;
+                    let delaySource = 'exponential backoff';
+
+                    // Check for Retry-After header if configured
+                    if (retryConfig.respectRetryAfter) {
+                        const retryAfterDelay = parseRetryAfter(response);
+                        if (retryAfterDelay !== null) {
+                            // Use Retry-After header value, but cap at maxDelay
+                            delay = Math.min(retryAfterDelay, retryConfig.maxDelay);
+                            delaySource = 'Retry-After header';
+                        } else {
+                            // Fall back to exponential backoff
+                            delay = calculateRetryDelay(attempt, retryConfig);
+                        }
+                    } else {
+                        // Use exponential backoff
+                        delay = calculateRetryDelay(attempt, retryConfig);
+                    }
+
                     if (DEBUG) {
-                        console.log(`${Date.now() / 1000}|Retry attempt ${attempt + 1}/${retryConfig.maxRetries} for ${context} after ${delay}ms (status: ${response.status})`);
+                        console.log(`${Date.now() / 1000}|Retry attempt ${attempt + 1}/${retryConfig.maxRetries} for ${context} after ${delay}ms (status: ${response.status}, source: ${delaySource})`);
                     }
                     await sleep(delay);
                     continue;
@@ -182,6 +208,39 @@ async function fetchWithRetry(
 
     // This should never happen, but just in case
     throw new Error('Unexpected retry exhaustion');
+}
+
+/**
+ * Parses the Retry-After header from a response.
+ * Supports both delay-seconds (integer) and HTTP-date formats.
+ * Returns the delay in milliseconds, or null if the header is invalid or missing.
+ */
+function parseRetryAfter(response: Response): number | null {
+    const retryAfter = response.headers.get('Retry-After');
+    if (!retryAfter) {
+        return null;
+    }
+
+    // Try parsing as delay-seconds (integer)
+    const delaySeconds = parseInt(retryAfter, 10);
+    if (!isNaN(delaySeconds) && delaySeconds >= 0) {
+        return delaySeconds * 1000; // Convert to milliseconds
+    }
+
+    // Try parsing as HTTP-date
+    try {
+        const retryDate = new Date(retryAfter);
+        if (!isNaN(retryDate.getTime())) {
+            const now = Date.now();
+            const delay = retryDate.getTime() - now;
+            // Only return positive delays
+            return delay > 0 ? delay : 0;
+        }
+    } catch {
+        // Invalid date format
+    }
+
+    return null;
 }
 
 /**
