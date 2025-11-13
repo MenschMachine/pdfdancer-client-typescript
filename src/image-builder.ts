@@ -45,6 +45,10 @@ export class ImageBuilder {
         return this;
     }
 
+    async apply(): Promise<boolean> {
+        return await this.add();
+    }
+
     async add() {
         if (!this._imageData) {
             throw new Error("Image data is not set");
