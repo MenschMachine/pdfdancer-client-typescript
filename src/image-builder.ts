@@ -45,6 +45,7 @@ export class ImageBuilder {
         return this;
     }
 
+    // noinspection JSUnusedGlobalSymbols
     async apply(): Promise<boolean> {
         return await this.add();
     }
