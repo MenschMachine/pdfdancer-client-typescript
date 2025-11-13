@@ -1,5 +1,9 @@
 # PDFDancer TypeScript Client
 
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/MenschMachine/pdfdancer-client-typescript/badge)](https://securityscorecards.dev/viewer/?uri=github.com/MenschMachine/pdfdancer-client-typescript)
+[![npm version](https://badge.fury.io/js/pdfdancer-client-typescript.svg)](https://www.npmjs.com/package/pdfdancer-client-typescript)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
 **Getting Started with PDFDancer**
 
 PDFDancer gives you pixel-perfect programmatic control over any PDF document from TypeScript. Locate existing elements by coordinates or text, adjust them precisely, add brand-new content, and ship the modified PDF in memory or on disk. The same API is also available for Python and Java, so teams can orchestrate identical PDF workflows across stacks.
@@ -467,6 +471,33 @@ The e2e suite covers paragraphs, pages, text lines, images, form fields, and pat
 
 - Python client: https://github.com/MenschMachine/pdfdancer-client-python
 - Java client: https://github.com/MenschMachine/pdfdancer-client-java
+
+## Security and Package Verification
+
+This package is signed and includes provenance attestations to ensure authenticity and integrity.
+
+### Verifying Package Integrity
+
+After installing, verify the package signatures:
+
+```bash
+npm audit signatures
+```
+
+This will confirm that the package was published from the official GitHub repository with cryptographic verification.
+
+### Security Features
+
+- **NPM Provenance**: All packages are published with NPM provenance attestations, linking each package to its source code and build process
+- **SLSA Level 3**: Supply-chain security attestations are generated for each release
+- **OpenSSF Scorecard**: Regular security assessments ensure best practices are followed
+- **Signed Releases**: Packages are never published from local machines, only via GitHub Actions
+
+For more details, see [SECURITY.md](SECURITY.md).
+
+### Reporting Security Issues
+
+If you discover a security vulnerability, please see our [Security Policy](SECURITY.md) for responsible disclosure guidelines.
 
 ## License
 
