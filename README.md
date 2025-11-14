@@ -1,8 +1,16 @@
-# PDFDancer TypeScript Client
+<div align="center">
 
-**Getting Started with PDFDancer**
+# PDFDancer TypeScript client
 
-PDFDancer gives you pixel-perfect programmatic control over any PDF document from TypeScript. Locate existing elements by coordinates or text, adjust them precisely, add brand-new content, and ship the modified PDF in memory or on disk. The same API is also available for Python and Java, so teams can orchestrate identical PDF workflows across stacks.
+<img src="media/logo-orange-512h.webp" alt="PDFDancer logo" width="120">
+
+</div>
+
+**Stop fighting PDFs. Start editing them.**
+
+**Edit text in any real-world PDF. Pixel-perfect. No corruption.**
+
+PDFDancer gives you pixel-perfect programmatic control over real-world PDF documents from TypeScript. Locate existing elements by coordinates or text, adjust them precisely, add brand-new content, and ship the modified PDF in memory or on disk. This package is the official TypeScript SDK for the PDFDancer API, and the same object model is also available for Python and Java.
 
 > Need the raw API schema? The latest OpenAPI description is published at https://bucket.pdfdancer.com/api-doc/development-0.0.yml.
 
@@ -17,7 +25,7 @@ PDFDancer gives you pixel-perfect programmatic control over any PDF document fro
 
 ## What Makes PDFDancer Different
 
-- **Edit any PDF**: Work with documents from customers, governments, or vendors—not just ones you generated.
+- **Edit text in real-world PDFs you didn’t create**: Work with documents from customers, governments, or vendors—not just ones you generated.
 - **Pixel-perfect positioning**: Move or add elements at exact coordinates and keep the original layout intact.
 - **Surgical text replacement**: Swap or rewrite paragraphs without reflowing the rest of the page.
 - **Form manipulation**: Inspect, fill, and update AcroForm fields programmatically.
