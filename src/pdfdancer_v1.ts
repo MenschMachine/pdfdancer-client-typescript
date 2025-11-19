@@ -1697,7 +1697,14 @@ export class PDFDancer {
             throw new ValidationException("Path position page index is less than 0");
         }
 
-        return this._addObject(path);
+        console.log('[PDFDancer] addPath called:', {
+            position: path.getPosition(),
+            segmentCount: path.pathSegments.length
+        });
+
+        const result = await this._addObject(path);
+        console.log('[PDFDancer] addPath result:', result);
+        return result;
     }
 
     /**

@@ -203,13 +203,8 @@ export class PathBuilder {
 
         // Apply current styling and position to all segments
         for (const segment of this._segments) {
-            // Each segment's position should be at its starting point (p0)
-            const pageIndex = this._position.pageIndex!;
-            if (segment instanceof Line || segment instanceof Bezier) {
-                segment.position = Position.atPageCoordinates(pageIndex, segment.p0.x, segment.p0.y);
-            } else {
-                segment.position = this._position;
-            }
+            // All segments share the same position as the path
+            segment.position = this._position;
             segment.strokeColor = this._strokeColor;
             segment.fillColor = this._fillColor;
             segment.strokeWidth = this._strokeWidth;
@@ -218,6 +213,22 @@ export class PathBuilder {
         }
 
         const path = new Path(this._position, this._segments, this._evenOddFill);
+
+        // Debug logging
+        console.log('[PathBuilder] Adding path:', {
+            position: this._position,
+            segmentCount: this._segments.length,
+            segments: this._segments.map((s, i) => ({
+                index: i,
+                type: s instanceof Line ? 'Line' : 'Bezier',
+                p0: s instanceof Line || s instanceof Bezier ? s.p0 : null,
+                p1: s instanceof Line || s instanceof Bezier ? s.p1 : null,
+                position: s.position,
+                strokeColor: s.strokeColor,
+                strokeWidth: s.strokeWidth
+            }))
+        });
+
         return await this._internals.addPath(path);
     }
 
