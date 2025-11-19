@@ -5,7 +5,7 @@
  * to help with visual debugging and testing.
  */
 
-import {PDFDancer, Color, StandardFonts, Position, ObjectRef, TextObjectRef} from "../../index";
+import {PDFDancer, Color, StandardFonts, ObjectRef, TextObjectRef} from "../../index";
 
 export interface GridOptions {
     /** Starting X coordinate (default: 0) */
