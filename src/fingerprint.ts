@@ -15,8 +15,8 @@ import * as os from 'os';
 function getInstallSalt(): string {
     const storageKey = 'pdfdancer_install_salt';
 
-    // Check if we're in a browser environment
-    if (typeof localStorage !== 'undefined') {
+    // Check if we're in a browser environment with functional localStorage
+    if (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function') {
         let salt = localStorage.getItem(storageKey);
         if (!salt) {
             salt = crypto.randomBytes(16).toString('hex');
