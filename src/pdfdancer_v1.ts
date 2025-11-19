@@ -2215,7 +2215,15 @@ export class PDFDancer {
         const elements: ObjectRef[] = [];
         if (Array.isArray(data.elements)) {
             for (const elementData of data.elements) {
-                elements.push(this._parseObjectRef(elementData));
+                const element = this._parseObjectRef(elementData);
+
+                // If the element's position doesn't have a pageIndex, inherit it from the page
+                if (element.position && element.position.pageIndex === undefined) {
+                    element.position.pageIndex = pageRef.position.pageIndex;
+                    console.log('[PDFDancer._parsePageSnapshot] Set element pageIndex to:', element.position.pageIndex);
+                }
+
+                elements.push(element);
             }
         }
 
