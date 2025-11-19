@@ -39,6 +39,7 @@ import {
     PageSizeInput,
     PageSnapshot,
     Paragraph,
+    Path,
     Position,
     PositionMode,
     ShapeType,
@@ -49,6 +50,7 @@ import {ParagraphBuilder} from './paragraph-builder';
 import {PageBuilder} from './page-builder';
 import {FormFieldObject, FormXObject, ImageObject, ParagraphObject, PathObject, TextLineObject} from "./types";
 import {ImageBuilder} from "./image-builder";
+import {PathBuilder} from "./path-builder";
 import {generateFingerprint} from "./fingerprint";
 import fs from "fs";
 import path from "node:path";
@@ -506,6 +508,11 @@ class PageClient {
     newImage(pageIndex?: number) {
         const targetIndex = pageIndex ?? this.position.pageIndex;
         return new ImageBuilder(this._client, targetIndex);
+    }
+
+    newPath(pageIndex?: number) {
+        const targetIndex = pageIndex ?? this.position.pageIndex;
+        return new PathBuilder(this._client, targetIndex);
     }
 
     async selectTextLines() {
@@ -1674,6 +1681,26 @@ export class PDFDancer {
     }
 
     /**
+     * Adds a path to the PDF document.
+     */
+    private async addPath(path: Path): Promise<boolean> {
+        if (!path) {
+            throw new ValidationException("Path cannot be null");
+        }
+        if (!path.getPosition()) {
+            throw new ValidationException("Path position is null, you need to specify a position for the new path, using .at(x,y)");
+        }
+        if (path.getPosition()!.pageIndex === undefined) {
+            throw new ValidationException("Path position page index is null");
+        }
+        if (path.getPosition()!.pageIndex! < 0) {
+            throw new ValidationException("Path position page index is less than 0");
+        }
+
+        return this._addObject(path);
+    }
+
+    /**
      * Adds a page to the PDF document.
      */
     private async addPage(request?: AddPageRequest | null): Promise<PageRef> {
@@ -1691,7 +1718,7 @@ export class PDFDancer {
     /**
      * Internal method to add any PDF object.
      */
-    private async _addObject(pdfObject: Image | Paragraph): Promise<boolean> {
+    private async _addObject(pdfObject: Image | Paragraph | Path): Promise<boolean> {
         const requestData = new AddRequest(pdfObject).toDict();
         const response = await this._makeRequest('POST', '/pdf/add', requestData);
         const result = await response.json() as boolean;
@@ -2175,6 +2202,10 @@ export class PDFDancer {
 
     newParagraph(pageIndex?: number) {
         return new ParagraphBuilder(this, pageIndex);
+    }
+
+    newPath(pageIndex?: number) {
+        return new PathBuilder(this, pageIndex);
     }
 
     newPage() {
