@@ -80,6 +80,42 @@ paths:
                 type: array
                 items:
                   type: string
+  /font/get:
+    get:
+      operationId: getAllFontNames
+      parameters:
+      - name: X-Session-Id
+        in: header
+        schema:
+          type: string
+          nullable: true
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getAllFontNames 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FontNamesResponse"
   /font/get/{fontName}:
     get:
       operationId: getFont
@@ -210,8 +246,6 @@ paths:
                 $ref: "#/components/schemas/ApiTokenCreateResponse"
   /me/tenant:
     get:
-      summary: Get current user's tenant information.
-      description: Get current user's tenant information.
       operationId: getTenant
       parameters:
       - name: v
@@ -236,15 +270,13 @@ paths:
           type: string
       responses:
         "200":
-          description: User's tenant with role
+          description: getTenant 200 response
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserTenantResponse"
   /me/tokens:
     get:
-      summary: List all API tokens for user's tenant.
-      description: List all API tokens for user's tenant.
       operationId: listTokens
       parameters:
       - name: v
@@ -269,7 +301,7 @@ paths:
           type: string
       responses:
         "200":
-          description: List of API tokens (without raw token values)
+          description: listTokens 200 response
           content:
             application/json:
               schema:
@@ -277,8 +309,6 @@ paths:
                 items:
                   $ref: "#/components/schemas/ApiTokenListResponse"
     post:
-      summary: Create a new API token for user's tenant.
-      description: Create a new API token for user's tenant.
       operationId: createToken
       parameters:
       - name: v
@@ -302,7 +332,6 @@ paths:
         schema:
           type: string
       requestBody:
-        description: token creation request
         content:
           application/json:
             schema:
@@ -310,20 +339,17 @@ paths:
         required: true
       responses:
         "200":
-          description: Created token with raw token value (shown only once)
+          description: createToken 200 response
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiTokenCreateResponse"
   /me/tokens/{tokenId}:
     get:
-      summary: Get a single API token by ID.
-      description: Get a single API token by ID.
       operationId: getToken
       parameters:
       - name: tokenId
         in: path
-        description: token ID to retrieve
         required: true
         schema:
           type: string
@@ -349,19 +375,16 @@ paths:
           type: string
       responses:
         "200":
-          description: Token details (without raw token value)
+          description: getToken 200 response
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiTokenListResponse"
     delete:
-      summary: Revoke an API token.
-      description: Revoke an API token.
       operationId: revokeToken
       parameters:
       - name: tokenId
         in: path
-        description: token ID to revoke
         required: true
         schema:
           type: string
@@ -387,18 +410,458 @@ paths:
           type: string
       responses:
         "200":
-          description: 204 No Content on success
+          description: revokeToken 200 response
+  /me/tokens/{tokenId}/reveal:
+    get:
+      operationId: revealToken
+      parameters:
+      - name: tokenId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: revealToken 200 response
+          content:
+            application/json:
+              schema:
+                type: string
+  /metrics/buffer-stats:
+    get:
+      operationId: getBufferStats
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getBufferStats 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetricsBuffer.BufferStats"
+  /metrics/errors:
+    get:
+      operationId: getErrors
+      parameters:
+      - name: days
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          default: 30
+      - name: limit
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          default: 100
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getErrors 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsService.ErrorAnalytics"
+  /metrics/event-types:
+    get:
+      operationId: getEventTypes
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getEventTypes 200 response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AnalyticsService.EventTypeInfo"
+  /metrics/jvm-stats:
+    get:
+      operationId: getJvmStats
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getJvmStats 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JvmStatsService.JvmStats"
+  /metrics/operations:
+    get:
+      operationId: getOperations
+      parameters:
+      - name: days
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          default: 30
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getOperations 200 response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AnalyticsService.DailyOperationCount"
+  /metrics/performance:
+    get:
+      operationId: getPerformance
+      parameters:
+      - name: days
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          default: 30
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getPerformance 200 response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AnalyticsService.PerformanceMetric"
+  /metrics/sessions:
+    get:
+      operationId: getSessions
+      parameters:
+      - name: days
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          default: 30
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getSessions 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsService.SessionStats"
+  /metrics/summary:
+    get:
+      operationId: getSummary
+      parameters:
+      - name: days
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          default: 30
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getSummary 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsService.DashboardSummary"
+  /metrics/summary/windows:
+    get:
+      operationId: getMultiWindowSummary
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getMultiWindowSummary 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsService.MultiWindowSummary"
+  /metrics/users:
+    get:
+      operationId: getUsers
+      parameters:
+      - name: days
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          default: 30
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getUsers 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsService.UserStats"
+  /payment/checkout-session:
+    post:
+      operationId: checkoutSession
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentController.CheckoutSessionRequest"
+        required: true
+      responses:
+        "200":
+          description: checkoutSession 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentController.CheckoutSessionResponse"
   /pdf/add:
     post:
-      summary: Adds new objects to the PDF document.
-      description: "Adds new objects to the PDF document. This operation creates new\
-        \ PDF content elements such as text, images, forms, or other objects at specified\
-        \ positions within the document."
       operationId: addObject
       parameters:
       - name: X-Session-Id
         in: header
-        description: unique identifier for the user session containing the PDF
         required: true
         schema:
           type: string
@@ -423,8 +886,6 @@ paths:
         schema:
           type: string
       requestBody:
-        description: "addition specifications including object type, content, and\
-          \ positioning"
         content:
           application/json:
             schema:
@@ -432,23 +893,17 @@ paths:
         required: true
       responses:
         "200":
-          description: HTTP response indicating whether the addition operation was
-            successful
+          description: addObject 200 response
           content:
             application/json:
               schema:
                 type: boolean
   /pdf/delete:
     delete:
-      summary: Removes specified objects from the PDF document.
-      description: "Removes specified objects from the PDF document. This operation\
-        \ permanently deletes PDF objects such as text elements, images, forms, or\
-        \ other content based on the provided deletion criteria."
       operationId: deleteObject
       parameters:
       - name: X-Session-Id
         in: header
-        description: unique identifier for the user session containing the PDF
         required: true
         schema:
           type: string
@@ -473,7 +928,6 @@ paths:
         schema:
           type: string
       requestBody:
-        description: deletion criteria specifying which objects to remove
         content:
           application/json:
             schema:
@@ -481,31 +935,22 @@ paths:
         required: true
       responses:
         "200":
-          description: HTTP response indicating whether the deletion operation was
-            successful
+          description: deleteObject 200 response
           content:
             application/json:
               schema:
                 type: boolean
   /pdf/document/snapshot:
     get:
-      summary: Retrieves a complete snapshot of the entire PDF document.
-      description: "Retrieves a complete snapshot of the entire PDF document. This\
-        \ endpoint returns all pages with their elements, document metadata, and font\
-        \ catalog in a single response, significantly reducing API overhead compared\
-        \ to requesting each element type separately per page."
       operationId: getDocumentSnapshot
       parameters:
       - name: X-Session-Id
         in: header
-        description: unique identifier for the user session containing the PDF
         required: true
         schema:
           type: string
       - name: types
         in: query
-        description: "optional comma-separated list of object types to include (e.g.,\
-          \ \"PARAGRAPH,IMAGE\")"
         explode: false
         schema:
           type: string
@@ -532,23 +977,17 @@ paths:
           type: string
       responses:
         "200":
-          description: HTTP response containing the complete document snapshot
+          description: getDocumentSnapshot 200 response
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/DocumentSnapshot"
   /pdf/find:
     post:
-      summary: Searches for PDF objects within the document based on specified criteria.
-      description: "Searches for PDF objects within the document based on specified\
-        \ criteria. This operation allows finding various types of PDF objects (text,\
-        \ images, forms, etc.) using flexible search parameters including object type,\
-        \ getPosition, and hints."
       operationId: findObject
       parameters:
       - name: X-Session-Id
         in: header
-        description: unique identifier for the user session containing the PDF
         required: true
         schema:
           type: string
@@ -573,8 +1012,6 @@ paths:
         schema:
           type: string
       requestBody:
-        description: "search criteria specifying object type, getPosition filters,\
-          \ and search hints"
         content:
           application/json:
             schema:
@@ -582,8 +1019,7 @@ paths:
         required: true
       responses:
         "200":
-          description: HTTP response containing list of object references matching
-            the search criteria
+          description: findObject 200 response
           content:
             application/json:
               schema:
@@ -676,15 +1112,10 @@ paths:
                 type: boolean
   /pdf/move:
     put:
-      summary: Moves PDF objects to new positions within the document.
-      description: "Moves PDF objects to new positions within the document. This operation\
-        \ relocates existing PDF objects (text, images, etc.) to different coordinates\
-        \ or pages while preserving their content and properties."
       operationId: moveObject
       parameters:
       - name: X-Session-Id
         in: header
-        description: unique identifier for the user session containing the PDF
         required: true
         schema:
           type: string
@@ -709,8 +1140,6 @@ paths:
         schema:
           type: string
       requestBody:
-        description: movement specifications including object reference and target
-          getPosition
         content:
           application/json:
             schema:
@@ -718,22 +1147,17 @@ paths:
         required: true
       responses:
         "200":
-          description: HTTP response indicating whether the move operation was successful
+          description: moveObject 200 response
           content:
             application/json:
               schema:
                 type: boolean
   /pdf/page/add:
     post:
-      summary: Adds a new blank page to the end of the PDF document.
-      description: Adds a new blank page to the end of the PDF document. This operation
-        creates a new page within the PDF and returns a reference that can be used
-        for subsequent operations on the created page.
       operationId: addPage
       parameters:
       - name: X-Session-Id
         in: header
-        description: unique identifier for the user session containing the PDF
         required: true
         schema:
           type: string
@@ -765,23 +1189,17 @@ paths:
         required: true
       responses:
         "200":
-          description: HTTP response containing the object reference for the newly
-            created page
+          description: addPage 200 response
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/PageRef"
   /pdf/page/delete:
     delete:
-      summary: Removes a page from the PDF document entirely.
-      description: "Removes a page from the PDF document entirely. This operation\
-        \ permanently deletes the specified page and all its content from the PDF\
-        \ document, updating page numbering for subsequent pages."
       operationId: deletePage
       parameters:
       - name: X-Session-Id
         in: header
-        description: unique identifier for the user session containing the PDF
         required: true
         schema:
           type: string
@@ -806,7 +1224,6 @@ paths:
         schema:
           type: string
       requestBody:
-        description: reference to the page object to be deleted
         content:
           application/json:
             schema:
@@ -814,28 +1231,22 @@ paths:
         required: true
       responses:
         "200":
-          description: HTTP response indicating whether the deletion was successful
+          description: deletePage 200 response
           content:
             application/json:
               schema:
                 type: boolean
   /pdf/page/find:
     post:
-      summary: Searches for pages within the PDF document based on optional criteria.
-      description: Searches for pages within the PDF document based on optional criteria.
-        This operation can return either a specific page by number or all pages in
-        the document if no page number is specified.
       operationId: findPage
       parameters:
       - name: X-Session-Id
         in: header
-        description: unique identifier for the user session containing the PDF
         required: true
         schema:
           type: string
       - name: pageIndex
         in: query
-        description: optional specific page number to retrieve (null returns all pages)
         explode: false
         schema:
           type: integer
@@ -863,8 +1274,7 @@ paths:
           type: string
       responses:
         "200":
-          description: HTTP response containing list of object references for matching
-            pages
+          description: findPage 200 response
           content:
             application/json:
               schema:
@@ -873,15 +1283,10 @@ paths:
                   $ref: "#/components/schemas/PageRef"
   /pdf/page/modify:
     put:
-      summary: Modifies page-level properties and metadata within the PDF document.
-      description: "Modifies page-level properties and metadata within the PDF document.\
-        \ This operation handles page-specific modifications including dimensions,\
-        \ rotation, media box settings, and other page-level attributes."
       operationId: modifyPage
       parameters:
       - name: X-Session-Id
         in: header
-        description: unique identifier for the user session containing the PDF
         required: true
         schema:
           type: string
@@ -906,7 +1311,6 @@ paths:
         schema:
           type: string
       requestBody:
-        description: modification specifications for page-level changes
         content:
           application/json:
             schema:
@@ -914,22 +1318,17 @@ paths:
         required: true
       responses:
         "200":
-          description: HTTP response indicating whether the modification was successful
+          description: modifyPage 200 response
           content:
             application/json:
               schema:
                 type: boolean
   /pdf/page/move:
     put:
-      summary: Moves a page to a different getPosition within the PDF document.
-      description: "Moves a page to a different getPosition within the PDF document.\
-        \ This operation reorders pages within the document, updating the page sequence\
-        \ according to the specified move request parameters."
       operationId: movePage
       parameters:
       - name: X-Session-Id
         in: header
-        description: unique identifier for the user session containing the PDF
         required: true
         schema:
           type: string
@@ -954,7 +1353,6 @@ paths:
         schema:
           type: string
       requestBody:
-        description: move request containing source page reference and target getPosition
         content:
           application/json:
             schema:
@@ -962,35 +1360,28 @@ paths:
         required: true
       responses:
         "200":
-          description: HTTP response indicating whether the move operation was successful
+          description: movePage 200 response
           content:
             application/json:
               schema:
                 type: boolean
   /pdf/page/{pageIndex}/snapshot:
     get:
-      summary: Retrieves a snapshot of a single PDF page.
-      description: "Retrieves a snapshot of a single PDF page. This endpoint returns\
-        \ the page metadata and all elements in a single response, reducing the number\
-        \ of API calls needed compared to requesting each element type separately."
       operationId: getPageSnapshot
       parameters:
       - name: X-Session-Id
         in: header
-        description: unique identifier for the user session containing the PDF
         required: true
         schema:
           type: string
       - name: pageIndex
         in: path
-        description: zero-based index of the page to retrieve
         required: true
         schema:
           type: integer
           format: int32
       - name: types
         in: query
-        description: optional comma-separated list of object types to include
         explode: false
         schema:
           type: string
@@ -1017,7 +1408,7 @@ paths:
           type: string
       responses:
         "200":
-          description: HTTP response containing the page snapshot
+          description: getPageSnapshot 200 response
           content:
             application/json:
               schema:
@@ -1108,10 +1499,6 @@ paths:
                 $ref: "#/components/schemas/CommandResult"
   /ping:
     get:
-      summary: Basic health check endpoint that confirms server availability.
-      description: Basic health check endpoint that confirms server availability.
-        This endpoint provides a simple way for monitoring systems to verify that
-        the API server is running and capable of handling requests.
       operationId: index
       parameters:
       - name: v
@@ -1136,7 +1523,7 @@ paths:
           type: string
       responses:
         "200":
-          description: a simple "Pong" response indicating the server is operational
+          description: index 200 response
           content:
             text/plain:
               schema:
@@ -1174,40 +1561,9 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Product"
-  /product/subscription:
-    get:
-      operationId: getSubscription
-      parameters:
-      - name: v
-        in: query
-        description: API version
-        schema:
-          type: string
-      - name: api-version
-        in: query
-        description: API version
-        schema:
-          type: string
-      - name: X-API-VERSION
-        in: header
-        description: API version
-        schema:
-          type: string
-      - name: Accept-Version
-        in: header
-        description: API version
-        schema:
-          type: string
-      responses:
-        "200":
-          description: getSubscription 200 response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Subscription"
   /product/{productId}:
     get:
-      operationId: getSessionPdf
+      operationId: getProduct
       parameters:
       - name: productId
         in: path
@@ -1236,7 +1592,7 @@ paths:
           type: string
       responses:
         "200":
-          description: getSessionPdf 200 response
+          description: getProduct 200 response
           content:
             application/json:
               schema:
@@ -1389,7 +1745,7 @@ paths:
         \ generating the final PDF output that reflects all changes made during the\
         \ session. The PDF is built asynchronously and streamed to avoid memory issues\
         \ with large files."
-      operationId: getSessionPdf_1
+      operationId: getSessionPdf
       parameters:
       - name: sessionId
         in: path
@@ -1426,14 +1782,101 @@ paths:
               schema:
                 type: string
                 format: binary
+  /subscription:
+    get:
+      operationId: getSubscription
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getSubscription 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+  /subscription/activate-early-access-plan:
+    post:
+      operationId: activateEarlyAccessPlan
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: activateEarlyAccessPlan 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+  /subscription/activate-free-plan:
+    post:
+      operationId: activateFreePlan
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: activateFreePlan 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
   /test:
     get:
-      summary: Authenticated test endpoint that verifies API token authentication
-        is working.
-      description: Authenticated test endpoint that verifies API token authentication
-        is working. This endpoint requires a valid API token (Bearer) and serves as
-        a way to test that the authentication mechanism is functioning properly without
-        affecting any actual application data.
       operationId: test
       parameters:
       - name: v
@@ -1458,7 +1901,7 @@ paths:
           type: string
       responses:
         "200":
-          description: a confirmation message indicating successful authentication
+          description: test 200 response
           content:
             text/plain:
               schema:
@@ -1585,10 +2028,530 @@ components:
       properties:
         object:
           $ref: "#/components/schemas/PDFObject"
-      description: "Request record for adding new PDF objects to a document. This\
-        \ immutable record encapsulates the data needed to add new content elements\
-        \ to a PDF document, including the complete object specification with getPosition,\
-        \ properties, and content data."
+    AnalyticsService.DailyOperationCount:
+      required:
+      - avgDuration
+      - count
+      - date
+      - eventType
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        eventType:
+          type: string
+        count:
+          type: integer
+          format: int64
+        avgDuration:
+          type: number
+          format: double
+    AnalyticsService.DashboardSummary:
+      required:
+      - activeSessions
+      - activeUsers
+      - activeUsers24h
+      - anonKeysIssued
+      - apiRequests
+      - apiTokensCreated
+      - apiTokensValidated
+      - avgCacheHitRate
+      - avgDurationApiRequest
+      - avgDurationDocumentGenerated
+      - avgDurationDocumentParsed
+      - avgDurationDocumentSaved
+      - avgDurationFontRegistered
+      - avgDurationFormFieldChanged
+      - avgDurationImageAdded
+      - avgDurationImageDeleted
+      - avgDurationImageMoved
+      - avgDurationMs
+      - avgDurationObjectAdded
+      - avgDurationObjectModified
+      - avgDurationPageGenerated
+      - avgDurationPageParsed
+      - avgDurationParagraphAdded
+      - avgDurationParagraphDeleted
+      - avgDurationParagraphMoved
+      - avgHeapUsagePercent
+      - avgProcessCpuLoad
+      - avgProcessingTimeMs
+      - avgRoundTripMs
+      - avgSystemCpuLoad
+      - avgThreadCount
+      - documentsGenerated
+      - documentsParsed
+      - documentsSaved
+      - errorRatePercent
+      - fontsRegistered
+      - formFieldsChanged
+      - http2xxSuccess
+      - http4xxClientError
+      - http5xxServerError
+      - httpStatus200
+      - httpStatus201
+      - httpStatus204
+      - httpStatus400
+      - httpStatus401
+      - httpStatus403
+      - httpStatus404
+      - httpStatus429
+      - httpStatus500
+      - httpStatus502
+      - httpStatus503
+      - imagesAdded
+      - imagesDeleted
+      - imagesMoved
+      - objectsAdded
+      - objectsDeleted
+      - objectsModified
+      - pagesDeleted
+      - pagesGenerated
+      - pagesMoved
+      - pagesParsed
+      - paragraphsAdded
+      - paragraphsDeleted
+      - paragraphsMoved
+      - processingTimeRequests
+      - roundTripRequests
+      - servicePercentiles
+      - sessionsCreated
+      - sessionsDeleted
+      - sessionsRetrieved
+      - tenantsCreated
+      - textOperations
+      - totalErrors
+      - totalEvents
+      - totalGcCollections
+      - totalGcTimeMs
+      - totalSessions
+      - totalUsers
+      - usersCreated
+      - vectorOperations
+      type: object
+      properties:
+        documentsGenerated:
+          type: integer
+          format: int64
+        documentsSaved:
+          type: integer
+          format: int64
+        documentsParsed:
+          type: integer
+          format: int64
+        pagesGenerated:
+          type: integer
+          format: int64
+        pagesParsed:
+          type: integer
+          format: int64
+        pagesDeleted:
+          type: integer
+          format: int64
+        pagesMoved:
+          type: integer
+          format: int64
+        objectsAdded:
+          type: integer
+          format: int64
+        objectsModified:
+          type: integer
+          format: int64
+        objectsDeleted:
+          type: integer
+          format: int64
+        imagesAdded:
+          type: integer
+          format: int64
+        imagesDeleted:
+          type: integer
+          format: int64
+        imagesMoved:
+          type: integer
+          format: int64
+        paragraphsAdded:
+          type: integer
+          format: int64
+        paragraphsDeleted:
+          type: integer
+          format: int64
+        paragraphsMoved:
+          type: integer
+          format: int64
+        textOperations:
+          type: integer
+          format: int64
+        vectorOperations:
+          type: integer
+          format: int64
+        fontsRegistered:
+          type: integer
+          format: int64
+        formFieldsChanged:
+          type: integer
+          format: int64
+        sessionsCreated:
+          type: integer
+          format: int64
+        sessionsDeleted:
+          type: integer
+          format: int64
+        sessionsRetrieved:
+          type: integer
+          format: int64
+        tenantsCreated:
+          type: integer
+          format: int64
+        usersCreated:
+          type: integer
+          format: int64
+        apiTokensCreated:
+          type: integer
+          format: int64
+        apiTokensValidated:
+          type: integer
+          format: int64
+        anonKeysIssued:
+          type: integer
+          format: int64
+        apiRequests:
+          type: integer
+          format: int64
+        roundTripRequests:
+          type: integer
+          format: int64
+        avgRoundTripMs:
+          type: number
+          format: double
+        processingTimeRequests:
+          type: integer
+          format: int64
+        avgProcessingTimeMs:
+          type: number
+          format: double
+        httpStatus200:
+          type: integer
+          format: int64
+        httpStatus201:
+          type: integer
+          format: int64
+        httpStatus204:
+          type: integer
+          format: int64
+        httpStatus400:
+          type: integer
+          format: int64
+        httpStatus401:
+          type: integer
+          format: int64
+        httpStatus403:
+          type: integer
+          format: int64
+        httpStatus404:
+          type: integer
+          format: int64
+        httpStatus429:
+          type: integer
+          format: int64
+        httpStatus500:
+          type: integer
+          format: int64
+        httpStatus502:
+          type: integer
+          format: int64
+        httpStatus503:
+          type: integer
+          format: int64
+        http2xxSuccess:
+          type: integer
+          format: int64
+        http4xxClientError:
+          type: integer
+          format: int64
+        http5xxServerError:
+          type: integer
+          format: int64
+        totalSessions:
+          type: integer
+          format: int64
+        activeSessions:
+          type: integer
+          format: int64
+        totalUsers:
+          type: integer
+          format: int64
+        activeUsers:
+          type: integer
+          format: int64
+        activeUsers24h:
+          type: integer
+          format: int64
+        avgDurationDocumentGenerated:
+          type: number
+          format: double
+        avgDurationDocumentSaved:
+          type: number
+          format: double
+        avgDurationDocumentParsed:
+          type: number
+          format: double
+        avgDurationPageGenerated:
+          type: number
+          format: double
+        avgDurationPageParsed:
+          type: number
+          format: double
+        avgDurationObjectAdded:
+          type: number
+          format: double
+        avgDurationObjectModified:
+          type: number
+          format: double
+        avgDurationImageAdded:
+          type: number
+          format: double
+        avgDurationImageDeleted:
+          type: number
+          format: double
+        avgDurationImageMoved:
+          type: number
+          format: double
+        avgDurationParagraphAdded:
+          type: number
+          format: double
+        avgDurationParagraphDeleted:
+          type: number
+          format: double
+        avgDurationParagraphMoved:
+          type: number
+          format: double
+        avgDurationFontRegistered:
+          type: number
+          format: double
+        avgDurationFormFieldChanged:
+          type: number
+          format: double
+        avgDurationApiRequest:
+          type: number
+          format: double
+        avgDurationMs:
+          type: number
+          format: double
+        totalErrors:
+          type: integer
+          format: int64
+        errorRatePercent:
+          type: number
+          format: double
+        totalEvents:
+          type: integer
+          format: int64
+        avgHeapUsagePercent:
+          type: number
+          format: double
+        avgProcessCpuLoad:
+          type: number
+          format: double
+        avgSystemCpuLoad:
+          type: number
+          format: double
+        avgThreadCount:
+          type: number
+          format: double
+        avgCacheHitRate:
+          type: number
+          format: double
+        totalGcCollections:
+          type: integer
+          format: int64
+        totalGcTimeMs:
+          type: integer
+          format: int64
+        servicePercentiles:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/AnalyticsService.ServicePercentiles"
+    AnalyticsService.ErrorAnalytics:
+      required:
+      - recentErrors
+      - trends
+      type: object
+      properties:
+        trends:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsService.ErrorTrend"
+        recentErrors:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsService.RecentError"
+    AnalyticsService.ErrorTrend:
+      required:
+      - date
+      - errorCount
+      - errorRate
+      - totalCount
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        errorCount:
+          type: integer
+          format: int64
+        totalCount:
+          type: integer
+          format: int64
+        errorRate:
+          type: number
+          format: double
+    AnalyticsService.EventTypeInfo:
+      required:
+      - eventType
+      - latestEvent
+      - totalCount
+      type: object
+      properties:
+        eventType:
+          type: string
+        totalCount:
+          type: integer
+          format: int64
+        latestEvent:
+          type: string
+          format: date-time
+    AnalyticsService.MultiWindowSummary:
+      required:
+      - last1Day
+      - last1Hour
+      - last30Days
+      - last7Days
+      type: object
+      properties:
+        last1Hour:
+          $ref: "#/components/schemas/AnalyticsService.DashboardSummary"
+        last1Day:
+          $ref: "#/components/schemas/AnalyticsService.DashboardSummary"
+        last7Days:
+          $ref: "#/components/schemas/AnalyticsService.DashboardSummary"
+        last30Days:
+          $ref: "#/components/schemas/AnalyticsService.DashboardSummary"
+    AnalyticsService.PerformanceMetric:
+      required:
+      - avgMs
+      - maxMs
+      - minMs
+      - operationCount
+      - operationType
+      - p50Ms
+      - p95Ms
+      - p99Ms
+      type: object
+      properties:
+        operationType:
+          type: string
+        operationCount:
+          type: integer
+          format: int64
+        avgMs:
+          type: number
+          format: double
+        p50Ms:
+          type: number
+          format: double
+        p95Ms:
+          type: number
+          format: double
+        p99Ms:
+          type: number
+          format: double
+        minMs:
+          type: integer
+          format: int32
+        maxMs:
+          type: integer
+          format: int32
+    AnalyticsService.RecentError:
+      required:
+      - errorMessage
+      - eventType
+      - operationType
+      - sessionId
+      - timestamp
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        eventType:
+          type: string
+        operationType:
+          type: string
+        errorMessage:
+          type: string
+        sessionId:
+          type: string
+    AnalyticsService.ServicePercentiles:
+      required:
+      - p50Ms
+      - p90Ms
+      - p95Ms
+      - p99Ms
+      type: object
+      properties:
+        p50Ms:
+          type: number
+          format: double
+        p90Ms:
+          type: number
+          format: double
+        p95Ms:
+          type: number
+          format: double
+        p99Ms:
+          type: number
+          format: double
+    AnalyticsService.SessionStats:
+      required:
+      - active1h
+      - active24h
+      - active7d
+      - totalSessions
+      type: object
+      properties:
+        totalSessions:
+          type: integer
+          format: int64
+        active1h:
+          type: integer
+          format: int64
+        active24h:
+          type: integer
+          format: int64
+        active7d:
+          type: integer
+          format: int64
+    AnalyticsService.UserStats:
+      required:
+      - active24h
+      - active30d
+      - active7d
+      - totalUsers
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+          format: int64
+        active24h:
+          type: integer
+          format: int64
+        active7d:
+          type: integer
+          format: int64
+        active30d:
+          type: integer
+          format: int64
     ApiTokenCreateRequest:
       required:
       - expiresAt
@@ -1599,7 +2562,6 @@ components:
           type: string
         expiresAt:
           type: string
-      description: Request to create a new API token.
     ApiTokenCreateResponse:
       required:
       - metadata
@@ -1610,8 +2572,6 @@ components:
           type: string
         metadata:
           $ref: "#/components/schemas/ApiTokenCreateResponse.ApiTokenMetadata"
-      description: Response when creating a new API token. Contains the raw token
-        (shown only once) plus metadata.
     ApiTokenCreateResponse.ApiTokenMetadata:
       required:
       - createdAt
@@ -1653,7 +2613,6 @@ components:
           type: string
         expiresAt:
           type: string
-      description: Response for listing API tokens (does not include the raw token).
     Authentication:
       required:
       - attributes
@@ -1678,32 +2637,19 @@ components:
       - p2
       - p3
       type: object
-      description: "Represents a cubic Bezier curve path segment defined by four control\
-        \ points. This class implements a cubic Bezier curve with start point, two\
-        \ control points, and end point, providing smooth curved path segments for\
-        \ complex vector graphics. Includes mathematical evaluation methods for point\
-        \ calculation along the curve."
       allOf:
       - $ref: "#/components/schemas/PathSegment"
       - $ref: "#/components/schemas/PDFObject"
       - type: object
         properties:
           p0:
-            description: Returns the starting point p0 of this Bezier segment.
-            allOf:
-            - $ref: "#/components/schemas/Point"
+            $ref: "#/components/schemas/Point"
           p1:
-            description: Returns the first control point p1 of this Bezier segment.
-            allOf:
-            - $ref: "#/components/schemas/Point"
+            $ref: "#/components/schemas/Point"
           p2:
-            description: Returns the second control point p2 of this Bezier segment.
-            allOf:
-            - $ref: "#/components/schemas/Point"
+            $ref: "#/components/schemas/Point"
           p3:
-            description: Returns the ending point p3 of this Bezier segment.
-            allOf:
-            - $ref: "#/components/schemas/Point"
+            $ref: "#/components/schemas/Point"
           objectType:
             $ref: "#/components/schemas/ObjectType"
     BoundingRect:
@@ -1715,31 +2661,19 @@ components:
       type: object
       properties:
         origin:
-          description: Returns the origin point of this bounding rectangle. The origin
-            represents the bottom-left corner in PDF coordinate system.
-          allOf:
-          - $ref: "#/components/schemas/Point"
+          $ref: "#/components/schemas/Point"
         x:
           type: number
-          description: X-coordinate of the rectangle's origin (left edge).
           format: double
         "y":
           type: number
-          description: Y-coordinate of the rectangle's origin (bottom edge in PDF
-            coordinates).
           format: double
         width:
           type: number
-          description: Width of the rectangle extending rightward from the origin.
           format: double
         height:
           type: number
-          description: Height of the rectangle extending upward from the origin.
           format: double
-      description: "Represents a rectangular area defined by getPosition and dimensions.\
-        \ This class encapsulates bounding box information for PDF objects, providing\
-        \ spatial extent data used for positioning, collision detection, and layout\
-        \ operations within PDF documents."
     ChangeFormFieldRequest:
       required:
       - ref
@@ -1755,26 +2689,16 @@ components:
       properties:
         red:
           type: integer
-          description: Red color component (0-255).
           format: int32
         green:
           type: integer
-          description: Green color component (0-255).
           format: int32
         blue:
           type: integer
-          description: Blue color component (0-255).
           format: int32
         alpha:
           type: integer
-          description: "Alpha (transparency) component (0-255, where 255 is fully\
-            \ opaque)."
           format: int32
-      description: "Represents color information using RGBA (Red, Green, Blue, Alpha)\
-        \ color model. This class encapsulates color data for PDF objects, supporting\
-        \ both opaque and transparent colors with integer values ranging from 0-255\
-        \ for each component. Provides convenient constructors and utility methods\
-        \ for color manipulation."
     CommandResult:
       required:
       - commandName
@@ -1808,7 +2732,6 @@ components:
         initialPageCount:
           type: integer
           format: int32
-      description: Request to create a new blank PDF session.
     DeleteRequest:
       required:
       - objectRef
@@ -1816,9 +2739,6 @@ components:
       properties:
         objectRef:
           $ref: "#/components/schemas/ObjectRef"
-      description: Request record for deleting PDF objects from a document. This immutable
-        record encapsulates the object reference needed to identify and remove specific
-        PDF objects from a document during editing operations.
     DocumentFontInfoDto:
       required:
       - documentFontName
@@ -1847,10 +2767,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PageSnapshot"
-      description: "Represents a complete snapshot of a PDF document including metadata\
-        \ and all pages. This response provides document-level information and aggregates\
-        \ all page snapshots, allowing clients to retrieve the entire document structure\
-        \ in a single API call."
     FindRequest:
       required:
       - hint
@@ -1864,27 +2780,25 @@ components:
           $ref: "#/components/schemas/Position"
         hint:
           type: string
-      description: "Request record for searching PDF objects within a document. This\
-        \ immutable record encapsulates search criteria for locating PDF objects based\
-        \ on type, getPosition constraints, and optional search hints, enabling flexible\
-        \ and efficient object discovery within PDF documents."
     Font:
       type: object
       properties:
         name:
           type: string
-          description: "Font family name (e.g., \"Arial\", \"Times New Roman\", \"\
-            Helvetica\")."
         size:
           type: number
-          description: Font size in points.
           format: double
         embedded:
           type: boolean
-      description: "Represents font properties for text rendering in PDF documents.\
-        \ This class encapsulates font characteristics including typeface name, size,\
-        \ and styling attributes such as bold, italic, and underline formatting. Used\
-        \ throughout the API for consistent text formatting and style management."
+    FontNamesResponse:
+      required:
+      - fontNames
+      type: object
+      properties:
+        fontNames:
+          type: array
+          items:
+            type: string
     FontType:
       type: string
       enum:
@@ -1893,45 +2807,24 @@ components:
       - EMBEDDED
     Form:
       type: object
-      description: "Represents an interactive form field within a PDF document. This\
-        \ class encapsulates form field properties including type, value, appearance,\
-        \ and behavior for various interactive PDF form elements such as text fields,\
-        \ checkboxes, radio buttons, and dropdowns."
       allOf:
       - $ref: "#/components/schemas/PDFObject"
       - type: object
         properties:
           name:
             type: string
-            description: Field name identifier used in form processing.
           type:
-            description: Type of form field determining its behavior and appearance.
-            allOf:
-            - $ref: "#/components/schemas/Form.FormType"
+            $ref: "#/components/schemas/Form.FormType"
           value:
             type: string
-            description: Current value or content of the form field.
           size:
-            description: Dimensions of the form field's visual representation.
-            allOf:
-            - $ref: "#/components/schemas/Size"
+            $ref: "#/components/schemas/Size"
           font:
-            description: Font properties for text-based form fields.
-            allOf:
-            - $ref: "#/components/schemas/Font"
+            $ref: "#/components/schemas/Font"
           objectType:
-            description: Returns the object type for this form field.
-            allOf:
-            - $ref: "#/components/schemas/ObjectType"
+            $ref: "#/components/schemas/ObjectType"
     Form.FormType:
       type: string
-      description: Enumeration of supported PDF form field types.
-      x-enum-descriptions:
-      - Single-line or multi-line text input field
-      - Checkbox for binary selections
-      - Radio button for mutually exclusive selections
-      - Dropdown list with selectable options
-      - Clickable button element
       enum:
       - TEXT_FIELD
       - CHECKBOX
@@ -1953,54 +2846,309 @@ components:
             type: string
     Image:
       type: object
-      description: "Represents an image object within a PDF document. This class encapsulates\
-        \ image data, format information, and dimensional properties for embedded\
-        \ or overlaid images in PDF documents. Supports various image formats and\
-        \ provides utilities for loading images from files."
       allOf:
       - $ref: "#/components/schemas/PDFObject"
       - type: object
         properties:
           format:
             type: string
-            description: "Image format (e.g., \"JPEG\", \"PNG\", \"GIF\")."
           size:
-            description: Dimensions of the image in PDF coordinate units.
-            allOf:
-            - $ref: "#/components/schemas/Size"
+            $ref: "#/components/schemas/Size"
           data:
             type: string
-            description: Raw image data bytes.
             format: byte
           objectType:
-            description: Returns the object type for this image.
-            allOf:
-            - $ref: "#/components/schemas/ObjectType"
+            $ref: "#/components/schemas/ObjectType"
+    JvmStatsService.BufferPoolStats:
+      required:
+      - count
+      - name
+      - totalCapacityBytes
+      - usedBytes
+      type: object
+      properties:
+        name:
+          type: string
+        count:
+          type: integer
+          format: int64
+        usedBytes:
+          type: integer
+          format: int64
+        totalCapacityBytes:
+          type: integer
+          format: int64
+    JvmStatsService.CacheStats:
+      required:
+      - evictions
+      - hitRatePercent
+      - hits
+      - loadFailures
+      - loadSuccess
+      - misses
+      - name
+      - size
+      type: object
+      properties:
+        name:
+          type: string
+        size:
+          type: integer
+          format: int64
+        hits:
+          type: integer
+          format: int64
+        misses:
+          type: integer
+          format: int64
+        hitRatePercent:
+          type: number
+          format: double
+        loadSuccess:
+          type: integer
+          format: int64
+        loadFailures:
+          type: integer
+          format: int64
+        evictions:
+          type: integer
+          format: int64
+    JvmStatsService.GcStats:
+      required:
+      - collectionCount
+      - collectionTimeMs
+      - name
+      type: object
+      properties:
+        name:
+          type: string
+        collectionCount:
+          type: integer
+          format: int64
+        collectionTimeMs:
+          type: integer
+          format: int64
+    JvmStatsService.JvmStats:
+      required:
+      - bufferPools
+      - caches
+      - garbageCollectors
+      - memory
+      - memoryPools
+      - operatingSystem
+      - runtime
+      - threads
+      type: object
+      properties:
+        runtime:
+          $ref: "#/components/schemas/JvmStatsService.RuntimeStats"
+        memory:
+          $ref: "#/components/schemas/JvmStatsService.MemoryStats"
+        threads:
+          $ref: "#/components/schemas/JvmStatsService.ThreadStats"
+        garbageCollectors:
+          type: array
+          items:
+            $ref: "#/components/schemas/JvmStatsService.GcStats"
+        memoryPools:
+          type: array
+          items:
+            $ref: "#/components/schemas/JvmStatsService.MemoryPoolStats"
+        operatingSystem:
+          $ref: "#/components/schemas/JvmStatsService.OsStats"
+        bufferPools:
+          type: array
+          items:
+            $ref: "#/components/schemas/JvmStatsService.BufferPoolStats"
+        caches:
+          type: array
+          items:
+            $ref: "#/components/schemas/JvmStatsService.CacheStats"
+    JvmStatsService.MemoryPoolStats:
+      required:
+      - committedBytes
+      - maxBytes
+      - name
+      - type
+      - usagePercent
+      - usedBytes
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        usedBytes:
+          type: integer
+          format: int64
+        committedBytes:
+          type: integer
+          format: int64
+        maxBytes:
+          type: integer
+          format: int64
+        usagePercent:
+          type: number
+          format: double
+    JvmStatsService.MemoryStats:
+      required:
+      - heap
+      - nonHeap
+      type: object
+      properties:
+        heap:
+          $ref: "#/components/schemas/JvmStatsService.MemoryUsageStats"
+        nonHeap:
+          $ref: "#/components/schemas/JvmStatsService.MemoryUsageStats"
+    JvmStatsService.MemoryUsageStats:
+      required:
+      - committedBytes
+      - maxBytes
+      - usagePercent
+      - usedBytes
+      type: object
+      properties:
+        usedBytes:
+          type: integer
+          format: int64
+        committedBytes:
+          type: integer
+          format: int64
+        maxBytes:
+          type: integer
+          format: int64
+        usagePercent:
+          type: number
+          format: double
+    JvmStatsService.OsStats:
+      required:
+      - arch
+      - availableProcessors
+      - freeMemoryBytes
+      - freeSwapBytes
+      - memoryUsagePercent
+      - name
+      - processCpuPercent
+      - systemCpuPercent
+      - systemLoadAverage
+      - totalMemoryBytes
+      - totalSwapBytes
+      - version
+      type: object
+      properties:
+        name:
+          type: string
+        arch:
+          type: string
+        version:
+          type: string
+        availableProcessors:
+          type: integer
+          format: int32
+        systemLoadAverage:
+          type: number
+          format: double
+        processCpuPercent:
+          type: number
+          format: double
+        systemCpuPercent:
+          type: number
+          format: double
+        totalMemoryBytes:
+          type: integer
+          format: int64
+        freeMemoryBytes:
+          type: integer
+          format: int64
+        memoryUsagePercent:
+          type: number
+          format: double
+        totalSwapBytes:
+          type: integer
+          format: int64
+        freeSwapBytes:
+          type: integer
+          format: int64
+    JvmStatsService.RuntimeStats:
+      required:
+      - startTimeMs
+      - uptimeMs
+      - vmName
+      - vmVersion
+      type: object
+      properties:
+        vmName:
+          type: string
+        vmVersion:
+          type: string
+        uptimeMs:
+          type: integer
+          format: int64
+        startTimeMs:
+          type: integer
+          format: int64
+    JvmStatsService.ThreadStats:
+      required:
+      - current
+      - daemon
+      - peak
+      - totalStarted
+      type: object
+      properties:
+        current:
+          type: integer
+          format: int32
+        peak:
+          type: integer
+          format: int32
+        daemon:
+          type: integer
+          format: int32
+        totalStarted:
+          type: integer
+          format: int64
     Line:
       required:
       - p0
       - p1
       type: object
-      description: "Represents a straight line path segment between two points. This\
-        \ class defines a linear path element connecting two coordinate points, commonly\
-        \ used in vector graphics and geometric shapes within PDF documents."
       allOf:
       - $ref: "#/components/schemas/PathSegment"
       - $ref: "#/components/schemas/PDFObject"
       - type: object
         properties:
           p1:
-            description: Returns the ending point of this line segment.
-            allOf:
-            - $ref: "#/components/schemas/Point"
+            $ref: "#/components/schemas/Point"
           p0:
-            description: Returns the starting point of this line segment.
-            allOf:
-            - $ref: "#/components/schemas/Point"
+            $ref: "#/components/schemas/Point"
           objectType:
-            description: Returns the object type for this line segment.
-            allOf:
-            - $ref: "#/components/schemas/ObjectType"
+            $ref: "#/components/schemas/ObjectType"
+    MetricsBuffer.BufferStats:
+      required:
+      - configEnabled
+      - currentBufferSize
+      - operationallyEnabled
+      - totalDropped
+      - totalFlushed
+      - totalPublished
+      type: object
+      properties:
+        configEnabled:
+          type: boolean
+        operationallyEnabled:
+          type: boolean
+        totalPublished:
+          type: integer
+          format: int64
+        totalFlushed:
+          type: integer
+          format: int64
+        totalDropped:
+          type: integer
+          format: int64
+        currentBufferSize:
+          type: integer
+          format: int32
     ModifyRequest:
       required:
       - newObject
@@ -2031,10 +3179,6 @@ components:
           $ref: "#/components/schemas/ObjectRef"
         newPosition:
           $ref: "#/components/schemas/Position"
-      description: "Request record for moving PDF objects to new positions within\
-        \ a document. This immutable record encapsulates both the object to be moved\
-        \ and its target getPosition, enabling precise repositioning operations during\
-        \ PDF editing."
     ObjectRef:
       required:
       - internalId
@@ -2044,21 +3188,10 @@ components:
       properties:
         internalId:
           type: string
-          description: Returns the internal identifier for the referenced object.
         position:
-          description: Returns the current getPosition information for the referenced
-            object.
-          allOf:
-          - $ref: "#/components/schemas/Position"
+          $ref: "#/components/schemas/Position"
         type:
-          description: Returns the type classification of the referenced object.
-          allOf:
-          - $ref: "#/components/schemas/ObjectType"
-      description: Lightweight reference to a PDF object providing identity and type
-        information. Object references enable efficient API operations by providing
-        a way to identify and reference PDF objects without transferring their complete
-        content. This design pattern reduces payload sizes and improves performance
-        for operations that only need object identification and basic properties.
+          $ref: "#/components/schemas/ObjectType"
       discriminator:
         propertyName: objectRefType
         mapping:
@@ -2075,31 +3208,6 @@ components:
       - $ref: "#/components/schemas/FormFieldRef"
     ObjectType:
       type: string
-      description: "Enumeration of PDF object types supported by the PDFDancer API.\
-        \ This enum categorizes the different types of objects that can exist within\
-        \ a PDF document, enabling type-safe operations and filtering across the API.\
-        \ Each type represents a distinct category of PDF content with specific manipulation\
-        \ capabilities and properties."
-      x-enum-descriptions:
-      - Root PDF document object containing all pages and metadata
-      - Individual page within the PDF document
-      - Single character or glyph element
-      - Text paragraph or block element
-      - Embedded image or graphics element
-      - Vector path or shape element
-      - Linear path segment
-      - Rectangular shape element
-      - Bezier curve path element
-      - Clipping region or mask
-      - FormXObject container
-      - Interactive acroform field element
-      - ""
-      - ""
-      - ""
-      - ""
-      - ""
-      - ""
-      - ""
       enum:
       - PDF
       - PAGE
@@ -2122,10 +3230,6 @@ components:
       - CHECKBOX
     Orientation:
       type: string
-      description: Enumeration of page orientations.
-      x-enum-descriptions:
-      - Portrait orientation (height \> width)
-      - Landscape orientation (width \> height)
       enum:
       - PORTRAIT
       - LANDSCAPE
@@ -2134,24 +3238,10 @@ components:
       properties:
         id:
           type: string
-          description: Returns the unique identifier for this PDF object.
         position:
-          description: Returns the spatial getPosition information for this object.
-          allOf:
-          - $ref: "#/components/schemas/Position"
+          $ref: "#/components/schemas/Position"
         objectType:
-          description: "Returns the specific object type for this PDF object. This\
-            \ method must be implemented by concrete subclasses to identify their\
-            \ specific type, enabling type-safe operations and filtering."
-          allOf:
-          - $ref: "#/components/schemas/ObjectType"
-      description: |-
-        Abstract base class for all PDF objects that can be manipulated within the API. This class provides the fundamental properties and behaviors shared by all PDF content elements, including getPosition tracking, identification, and object reference generation.
-
-
-        The class uses Jackson polymorphic serialization to handle different concrete types
-        during JSON serialization/deserialization, enabling type-safe API operations
-        while maintaining flexibility for different PDF object types.
+          $ref: "#/components/schemas/ObjectType"
       discriminator:
         propertyName: type
         mapping:
@@ -2183,10 +3273,6 @@ components:
         toPageIndex:
           type: integer
           format: int32
-      description: "Request record for reordering pages within a PDF document. This\
-        \ immutable record specifies a page movement operation, defining which page\
-        \ should be moved and where it should be repositioned in the document's page\
-        \ sequence."
     PageRef:
       required:
       - orientation
@@ -2211,8 +3297,6 @@ components:
         height:
           type: number
           format: double
-      description: "Represents PDF page dimensions, supporting both standard sizes\
-        \ and custom dimensions. Dimensions are specified in points (1/72 inch)."
     PageSnapshot:
       required:
       - elements
@@ -2230,31 +3314,20 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DocumentFontInfoDto"
-      description: "Represents a complete snapshot of a single PDF page including\
-        \ its metadata and all elements. This response aggregates page information\
-        \ and all contained objects (paragraphs, images, etc.) into a single response,\
-        \ reducing the number of API calls needed to retrieve page content."
     Paragraph:
       type: object
-      description: Represents a paragraph or text block within a PDF document. This
-        class encapsulates paragraph-level text content with unified formatting properties
-        and access to individual character elements for detailed manipulation. Provides
-        both block-level text operations and character-level granularity.
       allOf:
       - $ref: "#/components/schemas/PDFObject"
       - type: object
         properties:
           objectType:
-            description: Returns the object type for this paragraph.
-            allOf:
-            - $ref: "#/components/schemas/ObjectType"
+            $ref: "#/components/schemas/ObjectType"
           lines:
             type: array
             items:
               $ref: "#/components/schemas/TextLine"
           lineSpacings:
             type: array
-            description: Gets the line spacing factors between consecutive lines.
             items:
               type: number
               format: double
@@ -2264,59 +3337,36 @@ components:
             type: string
     Path:
       type: object
-      description: "Represents a complex vector path consisting of multiple path segments.\
-        \ This class encapsulates vector graphics data within PDF documents, composed\
-        \ of various path elements like lines, curves, and shapes. Provides automatic\
-        \ getPosition calculation based on constituent segments."
       allOf:
       - $ref: "#/components/schemas/PDFObject"
       - type: object
         properties:
           pathSegments:
             type: array
-            description: Returns the list of path segments that compose this path.
             items:
               $ref: "#/components/schemas/PathSegment"
           evenOddFill:
             type: boolean
-            description: Returns whether even-odd fill rule should be used (true)
-              or nonzero (false). Null means default (nonzero).
           objectType:
-            description: Returns the object type for this path.
-            allOf:
-            - $ref: "#/components/schemas/ObjectType"
+            $ref: "#/components/schemas/ObjectType"
     PathSegment:
       type: object
       properties:
         strokeColor:
-          description: Color used for drawing the segment's outline or stroke.
-          allOf:
-          - $ref: "#/components/schemas/Color"
+          $ref: "#/components/schemas/Color"
         fillColor:
-          description: Color used for filling the segment's interior area (if applicable).
-          allOf:
-          - $ref: "#/components/schemas/Color"
+          $ref: "#/components/schemas/Color"
         dashArray:
           type: array
-          description: Dash pattern for stroking the path segment. Interpreted as
-            alternating on/off lengths. Null or empty means solid line. Values are
-            in user space units.
           items:
             type: number
             format: double
         dashPhase:
           type: number
-          description: Dash phase (offset) into the dash pattern in user space units.
-            Null or zero means no offset.
           format: double
         strokeWidth:
           type: number
-          description: Width of the stroke line in PDF coordinate units.
           format: double
-      description: "Abstract base class for individual path segments within vector\
-        \ paths. This class provides common properties for path elements including\
-        \ stroke and fill colors, line width, and positioning. Concrete subclasses\
-        \ implement specific geometric shapes like lines, curves, and bezier segments."
       discriminator:
         propertyName: segmentType
         mapping:
@@ -2329,6 +3379,21 @@ components:
       oneOf:
       - $ref: "#/components/schemas/Line"
       - $ref: "#/components/schemas/Bezier"
+    PaymentController.CheckoutSessionRequest:
+      required:
+      - plan
+      type: object
+      properties:
+        plan:
+          type: string
+    PaymentController.CheckoutSessionResponse:
+      required:
+      - url
+      type: object
+      properties:
+        url:
+          type: string
+          format: url
     Point:
       required:
       - x
@@ -2341,10 +3406,6 @@ components:
         "y":
           type: number
           format: double
-      description: "Immutable point record representing 2D coordinates. This record\
-        \ provides a simple and efficient way to represent coordinate pairs within\
-        \ PDF documents, with conversion utilities for interoperability with Java's\
-        \ standard geometry classes."
     Position:
       type: object
       properties:
@@ -2356,54 +3417,26 @@ components:
           type: string
         x:
           type: number
-          description: "Returns the X coordinate of this getPosition. If no bounding\
-            \ rectangle is defined, returns -1 as a sentinel value."
           format: double
         "y":
           type: number
-          description: "Returns the Y coordinate of this getPosition. If no bounding\
-            \ rectangle is defined, returns -1 as a sentinel value."
           format: double
         pageIndex:
           type: integer
-          description: Returns the page number where this getPosition is located.
           format: int32
         shape:
-          description: Returns the geometric shape type of this getPosition.
-          allOf:
-          - $ref: "#/components/schemas/Position.ShapeType"
+          $ref: "#/components/schemas/Position.ShapeType"
         mode:
-          description: Returns the getPosition matching mode.
-          allOf:
-          - $ref: "#/components/schemas/Position.PositionMode"
+          $ref: "#/components/schemas/Position.PositionMode"
         boundingRect:
-          description: Returns the bounding rectangle defining the spatial extent
-            of this getPosition.
-          allOf:
-          - $ref: "#/components/schemas/BoundingRect"
-      description: "Represents spatial positioning and location information for PDF\
-        \ objects. This class encapsulates various ways to specify object locations\
-        \ within PDF documents, including page-based coordinates, bounding rectangles,\
-        \ and different positioning modes. It supports both precise coordinate positioning\
-        \ and area-based location specifications."
+          $ref: "#/components/schemas/BoundingRect"
     Position.PositionMode:
       type: string
-      description: Defines how getPosition matching should be performed when searching
-        for objects.
-      x-enum-descriptions:
-      - Objects that intersect with the specified getPosition area
-      - Objects completely contained within the specified getPosition area
       enum:
       - INTERSECT
       - CONTAINS
     Position.ShapeType:
       type: string
-      description: Defines the geometric shape type used for getPosition specification.
-      x-enum-descriptions:
-      - Single point coordinate
-      - Linear shape between two points
-      - Circular area with radius
-      - Rectangular area with width and height
       enum:
       - POINT
       - LINE
@@ -2418,6 +3451,7 @@ components:
       required:
       - description
       - id
+      - isHidden
       - name
       - price
       - requiresContact
@@ -2435,6 +3469,8 @@ components:
         type:
           $ref: "#/components/schemas/ProductType"
         requiresContact:
+          type: boolean
+        isHidden:
           type: boolean
     ProductType:
       type: string
@@ -2463,21 +3499,13 @@ components:
       properties:
         width:
           type: number
-          description: Returns the width dimension.
           format: double
         height:
           type: number
-          description: Returns the height dimension.
           format: double
         area:
           type: number
-          description: "Calculates and returns the total area. This method computes\
-            \ the area by multiplying width and height, useful for size comparisons\
-            \ and layout calculations."
           format: double
-      description: "Represents dimensional measurements with width and height properties.\
-        \ This class encapsulates size information for PDF objects (images, forms,\
-        \ etc.), providing both individual dimension access and calculated area methods."
     Subscription:
       required:
       - end
@@ -2495,38 +3523,22 @@ components:
           $ref: "#/components/schemas/Product"
     TextElement:
       type: object
-      description: "Represents a single character or glyph within a PDF document.\
-        \ This class encapsulates individual character properties including the character\
-        \ content, font styling, color, and getPosition for fine-grained text manipulation\
-        \ and character-level formatting operations."
       allOf:
       - $ref: "#/components/schemas/PDFObject"
       - type: object
         properties:
           text:
             type: string
-            description: The character or glyph content (typically a single character
-              string).
           font:
-            description: Font properties for rendering this character.
-            allOf:
-            - $ref: "#/components/schemas/Font"
+            $ref: "#/components/schemas/Font"
           color:
-            description: Color properties for rendering this character.
-            allOf:
-            - $ref: "#/components/schemas/Color"
+            $ref: "#/components/schemas/Color"
           objectType:
-            description: Returns the object type for this character.
-            allOf:
-            - $ref: "#/components/schemas/ObjectType"
+            $ref: "#/components/schemas/ObjectType"
           status:
             $ref: "#/components/schemas/TextStatus"
     TextLine:
       type: object
-      description: Represents a paragraph or text block within a PDF document. This
-        class encapsulates paragraph-level text content with unified formatting properties
-        and access to individual character elements for detailed manipulation. Provides
-        both block-level text operations and character-level granularity.
       allOf:
       - $ref: "#/components/schemas/PDFObject"
       - type: object
@@ -2537,9 +3549,7 @@ components:
           fontName:
             type: string
           objectType:
-            description: Returns the object type for this paragraph.
-            allOf:
-            - $ref: "#/components/schemas/ObjectType"
+            $ref: "#/components/schemas/ObjectType"
           textElements:
             type: array
             items:
@@ -2586,7 +3596,6 @@ components:
             format: double
           lineSpacings:
             type: array
-            description: Gets the line spacing factors between consecutive lines.
             items:
               type: number
               format: double
@@ -2627,7 +3636,6 @@ components:
           type: string
         status:
           type: string
-      description: Response containing user's tenant information with their role.
     VersionResponse:
       required:
       - color
