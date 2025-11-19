@@ -20,10 +20,10 @@ import {
     CommandResult,
     CreatePdfRequest,
     DeleteRequest,
+    DocumentFontInfo,
     DocumentSnapshot,
     FindRequest,
     Font,
-    DocumentFontInfo,
     FontType,
     FormFieldRef,
     Image,
@@ -169,7 +169,7 @@ async function fetchWithRetry(
                     }
 
                     if (DEBUG) {
-                        console.log(`${Date.now() / 1000}|Retry attempt ${attempt + 1}/${retryConfig.maxRetries} for ${context} after ${delay}ms (status: ${response.status}, source: ${delaySource})`);
+
                     }
                     await sleep(delay);
                     continue;
@@ -187,7 +187,7 @@ async function fetchWithRetry(
                 const delay = calculateRetryDelay(attempt, retryConfig);
                 if (DEBUG) {
                     const errorMessage = error instanceof Error ? error.message : String(error);
-                    console.log(`${Date.now() / 1000}|Retry attempt ${attempt + 1}/${retryConfig.maxRetries} for ${context} after ${delay}ms (error: ${errorMessage})`);
+
                 }
                 await sleep(delay);
                 continue;
@@ -351,11 +351,11 @@ function logGeneratedAtHeader(response: Response, method: string, path: string):
             }
 
             if (logParts.length > 0) {
-                console.log(`${Date.now() / 1000}|${method} ${path} - ${logParts.join(', ')}`);
+
             }
         } catch (e) {
             const errorMessage = e instanceof Error ? e.message : String(e);
-            console.log(`${Date.now() / 1000}|${method} ${path} - Header parse error: ${errorMessage}`);
+
         }
     }
 }
@@ -1155,7 +1155,6 @@ export class PDFDancer {
      * Now uses snapshot caching for better performance.
      */
     private async find(objectType?: ObjectType, position?: Position): Promise<ObjectRef[]> {
-        console.log('[PDFDancer.find] Called with:', { objectType, pageIndex: position?.pageIndex, shape: position?.shape });
 
         // Determine if we should use snapshot or fall back to HTTP
         // For paths with coordinates, we need to use HTTP (backend requirement)
@@ -1163,7 +1162,7 @@ export class PDFDancer {
             position?.shape === ShapeType.POINT;
 
         if (isPathWithCoordinates) {
-            console.log('[PDFDancer.find] Using HTTP for path with coordinates');
+
             // Fall back to HTTP for path coordinate queries
             const requestData = new FindRequest(objectType, position).toDict();
             const response = await this._makeRequest('POST', '/pdf/find', requestData);
@@ -1175,29 +1174,29 @@ export class PDFDancer {
         let elements: ObjectRef[];
 
         if (position?.pageIndex !== undefined) {
-            console.log('[PDFDancer.find] Using page snapshot for page', position.pageIndex);
+
             // Page-specific query - use page snapshot
             const pageSnapshot = await this._getOrFetchPageSnapshot(position.pageIndex);
             elements = pageSnapshot.elements;
-            console.log('[PDFDancer.find] Page snapshot has', elements.length, 'elements');
+
         } else {
-            console.log('[PDFDancer.find] Using document snapshot');
+
             // Document-wide query - use document snapshot
             const docSnapshot = await this._getOrFetchDocumentSnapshot();
             elements = docSnapshot.getAllElements();
-            console.log('[PDFDancer.find] Document snapshot has', elements.length, 'elements');
+
         }
 
         // Filter by object type
         if (objectType) {
             const beforeFilter = elements.length;
             elements = elements.filter(el => el.type === objectType);
-            console.log('[PDFDancer.find] After type filter:', elements.length, 'of', beforeFilter, '(type:', objectType, ')');
+
         }
 
         // Apply position-based filtering
         const result = this._filterByPosition(elements, position);
-        console.log('[PDFDancer.find] After position filter:', result.length, 'elements');
+
         return result;
     }
 
@@ -1463,7 +1462,7 @@ export class PDFDancer {
     private async _getOrFetchPageSnapshot(pageIndex: number): Promise<PageSnapshot> {
         // Check page cache first
         if (this._pageSnapshotCache.has(pageIndex)) {
-            console.log('[PDFDancer._getOrFetchPageSnapshot] Using cached page snapshot for page', pageIndex);
+
             return this._pageSnapshotCache.get(pageIndex)!;
         }
 
@@ -1471,7 +1470,7 @@ export class PDFDancer {
         if (this._documentSnapshotCache) {
             const pageSnapshot = this._documentSnapshotCache.getPageSnapshot(pageIndex);
             if (pageSnapshot) {
-                console.log('[PDFDancer._getOrFetchPageSnapshot] Extracting page from document snapshot for page', pageIndex);
+
                 // Cache it for future use
                 this._pageSnapshotCache.set(pageIndex, pageSnapshot);
                 return pageSnapshot;
@@ -1479,10 +1478,10 @@ export class PDFDancer {
         }
 
         // Fetch page snapshot from server
-        console.log('[PDFDancer._getOrFetchPageSnapshot] Fetching fresh page snapshot from server for page', pageIndex);
+
         const pageSnapshot = await this.getPageSnapshot(pageIndex);
         this._pageSnapshotCache.set(pageIndex, pageSnapshot);
-        console.log('[PDFDancer._getOrFetchPageSnapshot] Fetched snapshot with', pageSnapshot.elements.length, 'elements');
+
         return pageSnapshot;
     }
 
@@ -1501,7 +1500,7 @@ export class PDFDancer {
      * Called after any mutation operation.
      */
     private _invalidateCache(): void {
-        console.log('[PDFDancer._invalidateCache] Clearing all snapshot caches');
+
         this._documentSnapshotCache = null;
         this._pageSnapshotCache.clear();
         this._pagesCache = null;
@@ -1512,852 +1511,1131 @@ export class PDFDancer {
      * Handles coordinates, text matching, and field name filtering.
      */
     private _filterByPosition(elements: ObjectRef[], position?: Position): ObjectRef[] {
-        console.log('[PDFDancer._filterByPosition] Starting with', elements.length, 'elements');
-        console.log('[PDFDancer._filterByPosition] Position:', position);
-        console.log('[PDFDancer._filterByPosition] Elements:', elements.map(e => ({
-            type: e.type,
-            pageIndex: e.position?.pageIndex,
-            boundingRect: e.position?.boundingRect
-        })));
 
-        if (!position) {
-            return elements;
-        }
 
-        let filtered = elements;
-
-        // Filter by page index
-        if (position.pageIndex !== undefined) {
-            const before = filtered.length;
-            filtered = filtered.filter(el => el.position.pageIndex === position.pageIndex);
-            console.log('[PDFDancer._filterByPosition] After page filter:', filtered.length, 'of', before);
-        }
-
-        // Filter by coordinates (point containment with tolerance)
-        if (position.boundingRect && position.shape === ShapeType.POINT) {
-            console.log('[PDFDancer._filterByPosition] Applying coordinate filter');
-            const x = position.boundingRect.x;
-            const y = position.boundingRect.y;
-            const tolerance = position.tolerance || 0;
-            filtered = filtered.filter(el => {
-                const rect = el.position.boundingRect;
-                if (!rect) return false;
-                return x >= rect.x - tolerance && x <= rect.x + rect.width + tolerance &&
-                    y >= rect.y - tolerance && y <= rect.y + rect.height + tolerance;
-            });
-        }
-
-        // Filter by text starts with
-        if (position.textStartsWith && filtered.length > 0) {
-            console.log('[PDFDancer._filterByPosition] Applying textStartsWith filter');
-            const textLower = position.textStartsWith.toLowerCase();
-            filtered = filtered.filter(el => {
-                const textObj = el as TextObjectRef;
-                return textObj.text && textObj.text.toLowerCase().startsWith(textLower);
-            });
-        }
-
-        // Filter by text pattern (regex)
-        if (position.textPattern && filtered.length > 0) {
-            console.log('[PDFDancer._filterByPosition] Applying textPattern filter');
-            const regex = this._compileTextPattern(position.textPattern);
-            filtered = filtered.filter(el => {
-                const textObj = el as TextObjectRef;
-                return textObj.text && regex.test(textObj.text);
-            });
-        }
-
-        // Filter by name (for form fields)
-        if (position.name && filtered.length > 0) {
-            console.log('[PDFDancer._filterByPosition] Applying name filter');
-            filtered = filtered.filter(el => {
-                const formField = el as FormFieldRef;
-                return formField.name === position.name;
-            });
-        }
-
-        console.log('[PDFDancer._filterByPosition] Final result:', filtered.length, 'elements');
-        return filtered;
+        type: e.type,
+            pageIndex
+    :
+        e.position?.pageIndex,
+            boundingRect
+    :
+        e.position?.boundingRect
     }
 
-    /**
-     * Filters FormFieldRef elements by Position criteria.
-     */
-    private _filterFormFieldsByPosition(elements: FormFieldRef[], position?: Position): FormFieldRef[] {
-        return this._filterByPosition(elements as ObjectRef[], position) as FormFieldRef[];
-    }
-
-    private _compileTextPattern(pattern: string): RegExp {
-        try {
-            return new RegExp(pattern);
-        } catch {
-            const inlineMatch = pattern.match(/^\(\?([a-z]+)\)/i);
-            if (inlineMatch) {
-                const supportedFlags = inlineMatch[1]
-                    .toLowerCase()
-                    .split('')
-                    .filter(flag => 'gimsuy'.includes(flag));
-                const flags = Array.from(new Set(supportedFlags)).join('');
-                const source = pattern.slice(inlineMatch[0].length);
-                try {
-                    return new RegExp(source, flags);
-                } catch {
-                    // fall through to literal fallback
-                }
-            }
-
-            const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            return new RegExp(escaped);
-        }
-    }
-
-    // Manipulation Operations
-
-    /**
-     * Deletes the specified PDF object from the document.
-     */
-    private async delete(objectRef: ObjectRef): Promise<boolean> {
-        if (!objectRef) {
-            throw new ValidationException("Object reference cannot be null");
-        }
-
-        const requestData = new DeleteRequest(objectRef).toDict();
-        const response = await this._makeRequest('DELETE', '/pdf/delete', requestData);
-        const result = await response.json() as boolean;
-
-        // Invalidate cache after mutation
-        this._invalidateCache();
-
-        return result;
-    }
-
-    /**
-     * Moves a PDF object to a new position within the document.
-     */
-    private async move(objectRef: ObjectRef, position: Position): Promise<boolean> {
-        if (!objectRef) {
-            throw new ValidationException("Object reference cannot be null");
-        }
-        if (!position) {
-            throw new ValidationException("Position cannot be null");
-        }
-
-        const requestData = new MoveRequest(objectRef, position).toDict();
-        const response = await this._makeRequest('PUT', '/pdf/move', requestData);
-        const result = await response.json() as boolean;
-
-        // Invalidate cache after mutation
-        this._invalidateCache();
-
-        return result;
-    }
-
-    /**
-     * Changes the value of a form field.
-     */
-    private async changeFormField(formFieldRef: FormFieldRef, newValue: string): Promise<boolean> {
-        if (!formFieldRef) {
-            throw new ValidationException("Form field reference cannot be null");
-        }
-
-        const requestData = new ChangeFormFieldRequest(formFieldRef, newValue).toDict();
-        const response = await this._makeRequest('PUT', '/pdf/modify/formField', requestData);
-        const result = await response.json() as boolean;
-
-        // Invalidate cache after mutation
-        this._invalidateCache();
-
-        return result;
-    }
-
-    // Add Operations
-
-    /**
-     * Adds an image to the PDF document.
-     */
-    private async addImage(image: Image, position?: Position): Promise<boolean> {
-        if (!image) {
-            throw new ValidationException("Image cannot be null");
-        }
-
-        if (position) {
-            image.setPosition(position);
-        }
-
-        if (!image.getPosition()) {
-            throw new ValidationException("Image position is null");
-        }
-
-        return this._addObject(image);
-    }
-
-    /**
-     * Adds a paragraph to the PDF document.
-     */
-    private async addParagraph(paragraph: Paragraph): Promise<boolean> {
-        if (!paragraph) {
-            throw new ValidationException("Paragraph cannot be null");
-        }
-        if (!paragraph.getPosition()) {
-            throw new ValidationException("Paragraph position is null, you need to specify a position for the new paragraph, using .at(x,y)");
-        }
-        if (paragraph.getPosition()!.pageIndex === undefined) {
-            throw new ValidationException("Paragraph position page index is null");
-        }
-        if (paragraph.getPosition()!.pageIndex! < 0) {
-            throw new ValidationException("Paragraph position page index is less than 0");
-        }
-
-        return this._addObject(paragraph);
-    }
-
-    /**
-     * Adds a path to the PDF document.
-     */
-    private async addPath(path: Path): Promise<boolean> {
-        if (!path) {
-            throw new ValidationException("Path cannot be null");
-        }
-        if (!path.getPosition()) {
-            throw new ValidationException("Path position is null, you need to specify a position for the new path, using .at(x,y)");
-        }
-        if (path.getPosition()!.pageIndex === undefined) {
-            throw new ValidationException("Path position page index is null");
-        }
-        if (path.getPosition()!.pageIndex! < 0) {
-            throw new ValidationException("Path position page index is less than 0");
-        }
-
-        console.log('[PDFDancer] addPath called:', {
-            position: path.getPosition(),
-            segmentCount: path.pathSegments.length
-        });
-
-        const result = await this._addObject(path);
-        console.log('[PDFDancer] addPath result:', result);
-        return result;
-    }
-
-    /**
-     * Adds a page to the PDF document.
-     */
-    private async addPage(request?: AddPageRequest | null): Promise<PageRef> {
-        const payload = request ? request.toDict() : {};
-        const data = Object.keys(payload).length > 0 ? payload : undefined;
-        const response = await this._makeRequest('POST', '/pdf/page/add', data);
-        const result = await response.json();
-        const pageRef = this._parsePageRef(result);
-
-        this._invalidateCache();
-
-        return pageRef;
-    }
-
-    /**
-     * Internal method to add any PDF object.
-     */
-    private async _addObject(pdfObject: Image | Paragraph | Path): Promise<boolean> {
-        const requestData = new AddRequest(pdfObject).toDict();
-        const response = await this._makeRequest('POST', '/pdf/add', requestData);
-        const result = await response.json() as boolean;
-
-        // Invalidate cache after mutation
-        this._invalidateCache();
-
-        return result;
-    }
-
-    // Modify Operations
-
-    /**
-     * Modifies a paragraph object or its text content.
-     */
-    private async modifyParagraph(objectRef: ObjectRef, newParagraph: Paragraph | string | null): Promise<CommandResult> {
-        if (!objectRef) {
-            throw new ValidationException("Object reference cannot be null");
-        }
-        if (newParagraph === null || newParagraph === undefined) {
-            return CommandResult.empty("ModifyParagraph", objectRef.internalId);
-        }
-
-        let result: CommandResult;
-        if (typeof newParagraph === 'string') {
-            // Text modification - returns CommandResult
-            const requestData = new ModifyTextRequest(objectRef, newParagraph).toDict();
-            const response = await this._makeRequest('PUT', '/pdf/text/paragraph', requestData);
-            result = CommandResult.fromDict(await response.json());
-        } else {
-            // Object modification
-            const requestData = new ModifyRequest(objectRef, newParagraph).toDict();
-            const response = await this._makeRequest('PUT', '/pdf/modify', requestData);
-            result = CommandResult.fromDict(await response.json());
-        }
-
-        // Invalidate cache after mutation
-        this._invalidateCache();
-
-        return result;
-    }
-
-    /**
-     * Modifies a text line object.
-     */
-    private async modifyTextLine(objectRef: ObjectRef, newText: string): Promise<CommandResult> {
-        if (!objectRef) {
-            throw new ValidationException("Object reference cannot be null");
-        }
-        if (newText === null || newText === undefined) {
-            throw new ValidationException("New text cannot be null");
-        }
-
-        const requestData = new ModifyTextRequest(objectRef, newText).toDict();
-        const response = await this._makeRequest('PUT', '/pdf/text/line', requestData);
-        const result = CommandResult.fromDict(await response.json());
-
-        // Invalidate cache after mutation
-        this._invalidateCache();
-
-        return result;
-    }
-
-    // Font Operations
-
-    /**
-     * Finds available fonts matching the specified name and size.
-     */
-    async findFonts(fontName: string, fontSize: number): Promise<Font[]> {
-        if (!fontName || !fontName.trim()) {
-            throw new ValidationException("Font name cannot be null or empty");
-        }
-        if (fontSize <= 0) {
-            throw new ValidationException(`Font size must be positive, got ${fontSize}`);
-        }
-
-        const params = {fontName: fontName.trim()};
-        const response = await this._makeRequest('GET', '/font/find', undefined, params);
-
-        const fontNames = await response.json() as string[];
-        return fontNames.map((name: string) => new Font(name, fontSize));
-    }
-
-    /**
-     * Registers a custom font for use in PDF operations.
-     */
-    async registerFont(ttfFile: Uint8Array | File | string): Promise<string> {
-        if (!ttfFile) {
-            throw new ValidationException("TTF file cannot be null");
-        }
-
-        try {
-            let fontData: Uint8Array;
-            let filename: string;
-
-            if (ttfFile && ttfFile.constructor === Uint8Array) {
-                if (ttfFile.length === 0) {
-                    throw new ValidationException("Font data cannot be empty");
-                }
-                fontData = ttfFile;
-                filename = 'font.ttf';
-            } else if (ttfFile instanceof File) {
-                if (ttfFile.size === 0) {
-                    throw new ValidationException("Font file is empty");
-                }
-                fontData = new Uint8Array(await ttfFile.arrayBuffer());
-                filename = ttfFile.name;
-            } else if (typeof ttfFile === 'string') {
-                if (!fs.existsSync(ttfFile)) {
-                    throw new Error(`Font file not found: ${ttfFile}`);
-                }
-                fontData = new Uint8Array(fs.readFileSync(ttfFile));
-                filename = path.basename(ttfFile);
-            } else {
-                throw new ValidationException(`Unsupported font file type: ${typeof ttfFile}`);
-            }
-
-            // Upload font file
-            const formData = new FormData();
-            const blob = new Blob([fontData.buffer as ArrayBuffer], {type: 'font/ttf'});
-            formData.append('ttfFile', blob, filename);
-
-            const fingerprint = await this._getFingerprint();
-
-            const response = await this._fetchWithRetry(
-                this._buildUrl('/font/register'),
-                {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${this._token}`,
-                        'X-Session-Id': this._sessionId,
-                        'X-Generated-At': generateTimestamp(),
-                        'X-Fingerprint': fingerprint
-                    },
-                    body: formData,
-                    signal: AbortSignal.timeout(60000)
-                },
-                'POST /font/register'
-            );
-
-            logGeneratedAtHeader(response, 'POST', '/font/register');
-
-            if (!response.ok) {
-                const errorMessage = await this._extractErrorMessage(response);
-                throw new HttpClientException(`Font registration failed: ${errorMessage}`, response);
-            }
-
-            return (await response.text()).trim();
-        } catch (error) {
-            if (error instanceof ValidationException || error instanceof HttpClientException) {
-                throw error;
-            }
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            throw new PdfDancerException(`Failed to read font file: ${errorMessage}`, error as Error);
-        }
-    }
-
-    // Document Operations
-
-    /**
-     * Downloads the current state of the PDF document with all modifications applied.
-     */
-    async getBytes(): Promise<Uint8Array> {
-        const response = await this._makeRequest('GET', `/session/${this._sessionId}/pdf`);
-        return new Uint8Array(await response.arrayBuffer());
-    }
-
-    /**
-     * Saves the current PDF to a file (browser environment).
-     * Downloads the PDF in the browser.
-     */
-    async save(filename: string): Promise<void> {
-        if (!filename) {
-            throw new ValidationException("Filename cannot be null or empty");
-        }
-
-        try {
-            const pdfData = await this.getBytes();
-            fs.writeFileSync(filename, pdfData);
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            throw new PdfDancerException(`Failed to save PDF file: ${errorMessage}`, error as Error);
-        }
-    }
-
-    // Utility Methods
-
-    /**
-     * Parse JSON object data into ObjectRef instance.
-     */
-    private _parseObjectRef(objData: any): ObjectRef {
-        console.log('[PDFDancer._parseObjectRef] Parsing object:', JSON.stringify(objData));
-        const positionData = objData.position || {};
-        const position = positionData ? this._parsePosition(positionData) : new Position();
-
-        const objectType = objData.type as ObjectType;
-
-        if (objectType === ObjectType.PAGE) {
-            return this._parsePageRef(objData);
-        }
-
-        if (this._isTextObjectData(objData, objectType)) {
-            return this._parseTextObjectRef(objData);
-        }
-
-        // Check if this is a form field type
-        const formFieldTypes = [
-            ObjectType.FORM_FIELD,
-            ObjectType.TEXT_FIELD,
-            ObjectType.CHECKBOX,
-            ObjectType.RADIO_BUTTON
-        ];
-        if (formFieldTypes.includes(objectType)) {
-            return this._parseFormFieldRef(objData);
-        }
-
-        return new ObjectRef(
-            objData.internalId,
-            position,
-            objectType
-        );
-    }
-
-    private _isTextObjectData(objData: any, objectType: ObjectType): boolean {
-        return objectType === ObjectType.PARAGRAPH ||
-            objectType === ObjectType.TEXT_LINE ||
-            objectType === ObjectType.TEXT_ELEMENT ||
-            typeof objData.text === 'string' ||
-            typeof objData.fontName === 'string' ||
-            Array.isArray(objData.children);
-    }
-
-    private _parseTextObjectRef(objData: any, fallbackId?: string): TextObjectRef {
-        const positionData = objData.position || {};
-        const position = positionData ? this._parsePosition(positionData) : new Position();
-
-        const objectType = (objData.type as ObjectType) ?? ObjectType.TEXT_LINE;
-        const lineSpacings = Array.isArray(objData.lineSpacings) ? objData.lineSpacings : null;
-        const internalId = objData.internalId ?? fallbackId ?? '';
-
-        // Parse status if present
-        let status: TextStatus | undefined;
-        const statusData = objData.status;
-        if (statusData && typeof statusData === 'object') {
-            const fontInfoSource = statusData.fontInfoDto ?? statusData.fontRecommendation;
-            let fontInfo: DocumentFontInfo | undefined;
-            if (fontInfoSource && typeof fontInfoSource === 'object') {
-                const documentFontName = typeof fontInfoSource.documentFontName === 'string'
-                    ? fontInfoSource.documentFontName
-                    : (typeof fontInfoSource.fontName === 'string' ? fontInfoSource.fontName : '');
-                const systemFontName = typeof fontInfoSource.systemFontName === 'string'
-                    ? fontInfoSource.systemFontName
-                    : (typeof fontInfoSource.fontName === 'string' ? fontInfoSource.fontName : '');
-                fontInfo = new DocumentFontInfo(documentFontName, systemFontName);
-            }
-
-            const modified = statusData.modified !== undefined ? Boolean(statusData.modified) : false;
-            const encodable = statusData.encodable !== undefined ? Boolean(statusData.encodable) : true;
-            const fontTypeValue = typeof statusData.fontType === 'string'
-                && (Object.values(FontType) as string[]).includes(statusData.fontType)
-                ? statusData.fontType as FontType
-                : FontType.SYSTEM;
-
-            status = new TextStatus(
-                modified,
-                encodable,
-                fontTypeValue,
-                fontInfo
-            );
-        }
-
-        const textObject = new TextObjectRef(
-            internalId,
-            position,
-            objectType,
-            typeof objData.text === 'string' ? objData.text : undefined,
-            typeof objData.fontName === 'string' ? objData.fontName : undefined,
-            typeof objData.fontSize === 'number' ? objData.fontSize : undefined,
-            lineSpacings,
-            undefined,
-            this._parseColor(objData.color),
-            status
-        );
-
-        if (Array.isArray(objData.children) && objData.children.length > 0) {
+)));
+
+    if(
+
+!
+    position
+) {
+    return
+    elements;
+}
+
+let filtered = elements;
+
+// Filter by page index
+if (position.pageIndex !== undefined) {
+    const before = filtered.length;
+    filtered = filtered.filter(el => el.position.pageIndex === position.pageIndex);
+
+}
+
+// Filter by coordinates (point containment with tolerance)
+if (position.boundingRect && position.shape === ShapeType.POINT) {
+
+    const x = position.boundingRect.x;
+    const y = position.boundingRect.y;
+    const tolerance = position.tolerance || 0;
+    filtered = filtered.filter(el => {
+        const rect = el.position.boundingRect;
+        if (!rect) return false;
+        return x >= rect.x - tolerance && x <= rect.x + rect.width + tolerance &&
+            y >= rect.y - tolerance && y <= rect.y + rect.height + tolerance;
+    });
+}
+
+// Filter by text starts with
+if (position.textStartsWith && filtered.length > 0) {
+
+    const textLower = position.textStartsWith.toLowerCase();
+    filtered = filtered.filter(el => {
+        const textObj = el as TextObjectRef;
+        return textObj.text && textObj.text.toLowerCase().startsWith(textLower);
+    });
+}
+
+// Filter by text pattern (regex)
+if (position.textPattern && filtered.length > 0) {
+
+    const regex = this._compileTextPattern(position.textPattern);
+    filtered = filtered.filter(el => {
+        const textObj = el as TextObjectRef;
+        return textObj.text && regex.test(textObj.text);
+    });
+}
+
+// Filter by name (for form fields)
+if (position.name && filtered.length > 0) {
+
+    filtered = filtered.filter(el => {
+        const formField = el as FormFieldRef;
+        return formField.name === position.name;
+    });
+}
+
+
+return filtered;
+}
+
+/**
+ * Filters FormFieldRef elements by Position criteria.
+ */
+private
+_filterFormFieldsByPosition(elements
+:
+FormFieldRef[], position ? : Position
+):
+FormFieldRef[]
+{
+    return this._filterByPosition(elements as ObjectRef[], position) as FormFieldRef[];
+}
+
+private
+_compileTextPattern(pattern
+:
+string
+):
+RegExp
+{
+    try {
+        return new RegExp(pattern);
+    } catch {
+        const inlineMatch = pattern.match(/^\(\?([a-z]+)\)/i);
+        if (inlineMatch) {
+            const supportedFlags = inlineMatch[1]
+                .toLowerCase()
+                .split('')
+                .filter(flag => 'gimsuy'.includes(flag));
+            const flags = Array.from(new Set(supportedFlags)).join('');
+            const source = pattern.slice(inlineMatch[0].length);
             try {
-                textObject.children = objData.children.map((childData: any, index: number) => {
-                    const childFallbackId = `${internalId || 'child'}-${index}`;
-                    return this._parseTextObjectRef(childData, childFallbackId);
-                });
-            } catch (error) {
-                const message = error instanceof Error ? error.message : String(error);
-                console.error(`Failed to parse children of ${internalId}: ${message}`);
+                return new RegExp(source, flags);
+            } catch {
+                // fall through to literal fallback
             }
         }
 
-        return textObject;
+        const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return new RegExp(escaped);
+    }
+}
+
+// Manipulation Operations
+
+/**
+ * Deletes the specified PDF object from the document.
+ */
+private async
+delete (objectRef
+:
+ObjectRef
+):
+Promise < boolean > {
+    if(!
+objectRef
+)
+{
+    throw new ValidationException("Object reference cannot be null");
+}
+
+const requestData = new DeleteRequest(objectRef).toDict();
+const response = await this._makeRequest('DELETE', '/pdf/delete', requestData);
+const result = await response.json() as boolean;
+
+// Invalidate cache after mutation
+this._invalidateCache();
+
+return result;
+}
+
+/**
+ * Moves a PDF object to a new position within the document.
+ */
+private async
+move(objectRef
+:
+ObjectRef, position
+:
+Position
+):
+Promise < boolean > {
+    if(!
+objectRef
+)
+{
+    throw new ValidationException("Object reference cannot be null");
+}
+if (!position) {
+    throw new ValidationException("Position cannot be null");
+}
+
+const requestData = new MoveRequest(objectRef, position).toDict();
+const response = await this._makeRequest('PUT', '/pdf/move', requestData);
+const result = await response.json() as boolean;
+
+// Invalidate cache after mutation
+this._invalidateCache();
+
+return result;
+}
+
+/**
+ * Changes the value of a form field.
+ */
+private async
+changeFormField(formFieldRef
+:
+FormFieldRef, newValue
+:
+string
+):
+Promise < boolean > {
+    if(!
+formFieldRef
+)
+{
+    throw new ValidationException("Form field reference cannot be null");
+}
+
+const requestData = new ChangeFormFieldRequest(formFieldRef, newValue).toDict();
+const response = await this._makeRequest('PUT', '/pdf/modify/formField', requestData);
+const result = await response.json() as boolean;
+
+// Invalidate cache after mutation
+this._invalidateCache();
+
+return result;
+}
+
+// Add Operations
+
+/**
+ * Adds an image to the PDF document.
+ */
+private async
+addImage(image
+:
+Image, position ? : Position
+):
+Promise < boolean > {
+    if(!
+image
+)
+{
+    throw new ValidationException("Image cannot be null");
+}
+
+if (position) {
+    image.setPosition(position);
+}
+
+if (!image.getPosition()) {
+    throw new ValidationException("Image position is null");
+}
+
+return this._addObject(image);
+}
+
+/**
+ * Adds a paragraph to the PDF document.
+ */
+private async
+addParagraph(paragraph
+:
+Paragraph
+):
+Promise < boolean > {
+    if(!
+paragraph
+)
+{
+    throw new ValidationException("Paragraph cannot be null");
+}
+if (!paragraph.getPosition()) {
+    throw new ValidationException("Paragraph position is null, you need to specify a position for the new paragraph, using .at(x,y)");
+}
+if (paragraph.getPosition()!.pageIndex === undefined) {
+    throw new ValidationException("Paragraph position page index is null");
+}
+if (paragraph.getPosition()!.pageIndex! < 0) {
+    throw new ValidationException("Paragraph position page index is less than 0");
+}
+
+return this._addObject(paragraph);
+}
+
+/**
+ * Adds a path to the PDF document.
+ */
+private async
+addPath(path
+:
+Path
+):
+Promise < boolean > {
+    if(!
+path
+)
+{
+    throw new ValidationException("Path cannot be null");
+}
+if (!path.getPosition()) {
+    throw new ValidationException("Path position is null, you need to specify a position for the new path, using .at(x,y)");
+}
+if (path.getPosition()!.pageIndex === undefined) {
+    throw new ValidationException("Path position page index is null");
+}
+if (path.getPosition()!.pageIndex! < 0) {
+    throw new ValidationException("Path position page index is less than 0");
+}
+
+
+position: path.getPosition(),
+    segmentCount
+:
+path.pathSegments.length
+})
+;
+
+const result = await this._addObject(path);
+
+return result;
+}
+
+/**
+ * Adds a page to the PDF document.
+ */
+private async
+addPage(request ? : AddPageRequest | null)
+:
+Promise < PageRef > {
+    const payload = request ? request.toDict() : {};
+    const data = Object.keys(payload).length > 0 ? payload : undefined;
+    const response = await this._makeRequest('POST', '/pdf/page/add', data);
+    const result = await response.json();
+    const pageRef = this._parsePageRef(result);
+
+    this._invalidateCache();
+
+    return pageRef;
+}
+
+/**
+ * Internal method to add any PDF object.
+ */
+private async
+_addObject(pdfObject
+:
+Image | Paragraph | Path
+):
+Promise < boolean > {
+    const requestData = new AddRequest(pdfObject).toDict();
+    const response = await this._makeRequest('POST', '/pdf/add', requestData);
+    const result = await response.json() as boolean;
+
+    // Invalidate cache after mutation
+    this._invalidateCache();
+
+    return result;
+}
+
+// Modify Operations
+
+/**
+ * Modifies a paragraph object or its text content.
+ */
+private async
+modifyParagraph(objectRef
+:
+ObjectRef, newParagraph
+:
+Paragraph | string | null
+):
+Promise < CommandResult > {
+    if(!
+objectRef
+)
+{
+    throw new ValidationException("Object reference cannot be null");
+}
+if (newParagraph === null || newParagraph === undefined) {
+    return CommandResult.empty("ModifyParagraph", objectRef.internalId);
+}
+
+let result: CommandResult;
+if (typeof newParagraph === 'string') {
+    // Text modification - returns CommandResult
+    const requestData = new ModifyTextRequest(objectRef, newParagraph).toDict();
+    const response = await this._makeRequest('PUT', '/pdf/text/paragraph', requestData);
+    result = CommandResult.fromDict(await response.json());
+} else {
+    // Object modification
+    const requestData = new ModifyRequest(objectRef, newParagraph).toDict();
+    const response = await this._makeRequest('PUT', '/pdf/modify', requestData);
+    result = CommandResult.fromDict(await response.json());
+}
+
+// Invalidate cache after mutation
+this._invalidateCache();
+
+return result;
+}
+
+/**
+ * Modifies a text line object.
+ */
+private async
+modifyTextLine(objectRef
+:
+ObjectRef, newText
+:
+string
+):
+Promise < CommandResult > {
+    if(!
+objectRef
+)
+{
+    throw new ValidationException("Object reference cannot be null");
+}
+if (newText === null || newText === undefined) {
+    throw new ValidationException("New text cannot be null");
+}
+
+const requestData = new ModifyTextRequest(objectRef, newText).toDict();
+const response = await this._makeRequest('PUT', '/pdf/text/line', requestData);
+const result = CommandResult.fromDict(await response.json());
+
+// Invalidate cache after mutation
+this._invalidateCache();
+
+return result;
+}
+
+// Font Operations
+
+/**
+ * Finds available fonts matching the specified name and size.
+ */
+async
+findFonts(fontName
+:
+string, fontSize
+:
+number
+):
+Promise < Font[] > {
+    if(!
+fontName || !fontName.trim()
+)
+{
+    throw new ValidationException("Font name cannot be null or empty");
+}
+if (fontSize <= 0) {
+    throw new ValidationException(`Font size must be positive, got ${fontSize}`);
+}
+
+const params = {fontName: fontName.trim()};
+const response = await this._makeRequest('GET', '/font/find', undefined, params);
+
+const fontNames = await response.json() as string[];
+return fontNames.map((name: string) => new Font(name, fontSize));
+}
+
+/**
+ * Registers a custom font for use in PDF operations.
+ */
+async
+registerFont(ttfFile
+:
+Uint8Array | File | string
+):
+Promise < string > {
+    if(!
+ttfFile
+)
+{
+    throw new ValidationException("TTF file cannot be null");
+}
+
+try {
+    let fontData: Uint8Array;
+    let filename: string;
+
+    if (ttfFile && ttfFile.constructor === Uint8Array) {
+        if (ttfFile.length === 0) {
+            throw new ValidationException("Font data cannot be empty");
+        }
+        fontData = ttfFile;
+        filename = 'font.ttf';
+    } else if (ttfFile instanceof File) {
+        if (ttfFile.size === 0) {
+            throw new ValidationException("Font file is empty");
+        }
+        fontData = new Uint8Array(await ttfFile.arrayBuffer());
+        filename = ttfFile.name;
+    } else if (typeof ttfFile === 'string') {
+        if (!fs.existsSync(ttfFile)) {
+            throw new Error(`Font file not found: ${ttfFile}`);
+        }
+        fontData = new Uint8Array(fs.readFileSync(ttfFile));
+        filename = path.basename(ttfFile);
+    } else {
+        throw new ValidationException(`Unsupported font file type: ${typeof ttfFile}`);
     }
 
-    private _parsePageRef(objData: any): PageRef {
-        const positionData = objData.position || {};
-        const position = positionData ? this._parsePosition(positionData) : new Position();
+    // Upload font file
+    const formData = new FormData();
+    const blob = new Blob([fontData.buffer as ArrayBuffer], {type: 'font/ttf'});
+    formData.append('ttfFile', blob, filename);
 
-        const pageSize = this._parsePageSize(objData.pageSize);
-        const orientation = this._parseOrientation(objData.orientation);
+    const fingerprint = await this._getFingerprint();
 
-        return new PageRef(
-            objData.internalId,
-            position,
-            ObjectType.PAGE,
-            pageSize,
-            orientation
+    const response = await this._fetchWithRetry(
+        this._buildUrl('/font/register'),
+        {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${this._token}`,
+                'X-Session-Id': this._sessionId,
+                'X-Generated-At': generateTimestamp(),
+                'X-Fingerprint': fingerprint
+            },
+            body: formData,
+            signal: AbortSignal.timeout(60000)
+        },
+        'POST /font/register'
+    );
+
+    logGeneratedAtHeader(response, 'POST', '/font/register');
+
+    if (!response.ok) {
+        const errorMessage = await this._extractErrorMessage(response);
+        throw new HttpClientException(`Font registration failed: ${errorMessage}`, response);
+    }
+
+    return (await response.text()).trim();
+} catch (error) {
+    if (error instanceof ValidationException || error instanceof HttpClientException) {
+        throw error;
+    }
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new PdfDancerException(`Failed to read font file: ${errorMessage}`, error as Error);
+}
+}
+
+// Document Operations
+
+/**
+ * Downloads the current state of the PDF document with all modifications applied.
+ */
+async
+getBytes()
+:
+Promise < Uint8Array > {
+    const response = await this._makeRequest('GET', `/session/${this._sessionId}/pdf`);
+    return new Uint8Array(await response.arrayBuffer());
+}
+
+/**
+ * Saves the current PDF to a file (browser environment).
+ * Downloads the PDF in the browser.
+ */
+async
+save(filename
+:
+string
+):
+Promise < void > {
+    if(!
+filename
+)
+{
+    throw new ValidationException("Filename cannot be null or empty");
+}
+
+try {
+    const pdfData = await this.getBytes();
+    fs.writeFileSync(filename, pdfData);
+} catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new PdfDancerException(`Failed to save PDF file: ${errorMessage}`, error as Error);
+}
+}
+
+// Utility Methods
+
+/**
+ * Parse JSON object data into ObjectRef instance.
+ */
+private
+_parseObjectRef(objData
+:
+any
+):
+ObjectRef
+{
+
+    const positionData = objData.position || {};
+    const position = positionData ? this._parsePosition(positionData) : new Position();
+
+    const objectType = objData.type as ObjectType;
+
+    if (objectType === ObjectType.PAGE) {
+        return this._parsePageRef(objData);
+    }
+
+    if (this._isTextObjectData(objData, objectType)) {
+        return this._parseTextObjectRef(objData);
+    }
+
+    // Check if this is a form field type
+    const formFieldTypes = [
+        ObjectType.FORM_FIELD,
+        ObjectType.TEXT_FIELD,
+        ObjectType.CHECKBOX,
+        ObjectType.RADIO_BUTTON
+    ];
+    if (formFieldTypes.includes(objectType)) {
+        return this._parseFormFieldRef(objData);
+    }
+
+    return new ObjectRef(
+        objData.internalId,
+        position,
+        objectType
+    );
+}
+
+private
+_isTextObjectData(objData
+:
+any, objectType
+:
+ObjectType
+):
+boolean
+{
+    return objectType === ObjectType.PARAGRAPH ||
+        objectType === ObjectType.TEXT_LINE ||
+        objectType === ObjectType.TEXT_ELEMENT ||
+        typeof objData.text === 'string' ||
+        typeof objData.fontName === 'string' ||
+        Array.isArray(objData.children);
+}
+
+private
+_parseTextObjectRef(objData
+:
+any, fallbackId ? : string
+):
+TextObjectRef
+{
+    const positionData = objData.position || {};
+    const position = positionData ? this._parsePosition(positionData) : new Position();
+
+    const objectType = (objData.type as ObjectType) ?? ObjectType.TEXT_LINE;
+    const lineSpacings = Array.isArray(objData.lineSpacings) ? objData.lineSpacings : null;
+    const internalId = objData.internalId ?? fallbackId ?? '';
+
+    // Parse status if present
+    let status: TextStatus | undefined;
+    const statusData = objData.status;
+    if (statusData && typeof statusData === 'object') {
+        const fontInfoSource = statusData.fontInfoDto ?? statusData.fontRecommendation;
+        let fontInfo: DocumentFontInfo | undefined;
+        if (fontInfoSource && typeof fontInfoSource === 'object') {
+            const documentFontName = typeof fontInfoSource.documentFontName === 'string'
+                ? fontInfoSource.documentFontName
+                : (typeof fontInfoSource.fontName === 'string' ? fontInfoSource.fontName : '');
+            const systemFontName = typeof fontInfoSource.systemFontName === 'string'
+                ? fontInfoSource.systemFontName
+                : (typeof fontInfoSource.fontName === 'string' ? fontInfoSource.fontName : '');
+            fontInfo = new DocumentFontInfo(documentFontName, systemFontName);
+        }
+
+        const modified = statusData.modified !== undefined ? Boolean(statusData.modified) : false;
+        const encodable = statusData.encodable !== undefined ? Boolean(statusData.encodable) : true;
+        const fontTypeValue = typeof statusData.fontType === 'string'
+        && (Object.values(FontType) as string[]).includes(statusData.fontType)
+            ? statusData.fontType as FontType
+            : FontType.SYSTEM;
+
+        status = new TextStatus(
+            modified,
+            encodable,
+            fontTypeValue,
+            fontInfo
         );
     }
 
-    private _parsePageSize(pageSizeData: any): PageSize | undefined {
-        if (!pageSizeData || typeof pageSizeData !== 'object') {
-            return undefined;
+    const textObject = new TextObjectRef(
+        internalId,
+        position,
+        objectType,
+        typeof objData.text === 'string' ? objData.text : undefined,
+        typeof objData.fontName === 'string' ? objData.fontName : undefined,
+        typeof objData.fontSize === 'number' ? objData.fontSize : undefined,
+        lineSpacings,
+        undefined,
+        this._parseColor(objData.color),
+        status
+    );
+
+    if (Array.isArray(objData.children) && objData.children.length > 0) {
+        try {
+            textObject.children = objData.children.map((childData: any, index: number) => {
+                const childFallbackId = `${internalId || 'child'}-${index}`;
+                return this._parseTextObjectRef(childData, childFallbackId);
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            console.error(`Failed to parse children of ${internalId}: ${message}`);
         }
-
-        const name = typeof pageSizeData.name === 'string' ? pageSizeData.name : undefined;
-        const width = typeof pageSizeData.width === 'number' ? pageSizeData.width : undefined;
-        const height = typeof pageSizeData.height === 'number' ? pageSizeData.height : undefined;
-
-        if (name === undefined && width === undefined && height === undefined) {
-            return undefined;
-        }
-
-        return {name, width, height};
     }
 
-    private _parseOrientation(orientationData: any): Orientation | undefined {
-        if (typeof orientationData !== 'string') {
-            return undefined;
-        }
+    return textObject;
+}
 
-        if (orientationData === Orientation.PORTRAIT || orientationData === Orientation.LANDSCAPE) {
-            return orientationData;
-        }
+private
+_parsePageRef(objData
+:
+any
+):
+PageRef
+{
+    const positionData = objData.position || {};
+    const position = positionData ? this._parsePosition(positionData) : new Position();
 
-        const normalized = orientationData.trim().toUpperCase();
-        if (normalized === Orientation.PORTRAIT || normalized === Orientation.LANDSCAPE) {
-            return normalized as Orientation;
-        }
+    const pageSize = this._parsePageSize(objData.pageSize);
+    const orientation = this._parseOrientation(objData.orientation);
 
+    return new PageRef(
+        objData.internalId,
+        position,
+        ObjectType.PAGE,
+        pageSize,
+        orientation
+    );
+}
+
+private
+_parsePageSize(pageSizeData
+:
+any
+):
+PageSize | undefined
+{
+    if (!pageSizeData || typeof pageSizeData !== 'object') {
         return undefined;
     }
 
-    private _parseColor(colorData: any): Color | undefined {
-        if (!colorData || typeof colorData !== 'object') {
-            return undefined;
-        }
+    const name = typeof pageSizeData.name === 'string' ? pageSizeData.name : undefined;
+    const width = typeof pageSizeData.width === 'number' ? pageSizeData.width : undefined;
+    const height = typeof pageSizeData.height === 'number' ? pageSizeData.height : undefined;
 
-        // The API returns color as {red, green, blue, alpha}
-        const {red, green, blue, alpha} = colorData;
-
-        if (typeof red !== 'number' || typeof green !== 'number' || typeof blue !== 'number') {
-            return undefined;
-        }
-
-        const resolvedAlpha = typeof alpha === 'number' ? alpha : 255;
-
-        try {
-            return new Color(red, green, blue, resolvedAlpha);
-        } catch (_error) {
-            return undefined;
-        }
+    if (name === undefined && width === undefined && height === undefined) {
+        return undefined;
     }
 
-    private _parseFormFieldRef(objData: any): FormFieldRef {
-        const positionData = objData.position || {};
-        const position = positionData ? this._parsePosition(positionData) : new Position();
+    return {name, width, height};
+}
 
-        const objectType = objData.type as ObjectType;
+private
+_parseOrientation(orientationData
+:
+any
+):
+Orientation | undefined
+{
+    if (typeof orientationData !== 'string') {
+        return undefined;
+    }
 
-        return new FormFieldRef(
-            objData.internalId,
-            position,
-            objectType,
-            objData.name || undefined,
-            objData.value !== undefined ? objData.value : null
+    if (orientationData === Orientation.PORTRAIT || orientationData === Orientation.LANDSCAPE) {
+        return orientationData;
+    }
+
+    const normalized = orientationData.trim().toUpperCase();
+    if (normalized === Orientation.PORTRAIT || normalized === Orientation.LANDSCAPE) {
+        return normalized as Orientation;
+    }
+
+    return undefined;
+}
+
+private
+_parseColor(colorData
+:
+any
+):
+Color | undefined
+{
+    if (!colorData || typeof colorData !== 'object') {
+        return undefined;
+    }
+
+    // The API returns color as {red, green, blue, alpha}
+    const {red, green, blue, alpha} = colorData;
+
+    if (typeof red !== 'number' || typeof green !== 'number' || typeof blue !== 'number') {
+        return undefined;
+    }
+
+    const resolvedAlpha = typeof alpha === 'number' ? alpha : 255;
+
+    try {
+        return new Color(red, green, blue, resolvedAlpha);
+    } catch (_error) {
+        return undefined;
+    }
+}
+
+private
+_parseFormFieldRef(objData
+:
+any
+):
+FormFieldRef
+{
+    const positionData = objData.position || {};
+    const position = positionData ? this._parsePosition(positionData) : new Position();
+
+    const objectType = objData.type as ObjectType;
+
+    return new FormFieldRef(
+        objData.internalId,
+        position,
+        objectType,
+        objData.name || undefined,
+        objData.value !== undefined ? objData.value : null
+    );
+}
+
+/**
+ * Parse JSON position data into Position instance.
+ */
+private
+_parsePosition(posData
+:
+any
+):
+Position
+{
+
+    const position = new Position();
+    position.pageIndex = posData.pageIndex;
+    position.textStartsWith = posData.textStartsWith;
+
+
+    if (posData.shape) {
+        position.shape = ShapeType[posData.shape as keyof typeof ShapeType];
+    }
+    if (posData.mode) {
+        position.mode = PositionMode[posData.mode as keyof typeof PositionMode];
+    }
+
+    if (posData.boundingRect) {
+        const rectData = posData.boundingRect;
+        position.boundingRect = new BoundingRect(
+            rectData.x,
+            rectData.y,
+            rectData.width,
+            rectData.height
         );
     }
 
-    /**
-     * Parse JSON position data into Position instance.
-     */
-    private _parsePosition(posData: any): Position {
-        console.log('[PDFDancer._parsePosition] Parsing position data:', JSON.stringify(posData));
-        const position = new Position();
-        position.pageIndex = posData.pageIndex;
-        position.textStartsWith = posData.textStartsWith;
-        console.log('[PDFDancer._parsePosition] Set pageIndex to:', position.pageIndex);
+    return position;
+}
 
-        if (posData.shape) {
-            position.shape = ShapeType[posData.shape as keyof typeof ShapeType];
-        }
-        if (posData.mode) {
-            position.mode = PositionMode[posData.mode as keyof typeof PositionMode];
-        }
+/**
+ * Parse JSON data into DocumentSnapshot instance.
+ */
+private
+_parseDocumentSnapshot(data
+:
+any
+):
+DocumentSnapshot
+{
+    const pageCount = typeof data.pageCount === 'number' ? data.pageCount : 0;
 
-        if (posData.boundingRect) {
-            const rectData = posData.boundingRect;
-            position.boundingRect = new BoundingRect(
-                rectData.x,
-                rectData.y,
-                rectData.width,
-                rectData.height
-            );
-        }
-
-        return position;
-    }
-
-    /**
-     * Parse JSON data into DocumentSnapshot instance.
-     */
-    private _parseDocumentSnapshot(data: any): DocumentSnapshot {
-        const pageCount = typeof data.pageCount === 'number' ? data.pageCount : 0;
-
-        // Parse fonts
-        const fonts: DocumentFontInfo[] = [];
-        if (Array.isArray(data.fonts)) {
-            for (const fontData of data.fonts) {
-                if (fontData && typeof fontData === 'object') {
-                    const documentFontName = typeof fontData.documentFontName === 'string'
-                        ? fontData.documentFontName
-                        : (typeof fontData.fontName === 'string' ? fontData.fontName : '');
-                    const systemFontName = typeof fontData.systemFontName === 'string'
-                        ? fontData.systemFontName
-                        : (typeof fontData.fontName === 'string' ? fontData.fontName : '');
-                    fonts.push(new DocumentFontInfo(documentFontName, systemFontName));
-                }
+    // Parse fonts
+    const fonts: DocumentFontInfo[] = [];
+    if (Array.isArray(data.fonts)) {
+        for (const fontData of data.fonts) {
+            if (fontData && typeof fontData === 'object') {
+                const documentFontName = typeof fontData.documentFontName === 'string'
+                    ? fontData.documentFontName
+                    : (typeof fontData.fontName === 'string' ? fontData.fontName : '');
+                const systemFontName = typeof fontData.systemFontName === 'string'
+                    ? fontData.systemFontName
+                    : (typeof fontData.fontName === 'string' ? fontData.fontName : '');
+                fonts.push(new DocumentFontInfo(documentFontName, systemFontName));
             }
         }
+    }
 
-        // Parse pages
-        const pages: PageSnapshot[] = [];
-        if (Array.isArray(data.pages)) {
-            for (const pageData of data.pages) {
-                pages.push(this._parsePageSnapshot(pageData));
+    // Parse pages
+    const pages: PageSnapshot[] = [];
+    if (Array.isArray(data.pages)) {
+        for (const pageData of data.pages) {
+            pages.push(this._parsePageSnapshot(pageData));
+        }
+    }
+
+    return new DocumentSnapshot(pageCount, fonts, pages);
+}
+
+/**
+ * Parse JSON data into PageSnapshot instance.
+ */
+private
+_parsePageSnapshot(data
+:
+any
+):
+PageSnapshot
+{
+    // Parse page reference
+    const pageRef = this._parsePageRef(data.pageRef || {});
+
+    // Parse elements
+    const elements: ObjectRef[] = [];
+    if (Array.isArray(data.elements)) {
+        for (const elementData of data.elements) {
+            const element = this._parseObjectRef(elementData);
+
+            // If the element's position doesn't have a pageIndex, inherit it from the page
+            if (element.position && element.position.pageIndex === undefined) {
+                element.position.pageIndex = pageRef.position.pageIndex;
+
             }
+
+            elements.push(element);
         }
-
-        return new DocumentSnapshot(pageCount, fonts, pages);
     }
 
-    /**
-     * Parse JSON data into PageSnapshot instance.
-     */
-    private _parsePageSnapshot(data: any): PageSnapshot {
-        // Parse page reference
-        const pageRef = this._parsePageRef(data.pageRef || {});
+    return new PageSnapshot(pageRef, elements);
+}
 
-        // Parse elements
-        const elements: ObjectRef[] = [];
-        if (Array.isArray(data.elements)) {
-            for (const elementData of data.elements) {
-                const element = this._parseObjectRef(elementData);
+// Builder Pattern Support
 
-                // If the element's position doesn't have a pageIndex, inherit it from the page
-                if (element.position && element.position.pageIndex === undefined) {
-                    element.position.pageIndex = pageRef.position.pageIndex;
-                    console.log('[PDFDancer._parsePageSnapshot] Set element pageIndex to:', element.position.pageIndex);
-                }
 
-                elements.push(element);
-            }
-        }
+private
+toPathObjects(objectRefs
+:
+ObjectRef[]
+)
+{
+    return objectRefs.map(ref => PathObject.fromRef(this, ref));
+}
 
-        return new PageSnapshot(pageRef, elements);
+private
+toFormXObjects(objectRefs
+:
+ObjectRef[]
+)
+{
+    return objectRefs.map(ref => FormXObject.fromRef(this, ref));
+}
+
+private
+toImageObjects(objectRefs
+:
+ObjectRef[]
+)
+{
+    return objectRefs.map(ref => ImageObject.fromRef(this, ref));
+}
+
+newImage(pageIndex ? : number)
+{
+    return new ImageBuilder(this, pageIndex);
+}
+
+newParagraph(pageIndex ? : number)
+{
+    return new ParagraphBuilder(this, pageIndex);
+}
+
+newPath(pageIndex ? : number)
+{
+    return new PathBuilder(this, pageIndex);
+}
+
+newPage()
+{
+    return new PageBuilder(this);
+}
+
+page(pageIndex
+:
+number
+)
+{
+    if (pageIndex < 0) {
+        throw new ValidationException(`Page index must be >= 0, got ${pageIndex}`);
     }
+    return new PageClient(this, pageIndex);
+}
 
-    // Builder Pattern Support
+async
+pages()
+{
+    const pageRefs = await this.getPages();
+    return pageRefs.map((pageRef, pageIndex) => new PageClient(this, pageIndex, pageRef));
+}
 
+private
+toFormFields(objectRefs
+:
+FormFieldRef[]
+)
+{
+    return objectRefs.map(ref => FormFieldObject.fromRef(this, ref));
+}
 
-    private toPathObjects(objectRefs: ObjectRef[]) {
-        return objectRefs.map(ref => PathObject.fromRef(this, ref));
+async
+selectElements(types ? : ObjectType[])
+{
+    const snapshot = await this.getDocumentSnapshot(types);
+    const elements: ObjectRef[] = [];
+    for (const pageSnapshot of snapshot.pages) {
+        elements.push(...pageSnapshot.elements);
     }
+    return elements;
+}
 
-    private toFormXObjects(objectRefs: ObjectRef[]) {
-        return objectRefs.map(ref => FormXObject.fromRef(this, ref));
+async
+selectParagraphs()
+{
+    return this.toParagraphObjects(await this.findParagraphs());
+}
+
+async
+selectParagraphsMatching(pattern
+:
+string
+)
+{
+    if (!pattern) {
+        throw new ValidationException('Pattern cannot be empty');
     }
+    const position = new Position();
+    position.textPattern = pattern;
+    return this.toParagraphObjects(await this.findParagraphs(position));
+}
 
-    private toImageObjects(objectRefs: ObjectRef[]) {
-        return objectRefs.map(ref => ImageObject.fromRef(this, ref));
-    }
+private
+toParagraphObjects(objectRefs
+:
+TextObjectRef[]
+)
+{
+    return objectRefs.map(ref => ParagraphObject.fromRef(this, ref));
+}
 
-    newImage(pageIndex?: number) {
-        return new ImageBuilder(this, pageIndex);
-    }
+private
+toTextLineObjects(objectRefs
+:
+TextObjectRef[]
+)
+{
+    return objectRefs.map(ref => TextLineObject.fromRef(this, ref));
+}
 
-    newParagraph(pageIndex?: number) {
-        return new ParagraphBuilder(this, pageIndex);
-    }
+async
+selectTextLines()
+{
+    return this.toTextLineObjects(await this.findTextLines());
+}
 
-    newPath(pageIndex?: number) {
-        return new PathBuilder(this, pageIndex);
-    }
+async
+selectLines()
+{
+    return this.selectTextLines();
+}
 
-    newPage() {
-        return new PageBuilder(this);
-    }
+// Singular convenience methods - return the first element or null
 
-    page(pageIndex: number) {
-        if (pageIndex < 0) {
-            throw new ValidationException(`Page index must be >= 0, got ${pageIndex}`);
-        }
-        return new PageClient(this, pageIndex);
-    }
+async
+selectImage()
+{
+    const images = await this.selectImages();
+    return images.length > 0 ? images[0] : null;
+}
 
-    async pages() {
-        const pageRefs = await this.getPages();
-        return pageRefs.map((pageRef, pageIndex) => new PageClient(this, pageIndex, pageRef));
-    }
+async
+selectPath()
+{
+    const paths = await this.selectPaths();
+    return paths.length > 0 ? paths[0] : null;
+}
 
-    private toFormFields(objectRefs: FormFieldRef[]) {
-        return objectRefs.map(ref => FormFieldObject.fromRef(this, ref));
-    }
+async
+selectForm()
+{
+    const forms = await this.selectForms();
+    return forms.length > 0 ? forms[0] : null;
+}
 
-    async selectElements(types?: ObjectType[]) {
-        const snapshot = await this.getDocumentSnapshot(types);
-        const elements: ObjectRef[] = [];
-        for (const pageSnapshot of snapshot.pages) {
-            elements.push(...pageSnapshot.elements);
-        }
-        return elements;
-    }
+async
+selectFormField()
+{
+    const fields = await this.selectFormFields();
+    return fields.length > 0 ? fields[0] : null;
+}
 
-    async selectParagraphs() {
-        return this.toParagraphObjects(await this.findParagraphs());
-    }
+async
+selectFieldByName(fieldName
+:
+string
+)
+{
+    const fields = await this.selectFieldsByName(fieldName);
+    return fields.length > 0 ? fields[0] : null;
+}
 
-    async selectParagraphsMatching(pattern: string) {
-        if (!pattern) {
-            throw new ValidationException('Pattern cannot be empty');
-        }
-        const position = new Position();
-        position.textPattern = pattern;
-        return this.toParagraphObjects(await this.findParagraphs(position));
-    }
+async
+selectParagraph()
+{
+    const paragraphs = await this.selectParagraphs();
+    return paragraphs.length > 0 ? paragraphs[0] : null;
+}
 
-    private toParagraphObjects(objectRefs: TextObjectRef[]) {
-        return objectRefs.map(ref => ParagraphObject.fromRef(this, ref));
-    }
+async
+selectParagraphMatching(pattern
+:
+string
+)
+{
+    const paragraphs = await this.selectParagraphsMatching(pattern);
+    return paragraphs.length > 0 ? paragraphs[0] : null;
+}
 
-    private toTextLineObjects(objectRefs: TextObjectRef[]) {
-        return objectRefs.map(ref => TextLineObject.fromRef(this, ref));
-    }
+async
+selectTextLine()
+{
+    const lines = await this.selectTextLines();
+    return lines.length > 0 ? lines[0] : null;
+}
 
-    async selectTextLines() {
-        return this.toTextLineObjects(await this.findTextLines());
-    }
-
-    async selectLines() {
-        return this.selectTextLines();
-    }
-
-    // Singular convenience methods - return the first element or null
-
-    async selectImage() {
-        const images = await this.selectImages();
-        return images.length > 0 ? images[0] : null;
-    }
-
-    async selectPath() {
-        const paths = await this.selectPaths();
-        return paths.length > 0 ? paths[0] : null;
-    }
-
-    async selectForm() {
-        const forms = await this.selectForms();
-        return forms.length > 0 ? forms[0] : null;
-    }
-
-    async selectFormField() {
-        const fields = await this.selectFormFields();
-        return fields.length > 0 ? fields[0] : null;
-    }
-
-    async selectFieldByName(fieldName: string) {
-        const fields = await this.selectFieldsByName(fieldName);
-        return fields.length > 0 ? fields[0] : null;
-    }
-
-    async selectParagraph() {
-        const paragraphs = await this.selectParagraphs();
-        return paragraphs.length > 0 ? paragraphs[0] : null;
-    }
-
-    async selectParagraphMatching(pattern: string) {
-        const paragraphs = await this.selectParagraphsMatching(pattern);
-        return paragraphs.length > 0 ? paragraphs[0] : null;
-    }
-
-    async selectTextLine() {
-        const lines = await this.selectTextLines();
-        return lines.length > 0 ? lines[0] : null;
-    }
-
-    async selectLine() {
-        return this.selectTextLine();
-    }
+async
+selectLine()
+{
+    return this.selectTextLine();
+}
 }

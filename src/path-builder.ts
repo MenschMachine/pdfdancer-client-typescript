@@ -1,5 +1,5 @@
 import {PDFDancer} from "./pdfdancer_v1";
-import {Path, Position, Color, Line, Bezier, PathPoint, PathSegment} from "./models";
+import {Bezier, Color, Line, Path, PathPoint, PathSegment, Position} from "./models";
 
 // 👇 Internal view of PDFDancer methods, not exported
 interface PDFDancerInternals {
@@ -213,22 +213,6 @@ export class PathBuilder {
         }
 
         const path = new Path(this._position, this._segments, this._evenOddFill);
-
-        // Debug logging
-        console.log('[PathBuilder] Adding path:', {
-            position: this._position,
-            segmentCount: this._segments.length,
-            segments: this._segments.map((s, i) => ({
-                index: i,
-                type: s instanceof Line ? 'Line' : 'Bezier',
-                p0: s instanceof Line || s instanceof Bezier ? s.p0 : null,
-                p1: s instanceof Line || s instanceof Bezier ? s.p1 : null,
-                position: s.position,
-                strokeColor: s.strokeColor,
-                strokeWidth: s.strokeWidth
-            }))
-        });
-
         return await this._internals.addPath(path);
     }
 
