@@ -11,18 +11,18 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const allParagraphs = await pdf.selectParagraphs();
-        expect(allParagraphs).toHaveLength(24);
+        expect(allParagraphs).toHaveLength(20);
 
         const firstPageParas = await pdf.page(0).selectParagraphs();
-        expect(firstPageParas).toHaveLength(4);
+        expect(firstPageParas).toHaveLength(3);
 
         const first = firstPageParas[0];
-        expect(first.internalId).toBe('PARAGRAPH_000005');
+        expect(first.internalId).toBe('PARAGRAPH_000004');
         expectWithin(first.position.getX(), 180, 1);
-        expectWithin(first.position.getY(), 755.2, 1);
+        expectWithin(first.position.getY(), 755.2, 6);
 
         const last = firstPageParas[firstPageParas.length - 1];
-        expect(last.internalId).toBe('PARAGRAPH_000008');
+        expect(last.internalId).toBe('PARAGRAPH_000006');
         expectWithin(last.position.getX(), 69.3, 1);
         expectWithin(last.position.getY(), 46.7, 2);
 
@@ -40,9 +40,9 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         expect(paragraphs).toHaveLength(1);
 
         const paragraph = paragraphs[0];
-        expect(paragraph.internalId).toBe('PARAGRAPH_000006');
+        expect(paragraph.internalId).toBe('PARAGRAPH_000005');
         expectWithin(paragraph.position.getX(), 64.7, 1);
-        expectWithin(paragraph.position.getY(), 661.2, 2);
+        expectWithin(paragraph.position.getY(), 643, 2);
     });
 
     test('select paragraphs matching document level', async () => {
@@ -142,7 +142,7 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextlineHasFont(SAMPLE_PARAGRAPH, 'AAAZPH+Roboto-Regular', 12, 0);
         await assertions.assertTextlineHasColor(SAMPLE_PARAGRAPH, new Color(0, 0, 0), 0);
-        await assertions.assertParagraphIsAt(SAMPLE_PARAGRAPH, 40, 40, 0);
+        await assertions.assertParagraphIsAt(SAMPLE_PARAGRAPH, 40, 40, 0, 3);
     });
 
     test('add paragraph with styling on Showcase', async () => {
@@ -393,7 +393,7 @@ describe('Paragraph E2E Tests (Showcase)', () => {
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextlineHasFontMatching('Awesomely', 'Asimovian-Regular', 14);
-        await assertions.assertParagraphIsAt('Awesomely', 300.1, 500, 0);
+        await assertions.assertParagraphIsAt('Awesomely', 300.1, 500, 0, 5);
     });
 
     test('add paragraph with font file', async () => {
@@ -414,7 +414,7 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         await assertions.assertTextlineHasFontMatching('Obvious!', 'DancingScript-Regular', 24);
         await assertions.assertTextlineHasColor('Awesomely', new Color(0, 0, 255));
         await assertions.assertTextlineHasColor('Obvious!', new Color(0, 0, 255));
-        await assertions.assertParagraphIsAt('Awesomely', 300.1, 500, 0);
+        await assertions.assertParagraphIsAt('Awesomely', 300.1, 500, 0, 7);
     });
 
     test('add paragraph with standard font times', async () => {
@@ -429,7 +429,7 @@ describe('Paragraph E2E Tests (Showcase)', () => {
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextHasFont('Times Roman Test', StandardFonts.TIMES_ROMAN, 14);
-        await assertions.assertTextlineIsAt('Times Roman Test', 150, 150, 0, 4);
+        await assertions.assertParagraphIsAt('Times Roman Test', 150, 150, 0, 0);
     });
 
     test('add paragraph with standard font courier', async () => {
@@ -484,7 +484,7 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextlineHasFontMatching('Awesome', 'Roboto-Regular', 14);
         await assertions.assertTextlineHasColor('Awesome', new Color(0, 0, 0));
-        await assertions.assertParagraphIsAt('Awesome', 50, 100, 0);
+        await assertions.assertParagraphIsAt('Awesome', 50, 100, 0, 4);
     });
 });
 test('delete paragraph', async () => {

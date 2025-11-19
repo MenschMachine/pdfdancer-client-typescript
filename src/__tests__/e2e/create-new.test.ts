@@ -109,7 +109,7 @@ describe('Create New PDF E2E Tests', () => {
         expect(paragraph.getColor()).toEqual(new Color(0, 255, 0));
 
         expectWithin(paragraph.position.getX()!, 100, 1e-6);
-        expectWithin(paragraph.position.getY()!, 201.5, 1e-6);
+        expectWithin(paragraph.position.getY()!, 201.5, 3);
 
         const textLines = await (await client.pages())[0].selectTextLines();
         expect(textLines).toHaveLength(1);

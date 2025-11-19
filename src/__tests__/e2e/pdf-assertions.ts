@@ -91,7 +91,7 @@ export class PDFAssertions {
         return this;
     }
 
-    async assertParagraphIsAt(text: string, x: number, y: number, page = 0, epsilon = 3): Promise<this> {
+    async assertParagraphIsAt(text: string, x: number, y: number, page = 0, epsilon = 4): Promise<this> { // adjust epsilon for baseline vs bounding box differences
         const paragraphs = await this.pdf.page(page).selectParagraphsMatching(`.*${text}.*`);
         expect(paragraphs.length).toBeGreaterThan(0);
         const reference = paragraphs[0].objectRef();

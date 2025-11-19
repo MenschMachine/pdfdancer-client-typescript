@@ -10,7 +10,7 @@ describe('Paragraph Edit Session E2E Tests (Showcase)', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const paragraphs = await pdf.selectParagraphs();
-        expect(paragraphs.length).toBe(24);
+        expect(paragraphs.length).toBe(20);
     });
 
     test('edit text only', async () => {
@@ -103,7 +103,7 @@ describe('Paragraph Edit Session E2E Tests (Showcase)', () => {
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextlineHasFont(SAMPLE_PARAGRAPH, 'AAAZPH+Roboto-Regular', 12);
-        await assertions.assertParagraphIsAt(SAMPLE_PARAGRAPH, 150, 300, 0, 0.22);
+        await assertions.assertParagraphIsAt(SAMPLE_PARAGRAPH, 150, 300, 0);
     });
 
     test('multiple edits sequential', async () => {

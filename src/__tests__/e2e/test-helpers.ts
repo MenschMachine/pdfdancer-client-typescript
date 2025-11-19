@@ -150,3 +150,70 @@ export function readFontFixture(filename: string): Uint8Array {
     const fontData = fs.readFileSync(fontPath);
     return new Uint8Array(fontData);
 }
+
+/**
+ * Draw a coordinate grid on a PDF page for testing
+ * @param pdf - PDFDancer instance
+ * @param pageIndex - Page index (default: 0)
+ * @param gridSpacing - Spacing between grid lines in points (default: 50)
+ * @param showLabels - Whether to show coordinate labels (default: true)
+ * @param labelFont - Font name for labels (default: 'Helvetica')
+ * @param labelSize - Font size for labels (default: 8)
+ */
+export async function drawCoordinateGrid(
+    pdf: any,
+    pageIndex: number = 0,
+    gridSpacing: number = 50,
+    showLabels: boolean = true,
+    labelFont: string = 'Helvetica',
+    labelSize: number = 8
+): Promise<void> {
+    const pages = await pdf.pages();
+    const page = pages[pageIndex];
+    const width = page.pageSize?.width || 612;
+    const height = page.pageSize?.height || 792;
+
+    const Color = (await import('../../index')).Color;
+    const gridColor = new Color(200, 200, 200);
+    const labelColor = new Color(100, 100, 100);
+
+    for (let x = 0; x <= width; x += gridSpacing) {
+        await pdf.page(pageIndex)
+            .newPath()
+            .moveTo(x, 0)
+            .lineTo(x, height)
+            .strokeColor(gridColor)
+            .lineWidth(0.5)
+            .draw();
+
+        if (showLabels && x > 0) {
+            await pdf.page(pageIndex)
+                .newParagraph()
+                .text(x.toString())
+                .font(labelFont, labelSize)
+                .color(labelColor)
+                .at(x - 10, 5)
+                .build();
+        }
+    }
+
+    for (let y = 0; y <= height; y += gridSpacing) {
+        await pdf.page(pageIndex)
+            .newPath()
+            .moveTo(0, y)
+            .lineTo(width, y)
+            .strokeColor(gridColor)
+            .lineWidth(0.5)
+            .draw();
+
+        if (showLabels && y > 0) {
+            await pdf.page(pageIndex)
+                .newParagraph()
+                .text(y.toString())
+                .font(labelFont, labelSize)
+                .color(labelColor)
+                .at(5, y - 3)
+                .build();
+        }
+    }
+}
