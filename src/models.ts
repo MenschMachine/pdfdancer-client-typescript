@@ -567,9 +567,11 @@ export interface PathPoint {
 
 /**
  * Base class for path segments (lines, curves, etc.)
+ * Each segment extends PDFObject and requires a position.
  */
 export abstract class PathSegment {
     constructor(
+        public position?: Position,
         public strokeColor?: Color,
         public fillColor?: Color,
         public strokeWidth?: number,
@@ -586,13 +588,14 @@ export class Line extends PathSegment {
     constructor(
         public p0: PathPoint,
         public p1: PathPoint,
+        position?: Position,
         strokeColor?: Color,
         fillColor?: Color,
         strokeWidth?: number,
         dashArray?: number[],
         dashPhase?: number
     ) {
-        super(strokeColor, fillColor, strokeWidth, dashArray, dashPhase);
+        super(position, strokeColor, fillColor, strokeWidth, dashArray, dashPhase);
     }
 }
 
@@ -605,13 +608,14 @@ export class Bezier extends PathSegment {
         public p1: PathPoint,
         public p2: PathPoint,
         public p3: PathPoint,
+        position?: Position,
         strokeColor?: Color,
         fillColor?: Color,
         strokeWidth?: number,
         dashArray?: number[],
         dashPhase?: number
     ) {
-        super(strokeColor, fillColor, strokeWidth, dashArray, dashPhase);
+        super(position, strokeColor, fillColor, strokeWidth, dashArray, dashPhase);
     }
 }
 
@@ -823,6 +827,7 @@ export class AddRequest {
 
             const segmentToDict = (segment: PathSegment): Record<string, any> => {
                 const base: Record<string, any> = {
+                    position: segment.position ? positionToDict(segment.position) : null,
                     strokeColor: colorToDict(segment.strokeColor),
                     fillColor: colorToDict(segment.fillColor),
                     strokeWidth: segment.strokeWidth,

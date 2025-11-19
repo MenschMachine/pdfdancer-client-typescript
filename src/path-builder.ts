@@ -71,6 +71,7 @@ export class PathBuilder {
         const line = new Line(
             this._currentPoint,
             {x, y},
+            undefined,  // position will be set in add()
             this._strokeColor,
             this._fillColor,
             this._strokeWidth,
@@ -100,6 +101,7 @@ export class PathBuilder {
             {x: cp1x, y: cp1y},
             {x: cp2x, y: cp2y},
             {x, y},
+            undefined,  // position will be set in add()
             this._strokeColor,
             this._fillColor,
             this._strokeWidth,
@@ -197,6 +199,11 @@ export class PathBuilder {
         }
         if (!this._position) {
             throw new Error("Position is not set. Use at() or atPosition() to set the position.");
+        }
+
+        // Set position on all segments
+        for (const segment of this._segments) {
+            segment.position = this._position;
         }
 
         const path = new Path(this._position, this._segments, this._evenOddFill);
