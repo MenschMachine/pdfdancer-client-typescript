@@ -1512,6 +1512,14 @@ export class PDFDancer {
      * Handles coordinates, text matching, and field name filtering.
      */
     private _filterByPosition(elements: ObjectRef[], position?: Position): ObjectRef[] {
+        console.log('[PDFDancer._filterByPosition] Starting with', elements.length, 'elements');
+        console.log('[PDFDancer._filterByPosition] Position:', position);
+        console.log('[PDFDancer._filterByPosition] Elements:', elements.map(e => ({
+            type: e.type,
+            pageIndex: e.position?.pageIndex,
+            boundingRect: e.position?.boundingRect
+        })));
+
         if (!position) {
             return elements;
         }
@@ -1520,11 +1528,14 @@ export class PDFDancer {
 
         // Filter by page index
         if (position.pageIndex !== undefined) {
+            const before = filtered.length;
             filtered = filtered.filter(el => el.position.pageIndex === position.pageIndex);
+            console.log('[PDFDancer._filterByPosition] After page filter:', filtered.length, 'of', before);
         }
 
         // Filter by coordinates (point containment with tolerance)
         if (position.boundingRect && position.shape === ShapeType.POINT) {
+            console.log('[PDFDancer._filterByPosition] Applying coordinate filter');
             const x = position.boundingRect.x;
             const y = position.boundingRect.y;
             const tolerance = position.tolerance || 0;
@@ -1538,6 +1549,7 @@ export class PDFDancer {
 
         // Filter by text starts with
         if (position.textStartsWith && filtered.length > 0) {
+            console.log('[PDFDancer._filterByPosition] Applying textStartsWith filter');
             const textLower = position.textStartsWith.toLowerCase();
             filtered = filtered.filter(el => {
                 const textObj = el as TextObjectRef;
@@ -1547,6 +1559,7 @@ export class PDFDancer {
 
         // Filter by text pattern (regex)
         if (position.textPattern && filtered.length > 0) {
+            console.log('[PDFDancer._filterByPosition] Applying textPattern filter');
             const regex = this._compileTextPattern(position.textPattern);
             filtered = filtered.filter(el => {
                 const textObj = el as TextObjectRef;
@@ -1556,12 +1569,14 @@ export class PDFDancer {
 
         // Filter by name (for form fields)
         if (position.name && filtered.length > 0) {
+            console.log('[PDFDancer._filterByPosition] Applying name filter');
             filtered = filtered.filter(el => {
                 const formField = el as FormFieldRef;
                 return formField.name === position.name;
             });
         }
 
+        console.log('[PDFDancer._filterByPosition] Final result:', filtered.length, 'elements');
         return filtered;
     }
 
