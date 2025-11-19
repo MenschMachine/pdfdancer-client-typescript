@@ -5,7 +5,15 @@
  * to help with visual debugging and testing.
  */
 
-import {PDFDancer, Color, StandardFonts, ObjectRef, TextObjectRef} from "../../index";
+import {PDFDancer, Color, StandardFonts, Position} from "../../index";
+
+/**
+ * Represents any PDF object that has a position property.
+ * This includes BaseObject subclasses like ParagraphObject, TextLineObject, etc.
+ */
+export interface PositionedObject {
+    position: Position;
+}
 
 export interface GridOptions {
     /** Starting X coordinate (default: 0) */
@@ -214,7 +222,7 @@ export async function drawCoordinateGrid(pdf: PDFDancer, options: GridOptions = 
  */
 export async function drawBoundingBox(
     pdf: PDFDancer,
-    objectRef: ObjectRef,
+    objectRef: PositionedObject,
     options: BoundingBoxOptions = {}
 ): Promise<void> {
     const {
@@ -322,7 +330,7 @@ export async function drawBoundingBox(
  */
 export async function drawBoundingBoxes(
     pdf: PDFDancer,
-    objectRefs: ObjectRef[],
+    objectRefs: PositionedObject[],
     options: BoundingBoxOptions = {}
 ): Promise<void> {
     for (const objectRef of objectRefs) {
@@ -415,7 +423,7 @@ export async function drawCrosshair(
  */
 export async function highlightText(
     pdf: PDFDancer,
-    textObjectRef: TextObjectRef,
+    textObjectRef: PositionedObject,
     options: {
         color?: Color;
         padding?: number;
