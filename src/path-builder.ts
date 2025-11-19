@@ -203,7 +203,13 @@ export class PathBuilder {
 
         // Apply current styling and position to all segments
         for (const segment of this._segments) {
-            segment.position = this._position;
+            // Each segment's position should be at its starting point (p0)
+            const pageIndex = this._position.pageIndex!;
+            if (segment instanceof Line || segment instanceof Bezier) {
+                segment.position = Position.atPageCoordinates(pageIndex, segment.p0.x, segment.p0.y);
+            } else {
+                segment.position = this._position;
+            }
             segment.strokeColor = this._strokeColor;
             segment.fillColor = this._fillColor;
             segment.strokeWidth = this._strokeWidth;
