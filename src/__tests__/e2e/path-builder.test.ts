@@ -3,12 +3,12 @@
  */
 
 import {requireEnvAndFixture} from './test-helpers';
-import {PDFDancer, Color} from "../../index";
+import {Color, PDFDancer} from "../../index";
 
 describe('PathBuilder E2E Tests (New API)', () => {
 
     test('create simple line path using PathBuilder', async () => {
-        const [baseUrl, token, pdfData] = await requireEnvAndFixture('blank.pdf');
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('Empty.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         // Create a simple black line from (100, 100) to (200, 200)
@@ -26,7 +26,7 @@ describe('PathBuilder E2E Tests (New API)', () => {
     });
 
     test('create path with multiple segments using page-level API', async () => {
-        const [baseUrl, token, pdfData] = await requireEnvAndFixture('blank.pdf');
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('Empty.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         // Create a path with multiple line segments
@@ -41,12 +41,13 @@ describe('PathBuilder E2E Tests (New API)', () => {
             .at(0, 0)
             .add();
 
+        await pdf.save("/tmp/path1.test.pdf")
         const paths = await pdf.page(0).selectPaths();
         expect(paths.length).toBeGreaterThan(0);
     });
 
     test('create bezier curve path', async () => {
-        const [baseUrl, token, pdfData] = await requireEnvAndFixture('blank.pdf');
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('Empty.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         // Create a bezier curve
@@ -63,7 +64,7 @@ describe('PathBuilder E2E Tests (New API)', () => {
     });
 
     test('create dashed line path', async () => {
-        const [baseUrl, token, pdfData] = await requireEnvAndFixture('blank.pdf');
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('Empty.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         // Create a dashed line
@@ -81,7 +82,7 @@ describe('PathBuilder E2E Tests (New API)', () => {
     });
 
     test('create filled path with stroke', async () => {
-        const [baseUrl, token, pdfData] = await requireEnvAndFixture('blank.pdf');
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('Empty.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         // Create a filled rectangle with stroke
@@ -102,7 +103,7 @@ describe('PathBuilder E2E Tests (New API)', () => {
     });
 
     test('validate position is required', async () => {
-        const [baseUrl, token, pdfData] = await requireEnvAndFixture('blank.pdf');
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('Empty.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         // Try to add path without setting position
@@ -116,7 +117,7 @@ describe('PathBuilder E2E Tests (New API)', () => {
     });
 
     test('validate segments are required', async () => {
-        const [baseUrl, token, pdfData] = await requireEnvAndFixture('blank.pdf');
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('Empty.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         // Try to add path without any segments
@@ -128,7 +129,7 @@ describe('PathBuilder E2E Tests (New API)', () => {
     });
 
     test('validate moveTo is required before lineTo', async () => {
-        const [baseUrl, token, pdfData] = await requireEnvAndFixture('blank.pdf');
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('Empty.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         // Try to draw line without moving to starting point first

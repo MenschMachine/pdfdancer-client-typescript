@@ -2,7 +2,7 @@ import {Color, FontType, PDFDancer, StandardFonts} from '../../index';
 import {getFontPath, requireEnvAndFixture} from './test-helpers';
 import {expectWithin} from '../assertions';
 import {PDFAssertions} from './pdf-assertions';
-import {drawCoordinateGrid} from "./test-drawing-helpers";
+import {drawBoundingBox, drawCoordinateGrid} from "./test-drawing-helpers";
 
 const SAMPLE_PARAGRAPH = 'This is regular Sans text showing alignment and styles.';
 
@@ -429,14 +429,11 @@ describe('Paragraph E2E Tests (Showcase)', () => {
             .add();
 
         await drawCoordinateGrid(pdf);
-        /*
         let objectRefs = await pdf.page(0).selectParagraphsStartingWith("Times");
         await drawBoundingBox(pdf, objectRefs[0].objectRef())
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextHasFont('Times Roman Test', StandardFonts.TIMES_ROMAN, 14);
         await assertions.assertParagraphIsAt('Times Roman Test', 150, 150, 0);
-
-         */
     });
 
     test('add paragraph with standard font courier', async () => {
