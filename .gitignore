@@ -26,3 +26,4 @@ coverage/
 jwt-token*.txt
 .aider*
 /.run/
+.clinic

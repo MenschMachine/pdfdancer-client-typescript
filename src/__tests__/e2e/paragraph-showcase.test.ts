@@ -2,6 +2,7 @@ import {Color, FontType, PDFDancer, StandardFonts} from '../../index';
 import {getFontPath, requireEnvAndFixture} from './test-helpers';
 import {expectWithin} from '../assertions';
 import {PDFAssertions} from './pdf-assertions';
+import {drawCoordinateGrid} from "./test-drawing-helpers";
 
 const SAMPLE_PARAGRAPH = 'This is regular Sans text showing alignment and styles.';
 
@@ -427,9 +428,15 @@ describe('Paragraph E2E Tests (Showcase)', () => {
             .at(0, 150, 150)
             .add();
 
+        await drawCoordinateGrid(pdf);
+        /*
+        let objectRefs = await pdf.page(0).selectParagraphsStartingWith("Times");
+        await drawBoundingBox(pdf, objectRefs[0].objectRef())
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextHasFont('Times Roman Test', StandardFonts.TIMES_ROMAN, 14);
         await assertions.assertParagraphIsAt('Times Roman Test', 150, 150, 0);
+
+         */
     });
 
     test('add paragraph with standard font courier', async () => {
@@ -487,29 +494,29 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         await assertions.assertParagraphIsAt('Awesome', 50, 100, 0);
     });
 });
-    test('delete paragraph', async () => {
-        const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+test('delete paragraph', async () => {
+    const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
+    const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
-        await paragraph.delete();
+    const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+    await paragraph.delete();
 
-        const remaining = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
-        expect(remaining).toHaveLength(0);
-    });
+    const remaining = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+    expect(remaining).toHaveLength(0);
+});
 
-    test('move paragraph via moveTo', async () => {
-        const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+test('move paragraph via moveTo', async () => {
+    const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
+    const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
-        await paragraph.moveTo(0.1, 300);
+    const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+    await paragraph.moveTo(0.1, 300);
 
-        const moved = await pdf.page(0).selectParagraphsAt(0.1, 300);
-        expect(moved.length).toBeGreaterThan(0);
+    const moved = await pdf.page(0).selectParagraphsAt(0.1, 300);
+    expect(moved.length).toBeGreaterThan(0);
 
-        const status = moved[0].objectRef().status;
-        expect(status).toBeDefined();
-        expect(status?.getFontType()).toBe(FontType.EMBEDDED);
-        expect(status?.isModified()).toBe(false);
-    });
+    const status = moved[0].objectRef().status;
+    expect(status).toBeDefined();
+    expect(status?.getFontType()).toBe(FontType.EMBEDDED);
+    expect(status?.isModified()).toBe(false);
+});

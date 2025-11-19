@@ -5,7 +5,7 @@
  * to help with visual debugging and testing.
  */
 
-import {PDFDancer, Color, StandardFonts, Position} from "../../index";
+import {Color, PDFDancer, Position, StandardFonts} from "../../index";
 
 /**
  * Represents any PDF object that has a position property.
@@ -88,7 +88,7 @@ export async function drawCoordinateGrid(pdf: PDFDancer, options: GridOptions = 
 
     // Get page size if available and not explicitly set
     if (options.endX === undefined || options.endY === undefined) {
-        const pages = await pdf.getPages();
+        const pages = await pdf.pages();
         if (pages.length > pageIndex) {
             const pageSize = pages[pageIndex].pageSize;
             if (pageSize) {
