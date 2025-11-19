@@ -4,7 +4,6 @@
 
 import {requireEnvAndFixture} from './test-helpers';
 import {PDFDancer, Color} from "../../index";
-import {PDFAssertions} from './pdf-assertions';
 
 describe('PathBuilder E2E Tests (New API)', () => {
 
