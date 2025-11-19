@@ -306,7 +306,6 @@ describe('Paragraph E2E Tests (v2 API)', () => {
 
         const [para] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
         let originalX = para.position.getX();
-        let originalY = para.position.getY();
 
         await para.edit()
             .replace('Modified with\nStandard Font')
@@ -326,7 +325,6 @@ describe('Paragraph E2E Tests (v2 API)', () => {
 
         const [para] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
         let originalX = para.position.getX();
-        let originalY = para.position.getY();
 
         await para.edit()
             .replace('Modified with\nStandard Font')
@@ -345,7 +343,6 @@ describe('Paragraph E2E Tests (v2 API)', () => {
 
         const [para] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
         let originalX = para.position.getX();
-        let originalY = para.position.getY();
 
         await para.edit()
             .font(StandardFonts.HELVETICA_BOLD, 28)
