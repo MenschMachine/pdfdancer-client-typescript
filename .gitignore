@@ -19,6 +19,9 @@ npm-debug.log*
 # Coverage
 coverage/
 
+# Test results
+test-results/
+
 # Environment
 .env
 .env.local
