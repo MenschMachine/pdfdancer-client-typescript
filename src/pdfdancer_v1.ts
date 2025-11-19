@@ -1948,6 +1948,7 @@ export class PDFDancer {
      * Parse JSON object data into ObjectRef instance.
      */
     private _parseObjectRef(objData: any): ObjectRef {
+        console.log('[PDFDancer._parseObjectRef] Parsing object:', JSON.stringify(objData));
         const positionData = objData.position || {};
         const position = positionData ? this._parsePosition(positionData) : new Position();
 
@@ -2144,9 +2145,11 @@ export class PDFDancer {
      * Parse JSON position data into Position instance.
      */
     private _parsePosition(posData: any): Position {
+        console.log('[PDFDancer._parsePosition] Parsing position data:', JSON.stringify(posData));
         const position = new Position();
         position.pageIndex = posData.pageIndex;
         position.textStartsWith = posData.textStartsWith;
+        console.log('[PDFDancer._parsePosition] Set pageIndex to:', position.pageIndex);
 
         if (posData.shape) {
             position.shape = ShapeType[posData.shape as keyof typeof ShapeType];
