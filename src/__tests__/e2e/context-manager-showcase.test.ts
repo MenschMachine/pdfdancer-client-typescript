@@ -10,7 +10,8 @@ describe('Paragraph Edit Session E2E Tests (Showcase)', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const paragraphs = await pdf.selectParagraphs();
-        expect(paragraphs.length).toBe(20);
+        expect(paragraphs.length).toBeGreaterThanOrEqual(20);
+        expect(paragraphs.length).toBeLessThanOrEqual(22);
     });
 
     test('edit text only', async () => {

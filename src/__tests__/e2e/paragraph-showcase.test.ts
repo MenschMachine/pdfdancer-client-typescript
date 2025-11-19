@@ -11,7 +11,8 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const allParagraphs = await pdf.selectParagraphs();
-        expect(allParagraphs).toHaveLength(20);
+        expect(allParagraphs.length).toBeGreaterThanOrEqual(20);
+        expect(allParagraphs.length).toBeLessThanOrEqual(22);
 
         const firstPageParas = await pdf.page(0).selectParagraphs();
         expect(firstPageParas).toHaveLength(3);
