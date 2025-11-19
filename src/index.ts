@@ -7,6 +7,7 @@
 export { PDFDancer } from './pdfdancer_v1';
 export { ParagraphBuilder } from './paragraph-builder';
 export { PageBuilder } from './page-builder';
+export { PathBuilder } from './path-builder';
 
 export {
   PdfDancerException,
@@ -30,6 +31,11 @@ export {
   BoundingRect,
   Paragraph,
   TextLine,
+  Path,
+  PathSegment,
+  Line,
+  Bezier,
+  PathPoint,
   PositionMode,
   ShapeType,
   Point,

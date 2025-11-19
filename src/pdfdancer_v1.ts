@@ -39,6 +39,7 @@ import {
     PageSizeInput,
     PageSnapshot,
     Paragraph,
+    Path,
     Position,
     PositionMode,
     ShapeType,
@@ -49,6 +50,7 @@ import {ParagraphBuilder} from './paragraph-builder';
 import {PageBuilder} from './page-builder';
 import {FormFieldObject, FormXObject, ImageObject, ParagraphObject, PathObject, TextLineObject} from "./types";
 import {ImageBuilder} from "./image-builder";
+import {PathBuilder} from "./path-builder";
 import {generateFingerprint} from "./fingerprint";
 import fs from "fs";
 import path from "node:path";
@@ -506,6 +508,11 @@ class PageClient {
     newImage(pageIndex?: number) {
         const targetIndex = pageIndex ?? this.position.pageIndex;
         return new ImageBuilder(this._client, targetIndex);
+    }
+
+    newPath(pageIndex?: number) {
+        const targetIndex = pageIndex ?? this.position.pageIndex;
+        return new PathBuilder(this._client, targetIndex);
     }
 
     async selectTextLines() {
@@ -1148,12 +1155,15 @@ export class PDFDancer {
      * Now uses snapshot caching for better performance.
      */
     private async find(objectType?: ObjectType, position?: Position): Promise<ObjectRef[]> {
+        console.log('[PDFDancer.find] Called with:', { objectType, pageIndex: position?.pageIndex, shape: position?.shape });
+
         // Determine if we should use snapshot or fall back to HTTP
         // For paths with coordinates, we need to use HTTP (backend requirement)
         const isPathWithCoordinates = objectType === ObjectType.PATH &&
             position?.shape === ShapeType.POINT;
 
         if (isPathWithCoordinates) {
+            console.log('[PDFDancer.find] Using HTTP for path with coordinates');
             // Fall back to HTTP for path coordinate queries
             const requestData = new FindRequest(objectType, position).toDict();
             const response = await this._makeRequest('POST', '/pdf/find', requestData);
@@ -1165,22 +1175,30 @@ export class PDFDancer {
         let elements: ObjectRef[];
 
         if (position?.pageIndex !== undefined) {
+            console.log('[PDFDancer.find] Using page snapshot for page', position.pageIndex);
             // Page-specific query - use page snapshot
             const pageSnapshot = await this._getOrFetchPageSnapshot(position.pageIndex);
             elements = pageSnapshot.elements;
+            console.log('[PDFDancer.find] Page snapshot has', elements.length, 'elements');
         } else {
+            console.log('[PDFDancer.find] Using document snapshot');
             // Document-wide query - use document snapshot
             const docSnapshot = await this._getOrFetchDocumentSnapshot();
             elements = docSnapshot.getAllElements();
+            console.log('[PDFDancer.find] Document snapshot has', elements.length, 'elements');
         }
 
         // Filter by object type
         if (objectType) {
+            const beforeFilter = elements.length;
             elements = elements.filter(el => el.type === objectType);
+            console.log('[PDFDancer.find] After type filter:', elements.length, 'of', beforeFilter, '(type:', objectType, ')');
         }
 
         // Apply position-based filtering
-        return this._filterByPosition(elements, position);
+        const result = this._filterByPosition(elements, position);
+        console.log('[PDFDancer.find] After position filter:', result.length, 'elements');
+        return result;
     }
 
     /**
@@ -1445,6 +1463,7 @@ export class PDFDancer {
     private async _getOrFetchPageSnapshot(pageIndex: number): Promise<PageSnapshot> {
         // Check page cache first
         if (this._pageSnapshotCache.has(pageIndex)) {
+            console.log('[PDFDancer._getOrFetchPageSnapshot] Using cached page snapshot for page', pageIndex);
             return this._pageSnapshotCache.get(pageIndex)!;
         }
 
@@ -1452,6 +1471,7 @@ export class PDFDancer {
         if (this._documentSnapshotCache) {
             const pageSnapshot = this._documentSnapshotCache.getPageSnapshot(pageIndex);
             if (pageSnapshot) {
+                console.log('[PDFDancer._getOrFetchPageSnapshot] Extracting page from document snapshot for page', pageIndex);
                 // Cache it for future use
                 this._pageSnapshotCache.set(pageIndex, pageSnapshot);
                 return pageSnapshot;
@@ -1459,8 +1479,10 @@ export class PDFDancer {
         }
 
         // Fetch page snapshot from server
+        console.log('[PDFDancer._getOrFetchPageSnapshot] Fetching fresh page snapshot from server for page', pageIndex);
         const pageSnapshot = await this.getPageSnapshot(pageIndex);
         this._pageSnapshotCache.set(pageIndex, pageSnapshot);
+        console.log('[PDFDancer._getOrFetchPageSnapshot] Fetched snapshot with', pageSnapshot.elements.length, 'elements');
         return pageSnapshot;
     }
 
@@ -1479,6 +1501,7 @@ export class PDFDancer {
      * Called after any mutation operation.
      */
     private _invalidateCache(): void {
+        console.log('[PDFDancer._invalidateCache] Clearing all snapshot caches');
         this._documentSnapshotCache = null;
         this._pageSnapshotCache.clear();
         this._pagesCache = null;
@@ -1489,6 +1512,14 @@ export class PDFDancer {
      * Handles coordinates, text matching, and field name filtering.
      */
     private _filterByPosition(elements: ObjectRef[], position?: Position): ObjectRef[] {
+        console.log('[PDFDancer._filterByPosition] Starting with', elements.length, 'elements');
+        console.log('[PDFDancer._filterByPosition] Position:', position);
+        console.log('[PDFDancer._filterByPosition] Elements:', elements.map(e => ({
+            type: e.type,
+            pageIndex: e.position?.pageIndex,
+            boundingRect: e.position?.boundingRect
+        })));
+
         if (!position) {
             return elements;
         }
@@ -1497,11 +1528,14 @@ export class PDFDancer {
 
         // Filter by page index
         if (position.pageIndex !== undefined) {
+            const before = filtered.length;
             filtered = filtered.filter(el => el.position.pageIndex === position.pageIndex);
+            console.log('[PDFDancer._filterByPosition] After page filter:', filtered.length, 'of', before);
         }
 
         // Filter by coordinates (point containment with tolerance)
         if (position.boundingRect && position.shape === ShapeType.POINT) {
+            console.log('[PDFDancer._filterByPosition] Applying coordinate filter');
             const x = position.boundingRect.x;
             const y = position.boundingRect.y;
             const tolerance = position.tolerance || 0;
@@ -1515,6 +1549,7 @@ export class PDFDancer {
 
         // Filter by text starts with
         if (position.textStartsWith && filtered.length > 0) {
+            console.log('[PDFDancer._filterByPosition] Applying textStartsWith filter');
             const textLower = position.textStartsWith.toLowerCase();
             filtered = filtered.filter(el => {
                 const textObj = el as TextObjectRef;
@@ -1524,6 +1559,7 @@ export class PDFDancer {
 
         // Filter by text pattern (regex)
         if (position.textPattern && filtered.length > 0) {
+            console.log('[PDFDancer._filterByPosition] Applying textPattern filter');
             const regex = this._compileTextPattern(position.textPattern);
             filtered = filtered.filter(el => {
                 const textObj = el as TextObjectRef;
@@ -1533,12 +1569,14 @@ export class PDFDancer {
 
         // Filter by name (for form fields)
         if (position.name && filtered.length > 0) {
+            console.log('[PDFDancer._filterByPosition] Applying name filter');
             filtered = filtered.filter(el => {
                 const formField = el as FormFieldRef;
                 return formField.name === position.name;
             });
         }
 
+        console.log('[PDFDancer._filterByPosition] Final result:', filtered.length, 'elements');
         return filtered;
     }
 
@@ -1674,6 +1712,33 @@ export class PDFDancer {
     }
 
     /**
+     * Adds a path to the PDF document.
+     */
+    private async addPath(path: Path): Promise<boolean> {
+        if (!path) {
+            throw new ValidationException("Path cannot be null");
+        }
+        if (!path.getPosition()) {
+            throw new ValidationException("Path position is null, you need to specify a position for the new path, using .at(x,y)");
+        }
+        if (path.getPosition()!.pageIndex === undefined) {
+            throw new ValidationException("Path position page index is null");
+        }
+        if (path.getPosition()!.pageIndex! < 0) {
+            throw new ValidationException("Path position page index is less than 0");
+        }
+
+        console.log('[PDFDancer] addPath called:', {
+            position: path.getPosition(),
+            segmentCount: path.pathSegments.length
+        });
+
+        const result = await this._addObject(path);
+        console.log('[PDFDancer] addPath result:', result);
+        return result;
+    }
+
+    /**
      * Adds a page to the PDF document.
      */
     private async addPage(request?: AddPageRequest | null): Promise<PageRef> {
@@ -1691,7 +1756,7 @@ export class PDFDancer {
     /**
      * Internal method to add any PDF object.
      */
-    private async _addObject(pdfObject: Image | Paragraph): Promise<boolean> {
+    private async _addObject(pdfObject: Image | Paragraph | Path): Promise<boolean> {
         const requestData = new AddRequest(pdfObject).toDict();
         const response = await this._makeRequest('POST', '/pdf/add', requestData);
         const result = await response.json() as boolean;
@@ -1883,6 +1948,7 @@ export class PDFDancer {
      * Parse JSON object data into ObjectRef instance.
      */
     private _parseObjectRef(objData: any): ObjectRef {
+        console.log('[PDFDancer._parseObjectRef] Parsing object:', JSON.stringify(objData));
         const positionData = objData.position || {};
         const position = positionData ? this._parsePosition(positionData) : new Position();
 
@@ -2079,9 +2145,11 @@ export class PDFDancer {
      * Parse JSON position data into Position instance.
      */
     private _parsePosition(posData: any): Position {
+        console.log('[PDFDancer._parsePosition] Parsing position data:', JSON.stringify(posData));
         const position = new Position();
         position.pageIndex = posData.pageIndex;
         position.textStartsWith = posData.textStartsWith;
+        console.log('[PDFDancer._parsePosition] Set pageIndex to:', position.pageIndex);
 
         if (posData.shape) {
             position.shape = ShapeType[posData.shape as keyof typeof ShapeType];
@@ -2147,7 +2215,15 @@ export class PDFDancer {
         const elements: ObjectRef[] = [];
         if (Array.isArray(data.elements)) {
             for (const elementData of data.elements) {
-                elements.push(this._parseObjectRef(elementData));
+                const element = this._parseObjectRef(elementData);
+
+                // If the element's position doesn't have a pageIndex, inherit it from the page
+                if (element.position && element.position.pageIndex === undefined) {
+                    element.position.pageIndex = pageRef.position.pageIndex;
+                    console.log('[PDFDancer._parsePageSnapshot] Set element pageIndex to:', element.position.pageIndex);
+                }
+
+                elements.push(element);
             }
         }
 
@@ -2175,6 +2251,10 @@ export class PDFDancer {
 
     newParagraph(pageIndex?: number) {
         return new ParagraphBuilder(this, pageIndex);
+    }
+
+    newPath(pageIndex?: number) {
+        return new PathBuilder(this, pageIndex);
     }
 
     newPage() {

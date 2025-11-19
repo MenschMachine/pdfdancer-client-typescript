@@ -557,6 +557,100 @@ export class TextLine {
     }
 }
 
+/**
+ * Represents a 2D point with x and y coordinates for path operations.
+ */
+export interface PathPoint {
+    x: number;
+    y: number;
+}
+
+/**
+ * Base class for path segments (lines, curves, etc.)
+ * Each segment extends PDFObject and requires a position.
+ */
+export abstract class PathSegment {
+    constructor(
+        public position?: Position,
+        public strokeColor?: Color,
+        public fillColor?: Color,
+        public strokeWidth?: number,
+        public dashArray?: number[],
+        public dashPhase?: number
+    ) {
+    }
+}
+
+/**
+ * Represents a straight line segment between two points.
+ */
+export class Line extends PathSegment {
+    constructor(
+        public p0: PathPoint,
+        public p1: PathPoint,
+        position?: Position,
+        strokeColor?: Color,
+        fillColor?: Color,
+        strokeWidth?: number,
+        dashArray?: number[],
+        dashPhase?: number
+    ) {
+        super(position, strokeColor, fillColor, strokeWidth, dashArray, dashPhase);
+    }
+}
+
+/**
+ * Represents a cubic Bezier curve with four control points.
+ */
+export class Bezier extends PathSegment {
+    constructor(
+        public p0: PathPoint,
+        public p1: PathPoint,
+        public p2: PathPoint,
+        public p3: PathPoint,
+        position?: Position,
+        strokeColor?: Color,
+        fillColor?: Color,
+        strokeWidth?: number,
+        dashArray?: number[],
+        dashPhase?: number
+    ) {
+        super(position, strokeColor, fillColor, strokeWidth, dashArray, dashPhase);
+    }
+}
+
+/**
+ * Represents a vector path consisting of multiple path segments.
+ */
+export class Path {
+    constructor(
+        public position?: Position,
+        public pathSegments: PathSegment[] = [],
+        public evenOddFill?: boolean
+    ) {
+    }
+
+    getPosition(): Position | undefined {
+        return this.position;
+    }
+
+    setPosition(position: Position): void {
+        this.position = position;
+    }
+
+    addSegment(segment: PathSegment): void {
+        this.pathSegments.push(segment);
+    }
+
+    getSegments(): PathSegment[] {
+        return this.pathSegments;
+    }
+
+    clearSegments(): void {
+        this.pathSegments = [];
+    }
+}
+
 // Request classes for API communication
 
 /**
@@ -623,7 +717,7 @@ export class MoveRequest {
  * Request object for add operations.
  */
 export class AddRequest {
-    constructor(public pdfObject: Image | Paragraph) {
+    constructor(public pdfObject: Image | Paragraph | Path) {
     }
 
     toDict(): Record<string, any> {
@@ -632,7 +726,7 @@ export class AddRequest {
         };
     }
 
-    private objectToDict(obj: Image | Paragraph): Record<string, any> {
+    private objectToDict(obj: Image | Paragraph | Path): Record<string, any> {
         if (obj instanceof Image) {
             const size = obj.width !== undefined && obj.height !== undefined
                 ? {width: obj.width, height: obj.height}
@@ -718,6 +812,57 @@ export class AddRequest {
                 lines: lines.length ? lines : null,
                 lineSpacings,
                 font: fontToDict(obj.font)
+            };
+        } else if (obj instanceof Path) {
+            const colorToDict = (color?: Color | null) => {
+                if (!color) {
+                    return null;
+                }
+                return {red: color.r, green: color.g, blue: color.b, alpha: color.a};
+            };
+
+            const pointToDict = (point: PathPoint) => {
+                return {x: point.x, y: point.y};
+            };
+
+            const segmentToDict = (segment: PathSegment): Record<string, any> => {
+                const base: Record<string, any> = {
+                    position: segment.position ? positionToDict(segment.position) : null,
+                    strokeColor: colorToDict(segment.strokeColor),
+                    fillColor: colorToDict(segment.fillColor),
+                    strokeWidth: segment.strokeWidth,
+                    dashArray: segment.dashArray,
+                    dashPhase: segment.dashPhase
+                };
+
+                if (segment instanceof Line) {
+                    return {
+                        ...base,
+                        segmentType: "LINE",
+                        p0: pointToDict(segment.p0),
+                        p1: pointToDict(segment.p1)
+                    };
+                } else if (segment instanceof Bezier) {
+                    return {
+                        ...base,
+                        segmentType: "BEZIER",
+                        p0: pointToDict(segment.p0),
+                        p1: pointToDict(segment.p1),
+                        p2: pointToDict(segment.p2),
+                        p3: pointToDict(segment.p3)
+                    };
+                } else {
+                    throw new Error(`Unsupported path segment type: ${typeof segment}`);
+                }
+            };
+
+            const segments = obj.pathSegments.map(seg => segmentToDict(seg));
+
+            return {
+                type: "PATH",
+                position: obj.position ? positionToDict(obj.position) : null,
+                pathSegments: segments,
+                evenOddFill: obj.evenOddFill
             };
         } else {
             throw new Error(`Unsupported object type: ${typeof obj}`);
