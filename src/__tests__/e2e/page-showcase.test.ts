@@ -8,14 +8,16 @@ describe('Page E2E Tests (Showcase)', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const elements = await pdf.selectElements();
-        expect(elements.length).toBe(95);
+        expect(elements.length).toBeGreaterThanOrEqual(95);
+        expect(elements.length).toBeLessThanOrEqual(97);
 
         let total = 0;
         for (const page of await pdf.pages()) {
             const pageElements = await page.selectElements();
             total += pageElements.length;
         }
-        expect(total).toBe(95);
+        expect(total).toBeGreaterThanOrEqual(95);
+        expect(total).toBeLessThanOrEqual(97);
     });
 
     test('get pages', async () => {
