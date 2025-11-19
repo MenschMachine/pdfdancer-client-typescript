@@ -714,8 +714,7 @@ export class PDFDancer {
                     body: JSON.stringify(createRequest.toDict()),
                     signal: resolvedTimeout > 0 ? AbortSignal.timeout(resolvedTimeout) : undefined
                 },
-                DEFAULT_RETRY_CONFIG,
-                'POST /session/new'
+                DEFAULT_RETRY_CONFIG
             );
 
             if (!response.ok) {
@@ -771,8 +770,7 @@ export class PDFDancer {
                     },
                     signal: timeout > 0 ? AbortSignal.timeout(timeout) : undefined
                 },
-                DEFAULT_RETRY_CONFIG,
-                'POST /keys/anon'
+                DEFAULT_RETRY_CONFIG
             );
 
             if (!response.ok) {
@@ -925,8 +923,7 @@ export class PDFDancer {
                     },
                     body: formData,
                     signal: this._readTimeout > 0 ? AbortSignal.timeout(this._readTimeout) : undefined
-                },
-                'POST /session/create'
+                }
             );
 
             if (!response.ok) {
@@ -977,10 +974,9 @@ export class PDFDancer {
     private async _fetchWithRetry(
         url: string,
         // eslint-disable-next-line no-undef
-        options: RequestInit,
-        context: string = 'request'
+        options: RequestInit
     ): Promise<Response> {
-        return fetchWithRetry(url, options, this._retryConfig, context);
+        return fetchWithRetry(url, options, this._retryConfig);
     }
 
     /**
@@ -1017,8 +1013,7 @@ export class PDFDancer {
                     headers,
                     body: data ? JSON.stringify(data) : undefined,
                     signal: this._readTimeout > 0 ? AbortSignal.timeout(this._readTimeout) : undefined
-                },
-                `${method} ${path}`
+                }
             );
 
             // Handle FontNotFoundException
@@ -1771,8 +1766,7 @@ export class PDFDancer {
                     },
                     body: formData,
                     signal: AbortSignal.timeout(60000)
-                },
-                'POST /font/register'
+                }
             );
 
             if (!response.ok) {
