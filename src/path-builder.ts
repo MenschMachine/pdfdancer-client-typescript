@@ -201,9 +201,14 @@ export class PathBuilder {
             throw new Error("Position is not set. Use at() or atPosition() to set the position.");
         }
 
-        // Set position on all segments
+        // Apply current styling and position to all segments
         for (const segment of this._segments) {
             segment.position = this._position;
+            segment.strokeColor = this._strokeColor;
+            segment.fillColor = this._fillColor;
+            segment.strokeWidth = this._strokeWidth;
+            segment.dashArray = this._dashArray;
+            segment.dashPhase = this._dashPhase;
         }
 
         const path = new Path(this._position, this._segments, this._evenOddFill);
