@@ -63,7 +63,7 @@ export interface BoundingBoxOptions {
  * ```
  */
 export async function drawCoordinateGrid(pdf: PDFDancer, options: GridOptions = {}): Promise<void> {
-    const {
+    let {
         startX = 0,
         startY = 0,
         endX = 595,  // A4 width in points
@@ -78,80 +78,116 @@ export async function drawCoordinateGrid(pdf: PDFDancer, options: GridOptions = 
         showLabels = true
     } = options;
 
-    // Get page size if available
-    const pages = await pdf.getPages();
-    if (pages.length > pageIndex) {
-        const pageSize = pages[pageIndex].pageSize;
-        if (pageSize) {
-            // Use actual page size if not specified
-            const actualEndX = options.endX ?? pageSize.width ?? endX;
-            const actualEndY = options.endY ?? pageSize.height ?? endY;
-
-            await drawCoordinateGrid(pdf, {
-                ...options,
-                endX: actualEndX,
-                endY: actualEndY
-            });
-            return;
+    // Get page size if available and not explicitly set
+    if (options.endX === undefined || options.endY === undefined) {
+        const pages = await pdf.getPages();
+        if (pages.length > pageIndex) {
+            const pageSize = pages[pageIndex].pageSize;
+            if (pageSize) {
+                endX = options.endX ?? pageSize.width ?? endX;
+                endY = options.endY ?? pageSize.height ?? endY;
+            }
         }
     }
 
-    // Draw vertical lines
+    // Draw all minor vertical lines in one path
+    const minorVerticalPath = pdf.newPath();
+    let hasMinorVertical = false;
     for (let x = startX; x <= endX; x += spacing) {
         const isMajor = x % majorInterval === 0;
-        const color = isMajor ? majorGridColor : gridColor;
-        const width = isMajor ? 0.5 : 0.25;
-
-        await pdf.newPath()
-            .moveTo(x, startY)
-            .lineTo(x, endY)
-            .strokeColor(color)
-            .strokeWidth(width)
-            .at(pageIndex, 0, 0)
-            .add();
-
-        // Add labels for major lines
-        if (showLabels && isMajor) {
-            await pdf.newParagraph()
-                .text(`${x}`, labelColor)
-                .font(StandardFonts.HELVETICA, fontSize)
-                .at(pageIndex, x - 10, startY + 5)
-                .add();
+        if (!isMajor) {
+            minorVerticalPath.moveTo(x, startY).lineTo(x, endY);
+            hasMinorVertical = true;
         }
     }
+    if (hasMinorVertical) {
+        await minorVerticalPath
+            .strokeColor(gridColor)
+            .strokeWidth(0.25)
+            .at(pageIndex, startX, startY)
+            .add();
+    }
 
-    // Draw horizontal lines
+    // Draw all major vertical lines in one path
+    const majorVerticalPath = pdf.newPath();
+    let hasMajorVertical = false;
+    for (let x = startX; x <= endX; x += spacing) {
+        const isMajor = x % majorInterval === 0;
+        if (isMajor) {
+            majorVerticalPath.moveTo(x, startY).lineTo(x, endY);
+            hasMajorVertical = true;
+
+            // Add labels for major lines
+            if (showLabels) {
+                await pdf.newParagraph()
+                    .text(`${x}`, labelColor)
+                    .font(StandardFonts.HELVETICA, fontSize)
+                    .at(pageIndex, x - 10, startY + 5)
+                    .add();
+            }
+        }
+    }
+    if (hasMajorVertical) {
+        await majorVerticalPath
+            .strokeColor(majorGridColor)
+            .strokeWidth(0.5)
+            .at(pageIndex, startX, startY)
+            .add();
+    }
+
+    // Draw all minor horizontal lines in one path
+    const minorHorizontalPath = pdf.newPath();
+    let hasMinorHorizontal = false;
     for (let y = startY; y <= endY; y += spacing) {
         const isMajor = y % majorInterval === 0;
-        const color = isMajor ? majorGridColor : gridColor;
-        const width = isMajor ? 0.5 : 0.25;
-
-        await pdf.newPath()
-            .moveTo(startX, y)
-            .lineTo(endX, y)
-            .strokeColor(color)
-            .strokeWidth(width)
-            .at(pageIndex, 0, 0)
-            .add();
-
-        // Add labels for major lines
-        if (showLabels && isMajor) {
-            await pdf.newParagraph()
-                .text(`${y}`, labelColor)
-                .font(StandardFonts.HELVETICA, fontSize)
-                .at(pageIndex, startX + 5, y - 2)
-                .add();
+        if (!isMajor) {
+            minorHorizontalPath.moveTo(startX, y).lineTo(endX, y);
+            hasMinorHorizontal = true;
         }
     }
+    if (hasMinorHorizontal) {
+        await minorHorizontalPath
+            .strokeColor(gridColor)
+            .strokeWidth(0.25)
+            .at(pageIndex, startX, startY)
+            .add();
+    }
 
-    // Draw origin marker (0, 0)
-    if (startX <= 0 && startY <= 0) {
+    // Draw all major horizontal lines in one path
+    const majorHorizontalPath = pdf.newPath();
+    let hasMajorHorizontal = false;
+    for (let y = startY; y <= endY; y += spacing) {
+        const isMajor = y % majorInterval === 0;
+        if (isMajor) {
+            majorHorizontalPath.moveTo(startX, y).lineTo(endX, y);
+            hasMajorHorizontal = true;
+
+            // Add labels for major lines
+            if (showLabels) {
+                await pdf.newParagraph()
+                    .text(`${y}`, labelColor)
+                    .font(StandardFonts.HELVETICA, fontSize)
+                    .at(pageIndex, startX + 5, y - 2)
+                    .add();
+            }
+        }
+    }
+    if (hasMajorHorizontal) {
+        await majorHorizontalPath
+            .strokeColor(majorGridColor)
+            .strokeWidth(0.5)
+            .at(pageIndex, startX, startY)
+            .add();
+    }
+
+    // Draw origin marker (0, 0) if it's within the grid bounds
+    if (startX <= 0 && endX >= 0 && startY <= 0 && endY >= 0) {
         await pdf.newPath()
             .moveTo(-5, 0)
             .lineTo(5, 0)
             .strokeColor(new Color(255, 0, 0))
             .strokeWidth(2)
-            .at(pageIndex, 0, 0)
+            .at(pageIndex, -5, -5)
             .add();
 
         await pdf.newPath()
@@ -159,7 +195,7 @@ export async function drawCoordinateGrid(pdf: PDFDancer, options: GridOptions = 
             .lineTo(0, 5)
             .strokeColor(new Color(255, 0, 0))
             .strokeWidth(2)
-            .at(pageIndex, 0, 0)
+            .at(pageIndex, -5, -5)
             .add();
     }
 }
@@ -212,7 +248,7 @@ export async function drawBoundingBox(
         .lineTo(x, y)
         .strokeColor(color)
         .strokeWidth(lineWidth)
-        .at(pageIndex, 0, 0);
+        .at(pageIndex, x, y);
 
     if (dashPattern) {
         pathBuilder.dashPattern(dashPattern);
@@ -236,7 +272,7 @@ export async function drawBoundingBox(
                 .lineTo(corner.x + cornerSize, corner.y)
                 .strokeColor(color)
                 .strokeWidth(lineWidth + 0.5)
-                .at(pageIndex, 0, 0)
+                .at(pageIndex, corner.x - cornerSize, corner.y)
                 .add();
 
             // Vertical line
@@ -245,7 +281,7 @@ export async function drawBoundingBox(
                 .lineTo(corner.x, corner.y + cornerSize)
                 .strokeColor(color)
                 .strokeWidth(lineWidth + 0.5)
-                .at(pageIndex, 0, 0)
+                .at(pageIndex, corner.x, corner.y - cornerSize)
                 .add();
         }
     }
@@ -332,7 +368,7 @@ export async function drawCrosshair(
         .lineTo(x + size, y)
         .strokeColor(color)
         .strokeWidth(lineWidth)
-        .at(pageIndex, 0, 0)
+        .at(pageIndex, x - size, y)
         .add();
 
     // Vertical line
@@ -341,7 +377,7 @@ export async function drawCrosshair(
         .lineTo(x, y + size)
         .strokeColor(color)
         .strokeWidth(lineWidth)
-        .at(pageIndex, 0, 0)
+        .at(pageIndex, x, y - size)
         .add();
 
     // Circle
@@ -353,7 +389,7 @@ export async function drawCrosshair(
         .bezierTo(x + size * 0.55, y - size, x + size, y - size * 0.55, x + size, y)
         .strokeColor(color)
         .strokeWidth(lineWidth)
-        .at(pageIndex, 0, 0)
+        .at(pageIndex, x - size, y - size)
         .add();
 
     // Add label if provided
@@ -406,7 +442,7 @@ export async function highlightText(
         .lineTo(rect.x - padding, rect.y + rect.height + padding)
         .lineTo(rect.x - padding, rect.y - padding)
         .fillColor(color)
-        .at(pageIndex, 0, 0)
+        .at(pageIndex, rect.x - padding, rect.y - padding)
         .add();
 }
 
@@ -450,7 +486,7 @@ export async function drawArrow(
         .lineTo(toX, toY)
         .strokeColor(color)
         .strokeWidth(lineWidth)
-        .at(pageIndex, 0, 0)
+        .at(pageIndex, Math.min(fromX, toX), Math.min(fromY, toY))
         .add();
 
     // Calculate arrow head angle
@@ -466,7 +502,7 @@ export async function drawArrow(
         .lineTo(leftX, leftY)
         .strokeColor(color)
         .strokeWidth(lineWidth)
-        .at(pageIndex, 0, 0)
+        .at(pageIndex, Math.min(toX, leftX), Math.min(toY, leftY))
         .add();
 
     // Right arrow line
@@ -478,7 +514,7 @@ export async function drawArrow(
         .lineTo(rightX, rightY)
         .strokeColor(color)
         .strokeWidth(lineWidth)
-        .at(pageIndex, 0, 0)
+        .at(pageIndex, Math.min(toX, rightX), Math.min(toY, rightY))
         .add();
 
     // Add label if provided
