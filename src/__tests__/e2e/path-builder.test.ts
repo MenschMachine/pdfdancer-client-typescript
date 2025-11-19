@@ -17,7 +17,7 @@ describe('PathBuilder E2E Tests (New API)', () => {
             .lineTo(200, 200)
             .strokeColor(new Color(0, 0, 0))
             .strokeWidth(2)
-            .at(0, 0, 0)
+            .at(0, 100, 100)
             .add();
 
         // Verify the path was added
@@ -38,7 +38,7 @@ describe('PathBuilder E2E Tests (New API)', () => {
             .lineTo(50, 50)  // Close the rectangle
             .strokeColor(new Color(255, 0, 0))
             .strokeWidth(3)
-            .at(0, 0)
+            .at(50, 50)
             .add();
 
         await pdf.save("/tmp/path1.test.pdf")
@@ -56,7 +56,7 @@ describe('PathBuilder E2E Tests (New API)', () => {
             .bezierTo(150, 50, 250, 150, 300, 100)
             .strokeColor(new Color(0, 0, 255))
             .strokeWidth(2)
-            .at(0, 0, 0)
+            .at(0, 100, 100)
             .add();
 
         const paths = await pdf.selectPaths();
@@ -74,7 +74,7 @@ describe('PathBuilder E2E Tests (New API)', () => {
             .strokeColor(new Color(0, 0, 0))
             .strokeWidth(2)
             .dashPattern([5, 5])  // 5 units on, 5 units off
-            .at(0, 0, 0)
+            .at(0, 100, 100)
             .add();
 
         const paths = await pdf.selectPaths();
@@ -95,7 +95,7 @@ describe('PathBuilder E2E Tests (New API)', () => {
             .fillColor(new Color(255, 200, 200))  // Light red fill
             .strokeColor(new Color(255, 0, 0))     // Red stroke
             .strokeWidth(2)
-            .at(0, 0, 0)
+            .at(0, 100, 100)
             .add();
 
         const paths = await pdf.selectPaths();
