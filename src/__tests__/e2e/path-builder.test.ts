@@ -41,7 +41,6 @@ describe('PathBuilder E2E Tests (New API)', () => {
             .at(50, 50)
             .add();
 
-        await pdf.save("/tmp/path1.test.pdf")
         const paths = await pdf.page(0).selectPaths();
         expect(paths.length).toBeGreaterThan(0);
     });
