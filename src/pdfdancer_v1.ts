@@ -1155,12 +1155,15 @@ export class PDFDancer {
      * Now uses snapshot caching for better performance.
      */
     private async find(objectType?: ObjectType, position?: Position): Promise<ObjectRef[]> {
+        console.log('[PDFDancer.find] Called with:', { objectType, pageIndex: position?.pageIndex, shape: position?.shape });
+
         // Determine if we should use snapshot or fall back to HTTP
         // For paths with coordinates, we need to use HTTP (backend requirement)
         const isPathWithCoordinates = objectType === ObjectType.PATH &&
             position?.shape === ShapeType.POINT;
 
         if (isPathWithCoordinates) {
+            console.log('[PDFDancer.find] Using HTTP for path with coordinates');
             // Fall back to HTTP for path coordinate queries
             const requestData = new FindRequest(objectType, position).toDict();
             const response = await this._makeRequest('POST', '/pdf/find', requestData);
@@ -1172,22 +1175,30 @@ export class PDFDancer {
         let elements: ObjectRef[];
 
         if (position?.pageIndex !== undefined) {
+            console.log('[PDFDancer.find] Using page snapshot for page', position.pageIndex);
             // Page-specific query - use page snapshot
             const pageSnapshot = await this._getOrFetchPageSnapshot(position.pageIndex);
             elements = pageSnapshot.elements;
+            console.log('[PDFDancer.find] Page snapshot has', elements.length, 'elements');
         } else {
+            console.log('[PDFDancer.find] Using document snapshot');
             // Document-wide query - use document snapshot
             const docSnapshot = await this._getOrFetchDocumentSnapshot();
             elements = docSnapshot.getAllElements();
+            console.log('[PDFDancer.find] Document snapshot has', elements.length, 'elements');
         }
 
         // Filter by object type
         if (objectType) {
+            const beforeFilter = elements.length;
             elements = elements.filter(el => el.type === objectType);
+            console.log('[PDFDancer.find] After type filter:', elements.length, 'of', beforeFilter, '(type:', objectType, ')');
         }
 
         // Apply position-based filtering
-        return this._filterByPosition(elements, position);
+        const result = this._filterByPosition(elements, position);
+        console.log('[PDFDancer.find] After position filter:', result.length, 'elements');
+        return result;
     }
 
     /**
@@ -1452,6 +1463,7 @@ export class PDFDancer {
     private async _getOrFetchPageSnapshot(pageIndex: number): Promise<PageSnapshot> {
         // Check page cache first
         if (this._pageSnapshotCache.has(pageIndex)) {
+            console.log('[PDFDancer._getOrFetchPageSnapshot] Using cached page snapshot for page', pageIndex);
             return this._pageSnapshotCache.get(pageIndex)!;
         }
 
@@ -1459,6 +1471,7 @@ export class PDFDancer {
         if (this._documentSnapshotCache) {
             const pageSnapshot = this._documentSnapshotCache.getPageSnapshot(pageIndex);
             if (pageSnapshot) {
+                console.log('[PDFDancer._getOrFetchPageSnapshot] Extracting page from document snapshot for page', pageIndex);
                 // Cache it for future use
                 this._pageSnapshotCache.set(pageIndex, pageSnapshot);
                 return pageSnapshot;
@@ -1466,8 +1479,10 @@ export class PDFDancer {
         }
 
         // Fetch page snapshot from server
+        console.log('[PDFDancer._getOrFetchPageSnapshot] Fetching fresh page snapshot from server for page', pageIndex);
         const pageSnapshot = await this.getPageSnapshot(pageIndex);
         this._pageSnapshotCache.set(pageIndex, pageSnapshot);
+        console.log('[PDFDancer._getOrFetchPageSnapshot] Fetched snapshot with', pageSnapshot.elements.length, 'elements');
         return pageSnapshot;
     }
 
@@ -1486,6 +1501,7 @@ export class PDFDancer {
      * Called after any mutation operation.
      */
     private _invalidateCache(): void {
+        console.log('[PDFDancer._invalidateCache] Clearing all snapshot caches');
         this._documentSnapshotCache = null;
         this._pageSnapshotCache.clear();
         this._pagesCache = null;
