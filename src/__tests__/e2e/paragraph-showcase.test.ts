@@ -429,7 +429,7 @@ describe('Paragraph E2E Tests (Showcase)', () => {
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextHasFont('Times Roman Test', StandardFonts.TIMES_ROMAN, 14);
-        await assertions.assertParagraphIsAt('Times Roman Test', 150, 150, 0, 0);
+        await assertions.assertTextlineIsAt('Times Roman Test', 150, 150, 0, 4);
     });
 
     test('add paragraph with standard font courier', async () => {
@@ -445,7 +445,7 @@ describe('Paragraph E2E Tests (Showcase)', () => {
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextHasFont('Courier Monospace', StandardFonts.COURIER_BOLD, 12, 0);
-        await assertions.assertParagraphIsAt('Courier Monospace', 200, 200, 0);
+        await assertions.assertTextlineIsAt('Courier Monospace', 200, 200, 0, 4);
     });
 
     test('paragraph color reading', async () => {
