@@ -20,10 +20,10 @@ import {
     CommandResult,
     CreatePdfRequest,
     DeleteRequest,
+    DocumentFontInfo,
     DocumentSnapshot,
     FindRequest,
     Font,
-    DocumentFontInfo,
     FontType,
     FormFieldRef,
     Image,
@@ -56,12 +56,6 @@ import fs from "fs";
 import path from "node:path";
 
 const DEFAULT_TOLERANCE = 0.01;
-
-// Debug flag - set to true to enable timing logs
-const DEBUG =
-    (process.env.PDFDANCER_CLIENT_DEBUG ?? '').toLowerCase() === 'true' ||
-    (process.env.PDFDANCER_CLIENT_DEBUG ?? '') === '1' ||
-    (process.env.PDFDANCER_CLIENT_DEBUG ?? '').toLowerCase() === 'yes';
 
 /**
  * Configuration for retry mechanism on REST API calls.
@@ -133,8 +127,7 @@ async function fetchWithRetry(
     url: string,
     // eslint-disable-next-line no-undef
     options: RequestInit,
-    retryConfig: Required<RetryConfig>,
-    context: string = 'request'
+    retryConfig: Required<RetryConfig>
 ): Promise<Response> {
     let lastError: Error | null = null;
     let lastResponse: Response | null = null;
@@ -150,7 +143,6 @@ async function fetchWithRetry(
                 // If this is not the last attempt, wait and retry
                 if (attempt < retryConfig.maxRetries) {
                     let delay: number;
-                    let delaySource = 'exponential backoff';
 
                     // Check for Retry-After header if configured
                     if (retryConfig.respectRetryAfter) {
@@ -158,7 +150,6 @@ async function fetchWithRetry(
                         if (retryAfterDelay !== null) {
                             // Use Retry-After header value, but cap at maxDelay
                             delay = Math.min(retryAfterDelay, retryConfig.maxDelay);
-                            delaySource = 'Retry-After header';
                         } else {
                             // Fall back to exponential backoff
                             delay = calculateRetryDelay(attempt, retryConfig);
@@ -166,10 +157,6 @@ async function fetchWithRetry(
                     } else {
                         // Use exponential backoff
                         delay = calculateRetryDelay(attempt, retryConfig);
-                    }
-
-                    if (DEBUG) {
-
                     }
                     await sleep(delay);
                     continue;
@@ -185,10 +172,6 @@ async function fetchWithRetry(
             // Check if this is a network error and we should retry
             if (retryConfig.retryOnNetworkError && attempt < retryConfig.maxRetries) {
                 const delay = calculateRetryDelay(attempt, retryConfig);
-                if (DEBUG) {
-                    const errorMessage = error instanceof Error ? error.message : String(error);
-
-                }
                 await sleep(delay);
                 continue;
             }
@@ -288,77 +271,6 @@ function generateTimestamp(): string {
     return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${microseconds}Z`;
 }
 
-/**
- * Parse timestamp string, handling both microseconds and nanoseconds precision.
- * @param timestampStr Timestamp string in format YYYY-MM-DDTHH:MM:SS.fffffffZ (with 6 or 9 fractional digits)
- */
-function parseTimestamp(timestampStr: string): Date {
-    // Remove the 'Z' suffix
-    let ts = timestampStr.replace(/Z$/, '');
-
-    // Handle nanoseconds (9 digits) by truncating to milliseconds (3 digits)
-    // JavaScript's Date only supports millisecond precision
-    if (ts.includes('.')) {
-        const [datePart, fracPart] = ts.split('.');
-        // Truncate to 3 digits (milliseconds)
-        const truncatedFrac = fracPart.substring(0, 3);
-        ts = `${datePart}.${truncatedFrac}`;
-    }
-
-    return new Date(ts + 'Z');
-}
-
-/**
- * Check for X-Generated-At and X-Received-At headers and log timing information if DEBUG=true.
- *
- * Expected timestamp formats:
- * - 2025-10-24T08:49:39.161945Z (microseconds - 6 digits)
- * - 2025-10-24T08:58:45.468131265Z (nanoseconds - 9 digits)
- */
-function logGeneratedAtHeader(response: Response, method: string, path: string): void {
-    if (!DEBUG) {
-        return;
-    }
-
-    const generatedAt = response.headers.get('X-Generated-At');
-    const receivedAt = response.headers.get('X-Received-At');
-
-    if (generatedAt || receivedAt) {
-        try {
-            const logParts: string[] = [];
-            const currentTime = new Date();
-
-            // Parse and log X-Received-At
-            let receivedTime: Date | null = null;
-            if (receivedAt) {
-                receivedTime = parseTimestamp(receivedAt);
-                const timeSinceReceived = (currentTime.getTime() - receivedTime.getTime()) / 1000;
-                logParts.push(`X-Received-At: ${receivedAt}, time since received on backend: ${timeSinceReceived.toFixed(3)}s`);
-            }
-
-            // Parse and log X-Generated-At
-            let generatedTime: Date | null = null;
-            if (generatedAt) {
-                generatedTime = parseTimestamp(generatedAt);
-                const timeSinceGenerated = (currentTime.getTime() - generatedTime.getTime()) / 1000;
-                logParts.push(`X-Generated-At: ${generatedAt}, time since generated on backend: ${timeSinceGenerated.toFixed(3)}s`);
-            }
-
-            // Calculate processing time (X-Generated-At - X-Received-At)
-            if (receivedTime && generatedTime) {
-                const processingTime = (generatedTime.getTime() - receivedTime.getTime()) / 1000;
-                logParts.push(`processing time on backend: ${processingTime.toFixed(3)}s`);
-            }
-
-            if (logParts.length > 0) {
-
-            }
-        } catch (e) {
-            const errorMessage = e instanceof Error ? e.message : String(e);
-
-        }
-    }
-}
 
 // 👇 Internal view of PDFDancer methods, not exported
 interface PDFDancerInternals {
@@ -806,8 +718,6 @@ export class PDFDancer {
                 'POST /session/new'
             );
 
-            logGeneratedAtHeader(response, 'POST', '/session/new');
-
             if (!response.ok) {
                 const errorText = await response.text();
                 throw new HttpClientException(`Failed to create new PDF: ${errorText}`, response);
@@ -1019,8 +929,6 @@ export class PDFDancer {
                 'POST /session/create'
             );
 
-            logGeneratedAtHeader(response, 'POST', '/session/create');
-
             if (!response.ok) {
                 const errorMessage = await this._extractErrorMessage(response);
 
@@ -1113,8 +1021,6 @@ export class PDFDancer {
                 `${method} ${path}`
             );
 
-            logGeneratedAtHeader(response, method, path);
-
             // Handle FontNotFoundException
             if (response.status === 404) {
                 try {
@@ -1184,13 +1090,11 @@ export class PDFDancer {
 
         // Filter by object type
         if (objectType) {
-            const beforeFilter = elements.length;
             elements = elements.filter(el => el.type === objectType);
         }
 
         // Apply position-based filtering
-        const result = this._filterByPosition(elements, position);
-        return result;
+        return this._filterByPosition(elements, position);
     }
 
     /**
@@ -1511,9 +1415,7 @@ export class PDFDancer {
 
         // Filter by page index
         if (position.pageIndex !== undefined) {
-            const before = filtered.length;
             filtered = filtered.filter(el => el.position.pageIndex === position.pageIndex);
-
         }
 
         // Filter by coordinates (point containment with tolerance)
@@ -1711,9 +1613,7 @@ export class PDFDancer {
             throw new ValidationException("Path position page index is less than 0");
         }
 
-        const result = await this._addObject(path);
-
-        return result;
+        return await this._addObject(path);
     }
 
     /**
@@ -1875,8 +1775,6 @@ export class PDFDancer {
                 'POST /font/register'
             );
 
-            logGeneratedAtHeader(response, 'POST', '/font/register');
-
             if (!response.ok) {
                 const errorMessage = await this._extractErrorMessage(response);
                 throw new HttpClientException(`Font registration failed: ${errorMessage}`, response);
@@ -1994,7 +1892,7 @@ export class PDFDancer {
             const modified = statusData.modified !== undefined ? Boolean(statusData.modified) : false;
             const encodable = statusData.encodable !== undefined ? Boolean(statusData.encodable) : true;
             const fontTypeValue = typeof statusData.fontType === 'string'
-                && (Object.values(FontType) as string[]).includes(statusData.fontType)
+            && (Object.values(FontType) as string[]).includes(statusData.fontType)
                 ? statusData.fontType as FontType
                 : FontType.SYSTEM;
 
