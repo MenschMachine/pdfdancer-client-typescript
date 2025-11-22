@@ -623,8 +623,18 @@ export class PDFDancer {
         return this;
     }
 
+    /**
+     * Opens a PDF document for manipulation.
+     *
+     * @param pdfData PDF data as Uint8Array (raw bytes) or string (filepath)
+     * @param token Authentication token (optional, can use PDFDANCER_TOKEN env var)
+     * @param baseUrl Base URL for the PDFDancer API (optional)
+     * @param timeout Request timeout in milliseconds (default: 60000)
+     * @param retryConfig Retry configuration (optional, uses defaults if not specified)
+     * @returns A PDFDancer client instance
+     */
     static async open(
-        pdfData: Uint8Array,
+        pdfData: Uint8Array | string,
         token?: string,
         baseUrl?: string,
         timeout?: number,
