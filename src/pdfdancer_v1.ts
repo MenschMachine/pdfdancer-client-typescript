@@ -634,7 +634,7 @@ export class PDFDancer {
      * @returns A PDFDancer client instance
      */
     static async open(
-        pdfData: Uint8Array | string,
+        pdfData: Uint8Array | string | File | ArrayBuffer,
         token?: string,
         baseUrl?: string,
         timeout?: number,
@@ -817,7 +817,7 @@ export class PDFDancer {
         }
 
         try {
-            if (pdfData && pdfData.constructor === Uint8Array) {
+            if (pdfData && (pdfData.constructor === Uint8Array || Buffer.isBuffer(pdfData))) {
                 if (pdfData.length === 0) {
                     throw new ValidationException("PDF data cannot be empty");
                 }
