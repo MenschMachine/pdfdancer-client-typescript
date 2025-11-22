@@ -832,6 +832,7 @@ export class PDFDancer {
                 // Note: File reading will be handled asynchronously in the session creation
                 return new Uint8Array(); // Placeholder, will be replaced in _createSession
             } else if (typeof pdfData === 'string') {
+                // TODO why is this different to `instanceof File`?
                 // Handle string as filepath
                 if (!fs.existsSync(pdfData)) {
                     throw new ValidationException(`PDF file not found: ${pdfData}`);
