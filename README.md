@@ -155,7 +155,7 @@ const pdf = await PDFDancer.open(
 - Set `PDFDANCER_TOKEN` for authentication (preferred for local development and CI).
 - Override the API host with `PDFDANCER_BASE_URL` (e.g., sandbox environments).
 - Tune HTTP read timeouts via the `timeout` argument on `PDFDancer.open()` and `PDFDancer.new()`.
-- Page indexes start at `0` throughout the API.
+- Page numbers start at `1` throughout the API.
 
 ### Retry Configuration
 
