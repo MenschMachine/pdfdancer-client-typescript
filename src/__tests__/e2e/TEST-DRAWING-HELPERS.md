@@ -30,13 +30,13 @@ Draws a coordinate grid on a PDF page to help understand the coordinate system.
 - `majorGridColor`: Color for major grid lines (default: medium gray)
 - `labelColor`: Color for coordinate labels (default: dark gray)
 - `fontSize`: Font size for labels (default: 8)
-- `pageIndex`: Page to draw on (default: 0)
+- `pageNumber`: Page to draw on (default: 0)
 - `showLabels`: Whether to show coordinate labels (default: true)
 
 **Example:**
 ```typescript
 await drawCoordinateGrid(pdf, {
-    pageIndex: 0,
+    pageNumber: 0,
     spacing: 50,
     majorInterval: 100,
     showLabels: true
@@ -86,7 +86,7 @@ Draws a crosshair marker at specific coordinates.
 - `color`: Crosshair color (default: red)
 - `size`: Size of crosshair (default: 5)
 - `lineWidth`: Line width (default: 1)
-- `pageIndex`: Page index (default: 0)
+- `pageNumber`: Page index (default: 0)
 - `label`: Optional label text
 
 **Example:**
@@ -123,7 +123,7 @@ Draws an arrow between two points.
 - `color`: Arrow color (default: blue)
 - `lineWidth`: Line width (default: 1.5)
 - `arrowSize`: Size of arrow head (default: 8)
-- `pageIndex`: Page index (default: 0)
+- `pageNumber`: Page index (default: 0)
 - `label`: Optional label text
 
 **Example:**

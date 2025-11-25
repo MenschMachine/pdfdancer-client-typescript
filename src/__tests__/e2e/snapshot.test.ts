@@ -34,7 +34,7 @@ describe('Snapshot E2E Tests', () => {
             const pageSnapshot = snapshot.pages[i];
             expect(pageSnapshot).toBeInstanceOf(PageSnapshot);
             expect(pageSnapshot.pageRef).toBeDefined();
-            expect(pageSnapshot.pageRef.position.pageIndex).toBe(i);
+            expect(pageSnapshot.pageRef.position.pageNumber).toBe(i + 1);
             expect(pageSnapshot.elements).toBeDefined();
             expect(Array.isArray(pageSnapshot.elements)).toBe(true);
         }
@@ -77,15 +77,15 @@ describe('Snapshot E2E Tests', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const client = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const pageSnapshot = await client.getPageSnapshot(0);
-        
+        const pageSnapshot = await client.getPageSnapshot(1);
+
         // Verify snapshot structure
         expect(pageSnapshot).toBeDefined();
         expect(pageSnapshot).toBeInstanceOf(PageSnapshot);
-        
+
         // Verify page reference
         expect(pageSnapshot.pageRef).toBeDefined();
-        expect(pageSnapshot.pageRef.position.pageIndex).toBe(0);
+        expect(pageSnapshot.pageRef.position.pageNumber).toBe(1);
         expect(pageSnapshot.pageRef.type).toBe(ObjectType.PAGE);
         
         // Verify elements
@@ -106,7 +106,7 @@ describe('Snapshot E2E Tests', () => {
         const client = await PDFDancer.open(pdfData, token, baseUrl);
 
         // Get page snapshot filtered by images only
-        const pageSnapshot = await client.getPageSnapshot(0, [ObjectType.IMAGE]);
+        const pageSnapshot = await client.getPageSnapshot(1, [ObjectType.IMAGE]);
         
         expect(pageSnapshot).toBeDefined();
         
@@ -126,7 +126,7 @@ describe('Snapshot E2E Tests', () => {
         // Verify snapshot structure
         expect(pageSnapshot).toBeDefined();
         expect(pageSnapshot).toBeInstanceOf(PageSnapshot);
-        expect(pageSnapshot.pageRef.position.pageIndex).toBe(1);
+        expect(pageSnapshot.pageRef.position.pageNumber).toBe(1);
         expect(pageSnapshot.elements.length).toBeGreaterThan(0);
     });
 
@@ -134,7 +134,7 @@ describe('Snapshot E2E Tests', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const client = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const page = client.page(0);
+        const page = client.page(1);
         const pageSnapshot = await page.getSnapshot([ObjectType.PARAGRAPH]);
         
         expect(pageSnapshot).toBeDefined();
@@ -150,15 +150,15 @@ describe('Snapshot E2E Tests', () => {
         const client = await PDFDancer.open(pdfData, token, baseUrl);
 
         const snapshot = await client.getDocumentSnapshot();
-        
+
         // Test getPageSnapshot
-        const page0 = snapshot.getPageSnapshot(0);
-        expect(page0).toBeDefined();
-        expect(page0!.getPageIndex()).toBe(0);
-        
-        const page5 = snapshot.getPageSnapshot(5);
-        expect(page5).toBeDefined();
-        expect(page5!.getPageIndex()).toBe(5);
+        const page1 = snapshot.getPageSnapshot(1);
+        expect(page1).toBeDefined();
+        expect(page1!.getPageNumber()).toBe(1);
+
+        const page6 = snapshot.getPageSnapshot(6);
+        expect(page6).toBeDefined();
+        expect(page6!.getPageNumber()).toBe(6);
         
         // Test getAllElements
         const allElements = snapshot.getAllElements();
@@ -181,10 +181,10 @@ describe('Snapshot E2E Tests', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const client = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const pageSnapshot = await client.getPageSnapshot(0);
-        
-        // Test getPageIndex
-        expect(pageSnapshot.getPageIndex()).toBe(0);
+        const pageSnapshot = await client.getPageSnapshot(1);
+
+        // Test getPageNumber
+        expect(pageSnapshot.getPageNumber()).toBe(1);
         
         // Test getElementCount
         const elementCount = pageSnapshot.getElementCount();
@@ -245,13 +245,13 @@ describe('Snapshot E2E Tests', () => {
         const client = await PDFDancer.open(pdfData, token, baseUrl);
 
         // Get snapshot
-        const snapshot = await client.getPageSnapshot(0);
+        const snapshot = await client.getPageSnapshot(1);
         const snapshotParagraphs = snapshot.getElementsByType(ObjectType.PARAGRAPH);
-        
+
         // Get paragraphs via page client
-        const page = client.page(0);
+        const page = client.page(1);
         const paragraphs = await page.selectParagraphs();
-        
+
         // Should have same count
         expect(snapshotParagraphs.length).toBe(paragraphs.length);
     });
@@ -288,9 +288,9 @@ describe('Snapshot E2E Tests', () => {
         expect(snapshot.pages.length).toBeGreaterThan(0);
         
         // Empty pages might have no elements
-        const page0Snapshot = snapshot.getPageSnapshot(0);
-        expect(page0Snapshot).toBeDefined();
-        expect(page0Snapshot!.elements).toBeDefined();
-        expect(Array.isArray(page0Snapshot!.elements)).toBe(true);
+        const page1Snapshot = snapshot.getPageSnapshot(1);
+        expect(page1Snapshot).toBeDefined();
+        expect(page1Snapshot!.elements).toBeDefined();
+        expect(Array.isArray(page1Snapshot!.elements)).toBe(true);
     });
 });

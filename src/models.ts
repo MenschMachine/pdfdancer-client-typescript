@@ -88,7 +88,7 @@ export class Position {
     public tolerance?: number;
 
     constructor(
-        public pageIndex?: number,
+        public pageNumber?: number,
         public shape?: ShapeType,
         public mode?: PositionMode,
         public boundingRect?: BoundingRect,
@@ -100,22 +100,22 @@ export class Position {
     /**
      * Creates a position specification for an entire page. Page indexes start with 0.
      */
-    static atPage(pageIndex: number): Position {
-        return new Position(pageIndex, undefined, PositionMode.CONTAINS);
+    static atPage(pageNumber: number): Position {
+        return new Position(pageNumber, undefined, PositionMode.CONTAINS);
     }
 
     /**
      * Creates a position specification for specific coordinates on a page.
      * @param tolerance Optional tolerance in points for coordinate matching (default: 0)
      */
-    static atPageCoordinates(pageIndex: number, x: number, y: number, tolerance: number = 0): Position {
-        const pos = Position.atPage(pageIndex).atCoordinates({x, y});
+    static atPageCoordinates(pageNumber: number, x: number, y: number, tolerance: number = 0): Position {
+        const pos = Position.atPage(pageNumber).atCoordinates({x, y});
         pos.tolerance = tolerance;
         return pos;
     }
 
-    static atPageWithText(pageIndex: number, text: string) {
-        return Position.atPage(pageIndex).withTextStarts(text);
+    static atPageWithText(pageNumber: number, text: string) {
+        return Position.atPage(pageNumber).withTextStarts(text);
     }
 
     /**
@@ -195,7 +195,7 @@ export class Position {
         }
 
         return new Position(
-            this.pageIndex,
+            this.pageNumber,
             this.shape,
             this.mode,
             boundingRectCopy,
@@ -1019,7 +1019,7 @@ export class CreatePdfRequest {
  */
 export class AddPageRequest {
     constructor(
-        public pageIndex?: number,
+        public pageNumber?: number,
         public pageSize?: PageSize,
         public orientation?: Orientation | string
     ) {
@@ -1028,8 +1028,8 @@ export class AddPageRequest {
     toDict(): Record<string, any> {
         const payload: Record<string, any> = {};
 
-        if (this.pageIndex !== undefined) {
-            payload.pageIndex = this.pageIndex;
+        if (this.pageNumber !== undefined) {
+            payload.pageNumber = this.pageNumber;
         }
 
         if (this.orientation !== undefined && this.orientation !== null) {
@@ -1053,18 +1053,19 @@ export class AddPageRequest {
 
 /**
  * Request object for moving a page within the PDF.
+ * Uses 1-based page numbering.
  */
 export class MovePageRequest {
     constructor(
-        public fromPageIndex: number,
-        public toPageIndex: number
+        public fromPage: number,
+        public toPage: number
     ) {
     }
 
     toDict(): Record<string, any> {
         return {
-            fromPageIndex: this.fromPageIndex,
-            toPageIndex: this.toPageIndex
+            fromPage: this.fromPage,
+            toPage: this.toPage
         };
     }
 }
@@ -1116,8 +1117,8 @@ export class PageSnapshot {
     /**
      * Gets the page index from the page reference.
      */
-    getPageIndex(): number | undefined {
-        return this.pageRef.position.pageIndex;
+    getPageNumber(): number | undefined {
+        return this.pageRef.position.pageNumber;
     }
 
     /**
@@ -1142,8 +1143,8 @@ export class DocumentSnapshot {
     /**
      * Gets the snapshot for a specific page by index.
      */
-    getPageSnapshot(pageIndex: number): PageSnapshot | undefined {
-        return this.pages.find(page => page.getPageIndex() === pageIndex);
+    getPageSnapshot(pageNumber: number): PageSnapshot | undefined {
+        return this.pages.find(page => page.getPageNumber() === pageNumber);
     }
 
     /**
@@ -1171,7 +1172,7 @@ export class DocumentSnapshot {
 // Helper function to convert Position to dictionary for JSON serialization
 function positionToDict(position: Position): Record<string, any> {
     const result: Record<string, any> = {
-        pageIndex: position.pageIndex,
+        pageNumber: position.pageNumber,
         textStartsWith: position.textStartsWith,
         textPattern: position.textPattern,
         name: position.name

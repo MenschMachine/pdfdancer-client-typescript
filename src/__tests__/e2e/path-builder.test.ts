@@ -17,7 +17,7 @@ describe('PathBuilder E2E Tests (New API)', () => {
             .lineTo(200, 200)
             .strokeColor(new Color(0, 0, 0))
             .strokeWidth(2)
-            .at(0, 100, 100)
+            .at(1, 100, 100)
             .add();
 
         // Verify the path was added
@@ -30,7 +30,7 @@ describe('PathBuilder E2E Tests (New API)', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         // Create a path with multiple line segments
-        await pdf.page(0).newPath()
+        await pdf.page(1).newPath()
             .moveTo(50, 50)
             .lineTo(150, 50)
             .lineTo(150, 150)
@@ -41,7 +41,7 @@ describe('PathBuilder E2E Tests (New API)', () => {
             .at(50, 50)
             .add();
 
-        const paths = await pdf.page(0).selectPaths();
+        const paths = await pdf.page(1).selectPaths();
         expect(paths.length).toBeGreaterThan(0);
     });
 
@@ -55,7 +55,7 @@ describe('PathBuilder E2E Tests (New API)', () => {
             .bezierTo(150, 50, 250, 150, 300, 100)
             .strokeColor(new Color(0, 0, 255))
             .strokeWidth(2)
-            .at(0, 100, 100)
+            .at(1, 100, 100)
             .add();
 
         const paths = await pdf.selectPaths();
@@ -73,7 +73,7 @@ describe('PathBuilder E2E Tests (New API)', () => {
             .strokeColor(new Color(0, 0, 0))
             .strokeWidth(2)
             .dashPattern([5, 5])  // 5 units on, 5 units off
-            .at(0, 100, 100)
+            .at(1, 100, 100)
             .add();
 
         const paths = await pdf.selectPaths();
@@ -94,7 +94,7 @@ describe('PathBuilder E2E Tests (New API)', () => {
             .fillColor(new Color(255, 200, 200))  // Light red fill
             .strokeColor(new Color(255, 0, 0))     // Red stroke
             .strokeWidth(2)
-            .at(0, 100, 100)
+            .at(1, 100, 100)
             .add();
 
         const paths = await pdf.selectPaths();
@@ -122,7 +122,7 @@ describe('PathBuilder E2E Tests (New API)', () => {
         // Try to add path without any segments
         await expect(async () => {
             await pdf.newPath()
-                .at(0, 0, 0)
+                .at(1, 0, 0)
                 .add();
         }).rejects.toThrow(/No path segments defined/);
     });
@@ -135,7 +135,7 @@ describe('PathBuilder E2E Tests (New API)', () => {
         await expect(async () => {
             await pdf.newPath()
                 .lineTo(200, 200)
-                .at(0, 0, 0)
+                .at(1, 0, 0)
                 .add();
         }).rejects.toThrow(/No current point set/);
     });

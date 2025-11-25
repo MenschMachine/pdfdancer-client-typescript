@@ -43,12 +43,12 @@ describe('Form E2E Tests (v2 API)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('form-xobject-example.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        // Page 0, position (0,0) — expect no forms
-        let forms = await pdf.page(0).selectFormsAt(0, 0);
+        // Page 1, position (0,0) — expect no forms
+        let forms = await pdf.page(1).selectFormsAt(0, 0);
         expect(forms).toHaveLength(0);
 
-        // Page 0, position (321,601) — expect a form
-        forms = await pdf.page(0).selectFormsAt(321, 601, 1);
+        // Page 1, position (321,601) — expect a form
+        forms = await pdf.page(1).selectFormsAt(321, 601, 1);
         expect(forms).toHaveLength(1);
         expect(forms[0].internalId).toBe('FORM_000005');
 
@@ -62,7 +62,7 @@ describe('Form E2E Tests (v2 API)', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         // Test with results
-        const form = await pdf.page(0).selectForm();
+        const form = await pdf.page(1).selectForm();
         expect(form).not.toBeNull();
         expect(form!.internalId).toBe('FORM_000001');
 
@@ -76,12 +76,12 @@ describe('Form E2E Tests (v2 API)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('form-xobject-example.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const form = await pdf.page(0).selectFormAt(321, 601, 1);
+        const form = await pdf.page(1).selectFormAt(321, 601, 1);
         expect(form).not.toBeNull();
         expect(form!.internalId).toBe('FORM_000005');
 
         // Test with no match
-        const noMatch = await pdf.page(0).selectFormAt(0, 0);
+        const noMatch = await pdf.page(1).selectFormAt(0, 0);
         expect(noMatch).toBeNull();
     });
 });

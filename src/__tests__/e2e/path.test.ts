@@ -27,7 +27,7 @@ describe('Path E2E Tests (New API)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const paths = await pdf.page(0).selectPathsAt(80, 720);
+        const paths = await pdf.page(1).selectPathsAt(80, 720);
         expect(paths).toHaveLength(1);
         expect(paths[0].internalId).toBe('PATH_000001');
     });
@@ -36,14 +36,14 @@ describe('Path E2E Tests (New API)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        let paths = await pdf.page(0).selectPathsAt(80, 720);
+        let paths = await pdf.page(1).selectPathsAt(80, 720);
         expect(paths).toHaveLength(1);
         expect(paths[0].internalId).toBe('PATH_000001');
 
         const path = paths[0];
         await path.delete();
 
-        const remainingAtOldPos = await pdf.page(0).selectPathsAt(80, 720);
+        const remainingAtOldPos = await pdf.page(1).selectPathsAt(80, 720);
         expect(remainingAtOldPos).toHaveLength(0);
 
         const allPaths = await pdf.selectPaths();
@@ -58,17 +58,17 @@ describe('Path E2E Tests (New API)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [path] = await pdf.page(0).selectPathsAt(80, 720);
+        const [path] = await pdf.page(1).selectPathsAt(80, 720);
         const pos = path.position;
         expect(pos.getX()).toBeCloseTo(80, 1);
         expect(pos.getY()).toBeCloseTo(720, 1);
 
         await path.moveTo(50.1, 100);
 
-        const oldPos = await pdf.page(0).selectPathsAt(80, 720);
+        const oldPos = await pdf.page(1).selectPathsAt(80, 720);
         expect(oldPos).toHaveLength(0);
 
-        const moved = await pdf.page(0).selectPathsAt(50.1, 100);
+        const moved = await pdf.page(1).selectPathsAt(50.1, 100);
         const movedPos = moved[0].position;
         expect(movedPos.getX()).toBeCloseTo(50.1, 1);
         expect(movedPos.getY()).toBeCloseTo(100, 1);
@@ -88,7 +88,7 @@ describe('Path E2E Tests (New API)', () => {
         expect(pathFromPdf!.internalId).toBe('PATH_000001');
 
         // Test with page-level using position since paths may require coordinates
-        const pathOnPage = await pdf.page(0).selectPathAt(80, 720);
+        const pathOnPage = await pdf.page(1).selectPathAt(80, 720);
         expect(pathOnPage).not.toBeNull();
         expect(pathOnPage!.internalId).toBe('PATH_000001');
     });
@@ -97,12 +97,12 @@ describe('Path E2E Tests (New API)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const path = await pdf.page(0).selectPathAt(80, 720);
+        const path = await pdf.page(1).selectPathAt(80, 720);
         expect(path).not.toBeNull();
         expect(path!.internalId).toBe('PATH_000001');
 
         // Test with no match
-        const noMatch = await pdf.page(0).selectPathAt(1000, 1000);
+        const noMatch = await pdf.page(1).selectPathAt(1000, 1000);
         expect(noMatch).toBeNull();
     });
 });

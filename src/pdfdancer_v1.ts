@@ -302,7 +302,7 @@ interface PDFDancerInternals {
 
 class PageClient {
 
-    private _pageIndex: number;
+    private _pageNumber: number;
     private _client: PDFDancer;
     type: ObjectType = ObjectType.PAGE;
     position: Position;
@@ -311,11 +311,11 @@ class PageClient {
     orientation?: Orientation;
     private _internals: PDFDancerInternals;
 
-    constructor(client: PDFDancer, pageIndex: number, pageRef?: PageRef) {
+    constructor(client: PDFDancer, pageNumber: number, pageRef?: PageRef) {
         this._client = client;
-        this._pageIndex = pageIndex;
-        this.internalId = pageRef?.internalId ?? `PAGE-${this._pageIndex}`;
-        this.position = pageRef?.position ?? Position.atPage(this._pageIndex);
+        this._pageNumber = pageNumber;
+        this.internalId = pageRef?.internalId ?? `PAGE-${this._pageNumber}`;
+        this.position = pageRef?.position ?? Position.atPage(this._pageNumber);
         this.pageSize = pageRef?.pageSize;
         this.orientation = pageRef?.orientation;
         // Cast to the internal interface to get access
@@ -323,28 +323,28 @@ class PageClient {
     }
 
     async selectPathsAt(x: number, y: number, tolerance: number = 0) {
-        return this._internals.toPathObjects(await this._internals.findPaths(Position.atPageCoordinates(this._pageIndex, x, y, tolerance)));
+        return this._internals.toPathObjects(await this._internals.findPaths(Position.atPageCoordinates(this._pageNumber, x, y, tolerance)));
     }
 
     async selectPaths() {
-        return this._internals.toPathObjects(await this._internals.findPaths(Position.atPage(this._pageIndex)));
+        return this._internals.toPathObjects(await this._internals.findPaths(Position.atPage(this._pageNumber)));
     }
 
     async selectImages() {
-        return this._internals.toImageObjects(await this._internals._findImages(Position.atPage(this._pageIndex)));
+        return this._internals.toImageObjects(await this._internals._findImages(Position.atPage(this._pageNumber)));
     }
 
     async selectImagesAt(x: number, y: number, tolerance: number = 0) {
-        return this._internals.toImageObjects(await this._internals._findImages(Position.atPageCoordinates(this._pageIndex, x, y, tolerance)));
+        return this._internals.toImageObjects(await this._internals._findImages(Position.atPageCoordinates(this._pageNumber, x, y, tolerance)));
     }
 
     async delete(): Promise<boolean> {
-        return this._client.deletePage(this._pageIndex);
+        return this._client.deletePage(this._pageNumber);
     }
 
-    async moveTo(targetPageIndex: number): Promise<PageRef> {
-        const pageRef = await this._client.movePage(this._pageIndex, targetPageIndex);
-        this._pageIndex = pageRef.position.pageIndex ?? targetPageIndex;
+    async moveTo(targetPageNumber: number): Promise<PageRef> {
+        const pageRef = await this._client.movePage(this._pageNumber, targetPageNumber);
+        this._pageNumber = pageRef.position.pageNumber !== undefined ? pageRef.position.pageNumber + 1 : targetPageNumber;
         this.position = pageRef.position;
         this.internalId = pageRef.internalId;
         this.pageSize = pageRef.pageSize;
@@ -354,57 +354,57 @@ class PageClient {
 
     // noinspection JSUnusedGlobalSymbols
     async selectForms() {
-        return this._internals.toFormXObjects(await this._internals.findFormXObjects(Position.atPage(this._pageIndex)));
+        return this._internals.toFormXObjects(await this._internals.findFormXObjects(Position.atPage(this._pageNumber)));
     }
 
     async selectFormsAt(x: number, y: number, tolerance: number = 0) {
-        return this._internals.toFormXObjects(await this._internals.findFormXObjects(Position.atPageCoordinates(this._pageIndex, x, y, tolerance)));
+        return this._internals.toFormXObjects(await this._internals.findFormXObjects(Position.atPageCoordinates(this._pageNumber, x, y, tolerance)));
     }
 
     async selectFormFields() {
-        return this._internals.toFormFields(await this._internals.findFormFields(Position.atPage(this._pageIndex)));
+        return this._internals.toFormFields(await this._internals.findFormFields(Position.atPage(this._pageNumber)));
     }
 
     async selectFormFieldsAt(x: number, y: number, tolerance: number = 0) {
-        return this._internals.toFormFields(await this._internals.findFormFields(Position.atPageCoordinates(this._pageIndex, x, y, tolerance)));
+        return this._internals.toFormFields(await this._internals.findFormFields(Position.atPageCoordinates(this._pageNumber, x, y, tolerance)));
     }
 
     // noinspection JSUnusedGlobalSymbols
     async selectFormFieldsByName(fieldName: string) {
-        let pos = Position.atPage(this._pageIndex);
+        let pos = Position.atPage(this._pageNumber);
         pos.name = fieldName;
         return this._internals.toFormFields(await this._internals.findFormFields(pos));
     }
 
     async selectParagraphs() {
-        return this._internals.toParagraphObjects(await this._internals.findParagraphs(Position.atPage(this._pageIndex)));
+        return this._internals.toParagraphObjects(await this._internals.findParagraphs(Position.atPage(this._pageNumber)));
     }
 
     async selectElements(types?: ObjectType[]) {
-        const snapshot = await this._client.getPageSnapshot(this._pageIndex, types);
+        const snapshot = await this._client.getPageSnapshot(this._pageNumber, types);
         return snapshot.elements;
     }
 
     async selectParagraphsStartingWith(text: string) {
-        let pos = Position.atPage(this._pageIndex);
+        let pos = Position.atPage(this._pageNumber);
         pos.textStartsWith = text;
         return this._internals.toParagraphObjects(await this._internals.findParagraphs(pos));
     }
 
     async selectParagraphsMatching(pattern: string) {
-        let pos = Position.atPage(this._pageIndex);
+        let pos = Position.atPage(this._pageNumber);
         pos.textPattern = pattern;
         return this._internals.toParagraphObjects(await this._internals.findParagraphs(pos));
     }
 
     async selectParagraphsAt(x: number, y: number, tolerance: number = DEFAULT_TOLERANCE) {
         return this._internals.toParagraphObjects(
-            await this._internals.findParagraphs(Position.atPageCoordinates(this._pageIndex, x, y, tolerance))
+            await this._internals.findParagraphs(Position.atPageCoordinates(this._pageNumber, x, y, tolerance))
         );
     }
 
     async selectTextLinesStartingWith(text: string) {
-        let pos = Position.atPage(this._pageIndex);
+        let pos = Position.atPage(this._pageNumber);
         pos.textStartsWith = text;
         return this._internals.toTextLineObjects(await this._internals.findTextLines(pos));
     }
@@ -412,28 +412,28 @@ class PageClient {
     /**
      * Creates a new ParagraphBuilder for fluent paragraph construction.
      */
-    newParagraph(pageIndex?: number): ParagraphBuilder {
-        const targetIndex = pageIndex ?? this.position.pageIndex;
+    newParagraph(pageNumber?: number): ParagraphBuilder {
+        const targetIndex = pageNumber ?? this.position.pageNumber;
         return new ParagraphBuilder(this._client, targetIndex);
     }
 
-    newImage(pageIndex?: number) {
-        const targetIndex = pageIndex ?? this.position.pageIndex;
+    newImage(pageNumber?: number) {
+        const targetIndex = pageNumber ?? this.position.pageNumber;
         return new ImageBuilder(this._client, targetIndex);
     }
 
-    newPath(pageIndex?: number) {
-        const targetIndex = pageIndex ?? this.position.pageIndex;
+    newPath(pageNumber?: number) {
+        const targetIndex = pageNumber ?? this.position.pageNumber;
         return new PathBuilder(this._client, targetIndex);
     }
 
     async selectTextLines() {
-        return this._internals.toTextLineObjects(await this._internals.findTextLines(Position.atPage(this._pageIndex)));
+        return this._internals.toTextLineObjects(await this._internals.findTextLines(Position.atPage(this._pageNumber)));
     }
 
     // noinspection JSUnusedGlobalSymbols
     async selectTextLinesMatching(pattern: string) {
-        let pos = Position.atPage(this._pageIndex);
+        let pos = Position.atPage(this._pageNumber);
         pos.textPattern = pattern;
         return this._internals.toTextLineObjects(await this._internals.findTextLines(pos));
     }
@@ -441,7 +441,7 @@ class PageClient {
     // noinspection JSUnusedGlobalSymbols
     async selectTextLinesAt(x: number, y: number, tolerance: number = DEFAULT_TOLERANCE) {
         return this._internals.toTextLineObjects(
-            await this._internals.findTextLines(Position.atPageCoordinates(this._pageIndex, x, y, tolerance))
+            await this._internals.findTextLines(Position.atPageCoordinates(this._pageNumber, x, y, tolerance))
         );
     }
 
@@ -450,7 +450,7 @@ class PageClient {
      * Optionally filter by object types.
      */
     async getSnapshot(types?: ObjectType[]): Promise<PageSnapshot> {
-        return this._client.getPageSnapshot(this._pageIndex, types);
+        return this._client.getPageSnapshot(this._pageNumber, types);
     }
 
     // Singular convenience methods - return the first element or null
@@ -1013,7 +1013,8 @@ export class PDFDancer {
             'X-Session-Id': this._sessionId,
             'Content-Type': 'application/json',
             'X-Generated-At': generateTimestamp(),
-            'X-Fingerprint': fingerprint
+            'X-Fingerprint': fingerprint,
+            'X-API-VERSION': '1'
         };
 
         try {
@@ -1084,9 +1085,9 @@ export class PDFDancer {
         // Use snapshot-based search
         let elements: ObjectRef[];
 
-        if (position?.pageIndex !== undefined) {
+        if (position?.pageNumber !== undefined) {
             // Page-specific query - use page snapshot
-            const pageSnapshot = await this._getOrFetchPageSnapshot(position.pageIndex);
+            const pageSnapshot = await this._getOrFetchPageSnapshot(position.pageNumber);
             elements = pageSnapshot.elements;
         } else {
             // Document-wide query - use document snapshot
@@ -1168,9 +1169,9 @@ export class PDFDancer {
         // Use snapshot-based search
         let elements: ObjectRef[];
 
-        if (position?.pageIndex !== undefined) {
+        if (position?.pageNumber !== undefined) {
             // Page-specific query - use page snapshot
-            const pageSnapshot = await this._getOrFetchPageSnapshot(position.pageIndex);
+            const pageSnapshot = await this._getOrFetchPageSnapshot(position.pageNumber);
             elements = pageSnapshot.elements;
         } else {
             // Document-wide query - use document snapshot
@@ -1219,19 +1220,19 @@ export class PDFDancer {
      * Retrieves a reference to a specific page by its page index.
      * Now uses snapshot caching to avoid HTTP requests.
      */
-    private async _getPage(pageIndex: number): Promise<PageRef | null> {
-        if (pageIndex < 0) {
-            throw new ValidationException(`Page index must be >= 0, got ${pageIndex}`);
+    private async _getPage(pageNumber: number): Promise<PageRef | null> {
+        if (pageNumber < 0) {
+            throw new ValidationException(`Page index must be >= 0, got ${pageNumber}`);
         }
 
         // Try page snapshot cache first
-        if (this._pageSnapshotCache.has(pageIndex)) {
-            return this._pageSnapshotCache.get(pageIndex)!.pageRef;
+        if (this._pageSnapshotCache.has(pageNumber)) {
+            return this._pageSnapshotCache.get(pageNumber)!.pageRef;
         }
 
         // Try document snapshot cache
         if (this._documentSnapshotCache) {
-            const pageSnapshot = this._documentSnapshotCache.getPageSnapshot(pageIndex);
+            const pageSnapshot = this._documentSnapshotCache.getPageSnapshot(pageNumber);
             if (pageSnapshot) {
                 return pageSnapshot.pageRef;
             }
@@ -1239,42 +1240,50 @@ export class PDFDancer {
 
         // Fetch document snapshot to get page (this will cache it)
         const docSnapshot = await this._getOrFetchDocumentSnapshot();
-        const pageSnapshot = docSnapshot.getPageSnapshot(pageIndex);
+        const pageSnapshot = docSnapshot.getPageSnapshot(pageNumber);
         return pageSnapshot?.pageRef ?? null;
     }
 
     /**
-     * Moves an existing page to a new index.
+     * Moves an existing page to a new position.
+     *
+     * @param fromPage - The source page number (1-based, page 1 is first page)
+     * @param toPage - The target page number (1-based)
+     * @returns The page reference at the new position
+     * @throws ValidationException if fromPage or toPage is less than 1
      */
-    async movePage(pageIndex: number, targetPageIndex: number): Promise<PageRef> {
-        this._validatePageIndex(pageIndex, 'pageIndex');
-        this._validatePageIndex(targetPageIndex, 'targetPageIndex');
+    async movePage(fromPage: number, toPage: number): Promise<PageRef> {
+        this._validatePageNumber(fromPage, 'fromPage');
+        this._validatePageNumber(toPage, 'toPage');
 
         // Ensure the source page exists before attempting the move
-        await this._requirePageRef(pageIndex);
+        await this._requirePageRef(fromPage);
 
-        const request = new MovePageRequest(pageIndex, targetPageIndex).toDict();
+        const request = new MovePageRequest(fromPage, toPage).toDict();
         const response = await this._makeRequest('PUT', '/pdf/page/move', request);
         const success = await response.json() as boolean;
 
         if (!success) {
-            throw new HttpClientException(`Failed to move page from ${pageIndex} to ${targetPageIndex}`, response);
+            throw new HttpClientException(`Failed to move page from ${fromPage} to ${toPage}`, response);
         }
 
         // Invalidate cache after mutation
         this._invalidateCache();
 
         // Fetch the page again at its new position for up-to-date metadata
-        return await this._requirePageRef(targetPageIndex);
+        return await this._requirePageRef(toPage);
     }
 
     /**
-     * Deletes the page at the specified index.
+     * Deletes the page at the specified page number.
+     *
+     * @param pageNumber - The page number to delete (1-based, page 1 is first page)
+     * @throws ValidationException if pageNumber is less than 1
      */
-    async deletePage(pageIndex: number): Promise<boolean> {
-        this._validatePageIndex(pageIndex, 'pageIndex');
+    async deletePage(pageNumber: number): Promise<boolean> {
+        this._validatePageNumber(pageNumber, 'pageNumber');
 
-        const pageRef = await this._requirePageRef(pageIndex);
+        const pageRef = await this._requirePageRef(pageNumber);
         const result = await this._deletePage(pageRef);
 
         // Invalidate cache after mutation
@@ -1283,19 +1292,19 @@ export class PDFDancer {
         return result;
     }
 
-    private _validatePageIndex(pageIndex: number, fieldName: string): void {
-        if (!Number.isInteger(pageIndex)) {
-            throw new ValidationException(`${fieldName} must be an integer, got ${pageIndex}`);
+    private _validatePageNumber(pageNumber: number, fieldName: string): void {
+        if (!Number.isInteger(pageNumber)) {
+            throw new ValidationException(`${fieldName} must be an integer, got ${pageNumber}`);
         }
-        if (pageIndex < 0) {
-            throw new ValidationException(`${fieldName} must be >= 0, got ${pageIndex}`);
+        if (pageNumber < 1) {
+            throw new ValidationException(`${fieldName} must be >= 1 (1-based indexing), got ${pageNumber}`);
         }
     }
 
-    private async _requirePageRef(pageIndex: number): Promise<PageRef> {
-        const pageRef = await this._getPage(pageIndex);
+    private async _requirePageRef(pageNumber: number): Promise<PageRef> {
+        const pageRef = await this._getPage(pageNumber);
         if (!pageRef) {
-            throw new ValidationException(`Page not found at index ${pageIndex}`);
+            throw new ValidationException(`Page not found at page number ${pageNumber}`);
         }
         return pageRef;
     }
@@ -1338,19 +1347,20 @@ export class PDFDancer {
      * Gets a snapshot of a specific page.
      * Returns the page reference and all elements on that page.
      *
-     * @param pageIndex Zero-based page index
-     * @param types Optional array of ObjectType to filter elements by type
+     * @param pageNumber - The page number to retrieve (1-based, page 1 is first page)
+     * @param types - Optional array of ObjectType to filter elements by type
      * @returns PageSnapshot containing page information and elements
+     * @throws ValidationException if pageNumber is less than 1
      */
-    async getPageSnapshot(pageIndex: number, types?: ObjectType[]): Promise<PageSnapshot> {
-        this._validatePageIndex(pageIndex, 'pageIndex');
+    async getPageSnapshot(pageNumber: number, types?: ObjectType[]): Promise<PageSnapshot> {
+        this._validatePageNumber(pageNumber, 'pageNumber');
 
         const params: Record<string, string> = {};
         if (types && types.length > 0) {
             params.types = types.join(',');
         }
 
-        const response = await this._makeRequest('GET', `/pdf/page/${pageIndex}/snapshot`, undefined, params);
+        const response = await this._makeRequest('GET', `/pdf/page/${pageNumber}/snapshot`, undefined, params);
         const data = await response.json() as any;
 
         return this._parsePageSnapshot(data);
@@ -1361,26 +1371,29 @@ export class PDFDancer {
     /**
      * Gets a page snapshot from cache or fetches it.
      * First checks page cache, then document cache, then fetches from server.
+     *
+     * @param pageNumber - 1-based page number
      */
-    private async _getOrFetchPageSnapshot(pageIndex: number): Promise<PageSnapshot> {
+    private async _getOrFetchPageSnapshot(pageNumber: number): Promise<PageSnapshot> {
         // Check page cache first
-        if (this._pageSnapshotCache.has(pageIndex)) {
-            return this._pageSnapshotCache.get(pageIndex)!;
+        if (this._pageSnapshotCache.has(pageNumber)) {
+            return this._pageSnapshotCache.get(pageNumber)!;
         }
 
         // Check if we have document snapshot and can extract the page
+        // Convert 1-based page number to 0-based index for array access
         if (this._documentSnapshotCache) {
-            const pageSnapshot = this._documentSnapshotCache.getPageSnapshot(pageIndex);
+            const pageSnapshot = this._documentSnapshotCache.getPageSnapshot(pageNumber);
             if (pageSnapshot) {
                 // Cache it for future use
-                this._pageSnapshotCache.set(pageIndex, pageSnapshot);
+                this._pageSnapshotCache.set(pageNumber, pageSnapshot);
                 return pageSnapshot;
             }
         }
 
         // Fetch page snapshot from server
-        const pageSnapshot = await this.getPageSnapshot(pageIndex);
-        this._pageSnapshotCache.set(pageIndex, pageSnapshot);
+        const pageSnapshot = await this.getPageSnapshot(pageNumber);
+        this._pageSnapshotCache.set(pageNumber, pageSnapshot);
 
         return pageSnapshot;
     }
@@ -1420,8 +1433,8 @@ export class PDFDancer {
         let filtered = elements;
 
         // Filter by page index
-        if (position.pageIndex !== undefined) {
-            filtered = filtered.filter(el => el.position.pageIndex === position.pageIndex);
+        if (position.pageNumber !== undefined) {
+            filtered = filtered.filter(el => el.position.pageNumber === position.pageNumber);
         }
 
         // Filter by coordinates (point containment with tolerance)
@@ -1592,11 +1605,11 @@ export class PDFDancer {
         if (!paragraph.getPosition()) {
             throw new ValidationException("Paragraph position is null, you need to specify a position for the new paragraph, using .at(x,y)");
         }
-        if (paragraph.getPosition()!.pageIndex === undefined) {
-            throw new ValidationException("Paragraph position page index is null");
+        if (paragraph.getPosition()!.pageNumber === undefined) {
+            throw new ValidationException("Paragraph position page number is null");
         }
-        if (paragraph.getPosition()!.pageIndex! < 0) {
-            throw new ValidationException("Paragraph position page index is less than 0");
+        if (paragraph.getPosition()!.pageNumber! < 1) {
+            throw new ValidationException("Paragraph position page number is less than 1");
         }
 
         return this._addObject(paragraph);
@@ -1612,11 +1625,11 @@ export class PDFDancer {
         if (!path.getPosition()) {
             throw new ValidationException("Path position is null, you need to specify a position for the new path, using .at(x,y)");
         }
-        if (path.getPosition()!.pageIndex === undefined) {
-            throw new ValidationException("Path position page index is null");
+        if (path.getPosition()!.pageNumber === undefined) {
+            throw new ValidationException("Path position page number is null");
         }
-        if (path.getPosition()!.pageIndex! < 0) {
-            throw new ValidationException("Path position page index is less than 0");
+        if (path.getPosition()!.pageNumber! < 1) {
+            throw new ValidationException("Path position page number is less than 1");
         }
 
         return await this._addObject(path);
@@ -2028,7 +2041,7 @@ export class PDFDancer {
     private _parsePosition(posData: any): Position {
 
         const position = new Position();
-        position.pageIndex = posData.pageIndex;
+        position.pageNumber = posData.pageNumber;
         position.textStartsWith = posData.textStartsWith;
 
 
@@ -2098,9 +2111,9 @@ export class PDFDancer {
             for (const elementData of data.elements) {
                 const element = this._parseObjectRef(elementData);
 
-                // If the element's position doesn't have a pageIndex, inherit it from the page
-                if (element.position && element.position.pageIndex === undefined) {
-                    element.position.pageIndex = pageRef.position.pageIndex;
+                // If the element's position doesn't have a pageNumber, inherit it from the page
+                if (element.position && element.position.pageNumber === undefined) {
+                    element.position.pageNumber = pageRef.position.pageNumber;
 
                 }
 
@@ -2126,32 +2139,40 @@ export class PDFDancer {
         return objectRefs.map(ref => ImageObject.fromRef(this, ref));
     }
 
-    newImage(pageIndex?: number) {
-        return new ImageBuilder(this, pageIndex);
+    newImage(pageNumber?: number) {
+        return new ImageBuilder(this, pageNumber);
     }
 
-    newParagraph(pageIndex?: number) {
-        return new ParagraphBuilder(this, pageIndex);
+    newParagraph(pageNumber?: number) {
+        return new ParagraphBuilder(this, pageNumber);
     }
 
-    newPath(pageIndex?: number) {
-        return new PathBuilder(this, pageIndex);
+    newPath(pageNumber?: number) {
+        return new PathBuilder(this, pageNumber);
     }
 
     newPage() {
         return new PageBuilder(this);
     }
 
-    page(pageIndex: number) {
-        if (pageIndex < 0) {
-            throw new ValidationException(`Page index must be >= 0, got ${pageIndex}`);
+    /**
+     * Creates a client for working with a specific page.
+     *
+     * @param pageNumber - The page number (1-based, page 1 is first page)
+     * @returns A PageClient for the specified page
+     * @throws ValidationException if pageNumber is less than 1
+     */
+    page(pageNumber: number) {
+        if (pageNumber < 1) {
+            throw new ValidationException(`Page number must be >= 1 (1-based indexing), got ${pageNumber}`);
         }
-        return new PageClient(this, pageIndex);
+        return new PageClient(this, pageNumber);
     }
 
     async pages() {
         const pageRefs = await this.getPages();
-        return pageRefs.map((pageRef, pageIndex) => new PageClient(this, pageIndex, pageRef));
+        // Page numbers are 1-based
+        return pageRefs.map((pageRef, index) => new PageClient(this, index + 1, pageRef));
     }
 
     private toFormFields(objectRefs: FormFieldRef[]) {

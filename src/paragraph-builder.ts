@@ -58,12 +58,12 @@ export class ParagraphBuilder {
     private _originalFont?: Font;
     private _originalColor?: Color;
     private _positionChanged = false;
-    private _pageIndex?: number;
+    private _pageNumber?: number;
 
     private _pending: Promise<unknown>[] = [];
     private _registeringFont = false;
 
-    constructor(private readonly _client: PDFDancer, objectRefOrPageIndex?: TextObjectRef | number) {
+    constructor(private readonly _client: PDFDancer, objectRefOrPageNumber?: TextObjectRef | number) {
         if (!_client) {
             throw new ValidationException("Client cannot be null");
         }
@@ -71,10 +71,10 @@ export class ParagraphBuilder {
         this._paragraph = new Paragraph();
         this._internals = this._client as unknown as PDFDancerInternals;
 
-        if (objectRefOrPageIndex instanceof TextObjectRef) {
-            this.target(objectRefOrPageIndex);
-        } else if (typeof objectRefOrPageIndex === 'number') {
-            this._pageIndex = objectRefOrPageIndex;
+        if (objectRefOrPageNumber instanceof TextObjectRef) {
+            this.target(objectRefOrPageNumber);
+        } else if (typeof objectRefOrPageNumber === 'number') {
+            this._pageNumber = objectRefOrPageNumber;
         }
     }
 
@@ -121,8 +121,8 @@ export class ParagraphBuilder {
         if (position && !this._paragraph.getPosition()) {
             this._paragraph.setPosition(clonePosition(position)!);
         }
-        if (position?.pageIndex !== undefined) {
-            this._pageIndex = position.pageIndex;
+        if (position?.pageNumber !== undefined) {
+            this._pageNumber = position.pageNumber;
         }
     }
 
@@ -134,8 +134,8 @@ export class ParagraphBuilder {
         if (objectRef.position) {
             this.setOriginalParagraphPosition(objectRef.position);
         }
-        if (objectRef.position?.pageIndex !== undefined) {
-            this._pageIndex = objectRef.position.pageIndex;
+        if (objectRef.position?.pageNumber !== undefined) {
+            this._pageNumber = objectRef.position.pageNumber;
         }
         return this;
     }
@@ -234,12 +234,12 @@ export class ParagraphBuilder {
             position = clonePosition(this._targetObjectRef.position);
         }
 
-        const pageIndex = position?.pageIndex ?? this._pageIndex;
-        if (pageIndex === undefined) {
+        const pageNumber = position?.pageNumber ?? this._pageNumber;
+        if (pageNumber === undefined) {
             throw new ValidationException("Paragraph position must include a page index to move");
         }
 
-        this._paragraph.setPosition(Position.atPageCoordinates(pageIndex, x, y));
+        this._paragraph.setPosition(Position.atPageCoordinates(pageNumber, x, y));
         this._positionChanged = true;
         return this;
     }
@@ -250,29 +250,29 @@ export class ParagraphBuilder {
         }
         this._paragraph.setPosition(clonePosition(position)!);
         this._positionChanged = true;
-        if (position.pageIndex !== undefined) {
-            this._pageIndex = position.pageIndex;
+        if (position.pageNumber !== undefined) {
+            this._pageNumber = position.pageNumber;
         }
         return this;
     }
 
     at(x: number, y: number): this;
-    at(pageIndex: number, x: number, y: number): this;
-    at(pageIndexOrX: number, xOrY: number, maybeY?: number): this {
+    at(pageNumber: number, x: number, y: number): this;
+    at(pageNumberOrX: number, xOrY: number, maybeY?: number): this {
         if (maybeY === undefined) {
-            const pageIndex = this._pageIndex ?? this._paragraph.getPosition()?.pageIndex;
-            if (pageIndex === undefined) {
+            const pageNumber = this._pageNumber ?? this._paragraph.getPosition()?.pageNumber;
+            if (pageNumber === undefined) {
                 throw new ValidationException("Page index must be provided before calling at(x, y)");
             }
-            return this._setPosition(pageIndex, pageIndexOrX, xOrY);
+            return this._setPosition(pageNumber, pageNumberOrX, xOrY);
         }
 
-        return this._setPosition(pageIndexOrX, xOrY, maybeY);
+        return this._setPosition(pageNumberOrX, xOrY, maybeY);
     }
 
-    private _setPosition(pageIndex: number, x: number, y: number): this {
-        this._pageIndex = pageIndex;
-        return this.atPosition(Position.atPageCoordinates(pageIndex, x, y));
+    private _setPosition(pageNumber: number, x: number, y: number): this {
+        this._pageNumber = pageNumber;
+        return this.atPosition(Position.atPageCoordinates(pageNumber, x, y));
     }
 
     addTextLine(textLine: TextLine | TextObjectRef | string): this {
@@ -607,15 +607,15 @@ export class ParagraphBuilder {
             return undefined;
         }
 
-        const pageIndex = paragraphPosition.pageIndex;
+        const pageNumber = paragraphPosition.pageNumber;
         const baseX = paragraphPosition.getX();
         const baseY = paragraphPosition.getY();
-        if (pageIndex === undefined || baseX === undefined || baseY === undefined) {
+        if (pageNumber === undefined || baseX === undefined || baseY === undefined) {
             return undefined;
         }
 
         const offset = lineIndex * this._calculateBaselineDistance(spacingFactor);
-        return Position.atPageCoordinates(pageIndex, baseX, baseY + offset);
+        return Position.atPageCoordinates(pageNumber, baseX, baseY + offset);
     }
 
     private _calculateBaselineDistance(spacingFactor: number): number {

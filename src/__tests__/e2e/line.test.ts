@@ -38,7 +38,7 @@ describe('Text Line E2E Tests (v2 API)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const lines = await pdf.page(1).selectTextLines();
+        const lines = await pdf.page(2).selectTextLines();
         expect(lines).toHaveLength(26);
 
         const line = lines[0];
@@ -50,7 +50,7 @@ describe('Text Line E2E Tests (v2 API)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const lines = await pdf.page(0).selectTextLinesStartingWith('the complete');
+        const lines = await pdf.page(1).selectTextLinesStartingWith('the complete');
         expect(lines).toHaveLength(1);
 
         const line = lines[0];
@@ -64,10 +64,10 @@ describe('Text Line E2E Tests (v2 API)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [line] = await pdf.page(0).selectTextLinesStartingWith('The Complete');
+        const [line] = await pdf.page(1).selectTextLinesStartingWith('The Complete');
         await line.delete();
 
-        const remaining = await pdf.page(0).selectTextLinesStartingWith('The Complete');
+        const remaining = await pdf.page(1).selectTextLinesStartingWith('The Complete');
         expect(remaining).toHaveLength(0);
 
         // Save PDF to verify operation
@@ -87,38 +87,38 @@ describe('Text Line E2E Tests (v2 API)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [line] = await pdf.page(0).selectTextLinesStartingWith('The Complete');
+        const [line] = await pdf.page(1).selectTextLinesStartingWith('The Complete');
         let newX = line.position!.getX()! + 100;
         let newY = line.position!.getY()!;
         await line.moveTo(newX, newY);
 
-        const movedPara = await pdf.page(0).selectTextLinesAt(newX, newY);
+        const movedPara = await pdf.page(1).selectTextLinesAt(newX, newY);
         expect(movedPara.length).toBeGreaterThan(0);
         const assertions = await PDFAssertions.create(pdf);
-        await assertions.assertTextlineIsAt('The Complete', newX, newY, 0, 0.25);
+        await assertions.assertTextlineIsAt('The Complete', newX, newY, 1, 0.25);
     });
 
     test('modify line', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [line] = await pdf.page(0).selectTextLinesStartingWith('The Complete');
+        const [line] = await pdf.page(1).selectTextLinesStartingWith('The Complete');
         const result = await line.edit().text(' replaced ').apply();
         expect(result.success).toBe(true);
 
-        const stillOld = await pdf.page(0).selectParagraphsStartingWith('The Complete');
+        const stillOld = await pdf.page(1).selectParagraphsStartingWith('The Complete');
         expect(stillOld).toHaveLength(0);
 
-        const lines = await pdf.page(0).selectTextLinesMatching('.*replaced.*');
+        const lines = await pdf.page(1).selectTextLinesMatching('.*replaced.*');
         expect(lines.length).toBeGreaterThan(0);
         expect(lines[0].objectRef().status).toBeDefined();
         expect(lines[0].objectRef().status?.getFontType()).toBe(FontType.EMBEDDED);
         expect(lines[0].objectRef().status?.isModified()).toBe(true);
 
-        const replaced = await pdf.page(0).selectParagraphsStartingWith(' replaced ');
+        const replaced = await pdf.page(1).selectParagraphsStartingWith(' replaced ');
         expect(replaced.length).toBeGreaterThan(0);
 
-        const containingParas = await pdf.page(0).selectParagraphsStartingWith(' replaced ');
+        const containingParas = await pdf.page(1).selectParagraphsStartingWith(' replaced ');
         expect(containingParas.length).toBeGreaterThan(0);
 
         const assertions = await PDFAssertions.create(pdf);
@@ -131,7 +131,7 @@ describe('Text Line E2E Tests (v2 API)', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         // Test with results
-        const line = await pdf.page(1).selectTextLine();
+        const line = await pdf.page(2).selectTextLine();
         expect(line).not.toBeNull();
         expect(line!.internalId).toBe('TEXTLINE_000005');
 
@@ -150,12 +150,12 @@ describe('Text Line E2E Tests (v2 API)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const line = await pdf.page(0).selectTextLineStartingWith('the complete');
+        const line = await pdf.page(1).selectTextLineStartingWith('the complete');
         expect(line).not.toBeNull();
         expect(line!.internalId).toBe('TEXTLINE_000002');
 
         // Test with no match
-        const noMatch = await pdf.page(0).selectTextLineStartingWith('NoMatch');
+        const noMatch = await pdf.page(1).selectTextLineStartingWith('NoMatch');
         expect(noMatch).toBeNull();
     });
 
@@ -163,12 +163,12 @@ describe('Text Line E2E Tests (v2 API)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const line = await pdf.page(0).selectTextLineMatching('.*Complete.*');
+        const line = await pdf.page(1).selectTextLineMatching('.*Complete.*');
         expect(line).not.toBeNull();
         expect(line!.internalId).toBe('TEXTLINE_000002');
 
         // Test with no match
-        const noMatch = await pdf.page(0).selectTextLineMatching('.*NOT FOUND.*');
+        const noMatch = await pdf.page(1).selectTextLineMatching('.*NOT FOUND.*');
         expect(noMatch).toBeNull();
     });
 
@@ -176,12 +176,12 @@ describe('Text Line E2E Tests (v2 API)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const line = await pdf.page(0).selectTextLineAt(54, 606, 10);
+        const line = await pdf.page(1).selectTextLineAt(54, 606, 10);
         expect(line).not.toBeNull();
         expect(line!.internalId).toBe('TEXTLINE_000002');
 
         // Test with no match
-        const noMatch = await pdf.page(0).selectTextLineAt(1000, 1000, 1);
+        const noMatch = await pdf.page(1).selectTextLineAt(1000, 1000, 1);
         expect(noMatch).toBeNull();
     });
 });

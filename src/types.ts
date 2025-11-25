@@ -42,7 +42,7 @@ export class BaseObject<TRef extends ObjectRef = ObjectRef> {
     }
 
     async moveTo(x: number, y: number) {
-        return this._internals.move(this.ref(), Position.atPageCoordinates(this.position.pageIndex!, x, y));
+        return this._internals.move(this.ref(), Position.atPageCoordinates(this.position.pageNumber!, x, y));
     }
 }
 
@@ -269,11 +269,11 @@ export class ParagraphEditSession {
         );
 
         if (onlyMove) {
-            const pageIndex = this._objectRef.position.pageIndex;
-            if (pageIndex === undefined) {
-                throw new ValidationException("Paragraph position must include a page index to move");
+            const pageNumber = this._objectRef.position.pageNumber;
+            if (pageNumber === undefined) {
+                throw new ValidationException("Paragraph position must include a page number to move");
             }
-            const position = Position.atPageCoordinates(pageIndex, this._newPosition!.x, this._newPosition!.y);
+            const position = Position.atPageCoordinates(pageNumber, this._newPosition!.x, this._newPosition!.y);
             const result = await this._internals.move(this._objectRef, position);
             this._hasChanges = false;
             return result;

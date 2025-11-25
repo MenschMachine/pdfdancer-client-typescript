@@ -27,7 +27,7 @@ async function visualDebuggingExample() {
 
     // Draw coordinate grid first for reference
     await drawCoordinateGrid(pdf, {
-        pageIndex: 0,
+        pageNumber: 0,
         spacing: 50,
         majorInterval: 100
     });
