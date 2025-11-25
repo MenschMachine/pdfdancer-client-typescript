@@ -36,8 +36,8 @@ export interface GridOptions {
     labelColor?: Color;
     /** Font size for labels (default: 8) */
     fontSize?: number;
-    /** Page number to draw on (default: 0) */
-    pageNumber?: number = 1;
+    /** Page number to draw on (default: 1) */
+    pageNumber?: number;
     /** Show labels (default: true) */
     showLabels?: boolean;
 }
