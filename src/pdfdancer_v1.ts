@@ -48,6 +48,7 @@ import {
 } from './models';
 import {ParagraphBuilder} from './paragraph-builder';
 import {PageBuilder} from './page-builder';
+import {loadEnv} from './env-loader';
 import {FormFieldObject, FormXObject, ImageObject, ParagraphObject, PathObject, TextLineObject} from "./types";
 import {ImageBuilder} from "./image-builder";
 import {PathBuilder} from "./path-builder";
@@ -640,6 +641,8 @@ export class PDFDancer {
         timeout?: number,
         retryConfig?: RetryConfig
     ): Promise<PDFDancer> {
+        loadEnv();
+
         const resolvedBaseUrl =
             baseUrl ??
             process.env.PDFDANCER_BASE_URL ??
@@ -678,6 +681,8 @@ export class PDFDancer {
         timeout?: number,
         retryConfig?: RetryConfig
     ): Promise<PDFDancer> {
+        loadEnv();
+
         const resolvedBaseUrl =
             baseUrl ??
             process.env.PDFDANCER_BASE_URL ??
