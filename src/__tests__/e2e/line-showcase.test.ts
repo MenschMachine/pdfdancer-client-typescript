@@ -44,7 +44,7 @@ describe('Text Line E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const lines = await pdf.page(0).selectTextLinesStartingWith(SAMPLE_PARAGRAPH);
+        const lines = await pdf.page(1).selectTextLinesStartingWith(SAMPLE_PARAGRAPH);
         expect(lines.length).toBe(1);
 
         const line = lines[0];
@@ -57,10 +57,10 @@ describe('Text Line E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [line] = await pdf.page(0).selectTextLinesStartingWith(SAMPLE_PARAGRAPH);
+        const [line] = await pdf.page(1).selectTextLinesStartingWith(SAMPLE_PARAGRAPH);
         await line.delete();
 
-        const remaining = await pdf.page(0).selectTextLinesStartingWith(SAMPLE_PARAGRAPH);
+        const remaining = await pdf.page(1).selectTextLinesStartingWith(SAMPLE_PARAGRAPH);
         expect(remaining.length).toBe(0);
 
         const assertions = await PDFAssertions.create(pdf);
@@ -71,14 +71,14 @@ describe('Text Line E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [line] = await pdf.page(0).selectTextLinesStartingWith(SAMPLE_PARAGRAPH);
+        const [line] = await pdf.page(1).selectTextLinesStartingWith(SAMPLE_PARAGRAPH);
         const pos = line.position;
         const newX = pos.getX()! + 100;
         const newY = pos.getY()! + 18;
 
         await line.moveTo(newX, newY);
 
-        const moved = (await pdf.page(0).selectTextLinesAt(newX, newY, 1))[0];
+        const moved = (await pdf.page(1).selectTextLinesAt(newX, newY, 1))[0];
         const status = moved.objectRef().status;
         expect(status).toBeDefined();
         expect(status?.getFontType()).toBe(FontType.EMBEDDED);
@@ -92,13 +92,13 @@ describe('Text Line E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [line] = await pdf.page(0).selectTextLinesStartingWith(SAMPLE_PARAGRAPH);
+        const [line] = await pdf.page(1).selectTextLinesStartingWith(SAMPLE_PARAGRAPH);
         await line.edit().text(' replaced ').apply();
 
-        expect(await pdf.page(0).selectTextLinesStartingWith(SAMPLE_PARAGRAPH)).toHaveLength(0);
-        expect(await pdf.page(0).selectParagraphsStartingWith(' replaced ')).not.toHaveLength(0);
+        expect(await pdf.page(1).selectTextLinesStartingWith(SAMPLE_PARAGRAPH)).toHaveLength(0);
+        expect(await pdf.page(1).selectParagraphsStartingWith(' replaced ')).not.toHaveLength(0);
 
-        const lines = await pdf.page(0).selectTextLinesStartingWith(' replaced ');
+        const lines = await pdf.page(1).selectTextLinesStartingWith(' replaced ');
         expect(lines.length).toBeGreaterThan(0);
         const status = lines[0].objectRef().status;
         expect(status).toBeDefined();

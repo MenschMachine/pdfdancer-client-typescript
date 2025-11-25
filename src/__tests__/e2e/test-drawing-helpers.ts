@@ -36,8 +36,8 @@ export interface GridOptions {
     labelColor?: Color;
     /** Font size for labels (default: 8) */
     fontSize?: number;
-    /** Page index to draw on (default: 0) */
-    pageIndex?: number;
+    /** Page number to draw on (default: 0) */
+    pageNumber?: number = 1;
     /** Show labels (default: true) */
     showLabels?: boolean;
 }
@@ -64,7 +64,7 @@ export interface BoundingBoxOptions {
  * @example
  * ```typescript
  * await drawCoordinateGrid(pdf, {
- *   pageIndex: 0,
+ *   pageNumber: 1,
  *   spacing: 50,
  *   majorInterval: 100
  * });
@@ -82,15 +82,15 @@ export async function drawCoordinateGrid(pdf: PDFDancer, options: GridOptions = 
         majorGridColor = new Color(180, 180, 180),
         labelColor = new Color(100, 100, 100),
         fontSize = 8,
-        pageIndex = 0,
+        pageNumber = 1,
         showLabels = true
     } = options;
 
     // Get page size if available and not explicitly set
     if (options.endX === undefined || options.endY === undefined) {
         const pages = await pdf.pages();
-        if (pages.length > pageIndex) {
-            const pageSize = pages[pageIndex].pageSize;
+        if (pages.length >= pageNumber) {
+            const pageSize = pages[pageNumber - 1].pageSize;
             if (pageSize) {
                 endX = options.endX ?? pageSize.width ?? endX;
                 endY = options.endY ?? pageSize.height ?? endY;
@@ -109,7 +109,7 @@ export async function drawCoordinateGrid(pdf: PDFDancer, options: GridOptions = 
             .lineTo(x, endY)
             .strokeColor(color)
             .strokeWidth(width)
-            .at(pageIndex, x, startY)
+            .at(pageNumber, x, startY)
             .add();
 
         // Add labels for major lines
@@ -117,7 +117,7 @@ export async function drawCoordinateGrid(pdf: PDFDancer, options: GridOptions = 
             await pdf.newParagraph()
                 .text(`${x}`, labelColor)
                 .font(StandardFonts.HELVETICA, fontSize)
-                .at(pageIndex, x - 10, startY + 5)
+                .at(pageNumber, x - 10, startY + 5)
                 .add();
         }
     }
@@ -133,7 +133,7 @@ export async function drawCoordinateGrid(pdf: PDFDancer, options: GridOptions = 
             .lineTo(endX, y)
             .strokeColor(color)
             .strokeWidth(width)
-            .at(pageIndex, startX, y)
+            .at(pageNumber, startX, y)
             .add();
 
         // Add labels for major lines
@@ -141,7 +141,7 @@ export async function drawCoordinateGrid(pdf: PDFDancer, options: GridOptions = 
             await pdf.newParagraph()
                 .text(`${y}`, labelColor)
                 .font(StandardFonts.HELVETICA, fontSize)
-                .at(pageIndex, startX + 5, y - 2)
+                .at(pageNumber, startX + 5, y - 2)
                 .add();
         }
     }
@@ -153,7 +153,7 @@ export async function drawCoordinateGrid(pdf: PDFDancer, options: GridOptions = 
             .lineTo(5, 0)
             .strokeColor(new Color(255, 0, 0))
             .strokeWidth(2)
-            .at(pageIndex, -5, 0)
+            .at(pageNumber, -5, 0)
             .add();
 
         await pdf.newPath()
@@ -161,7 +161,7 @@ export async function drawCoordinateGrid(pdf: PDFDancer, options: GridOptions = 
             .lineTo(0, 5)
             .strokeColor(new Color(255, 0, 0))
             .strokeWidth(2)
-            .at(pageIndex, 0, -5)
+            .at(pageNumber, 0, -5)
             .add();
     }
 }
@@ -199,7 +199,7 @@ export async function drawBoundingBox(
     }
 
     const rect = position.boundingRect;
-    const pageIndex = position.pageIndex ?? 0;
+    const pageNumber = position.pageNumber ?? 1;
     const x = rect.x;
     const y = rect.y;
     const width = rect.width;
@@ -214,7 +214,7 @@ export async function drawBoundingBox(
         .lineTo(x, y)
         .strokeColor(color)
         .strokeWidth(lineWidth)
-        .at(pageIndex, x, y);
+        .at(pageNumber, x, y);
 
     if (dashPattern) {
         pathBuilder.dashPattern(dashPattern);
@@ -238,7 +238,7 @@ export async function drawBoundingBox(
                 .lineTo(corner.x + cornerSize, corner.y)
                 .strokeColor(color)
                 .strokeWidth(lineWidth + 0.5)
-                .at(pageIndex, corner.x - cornerSize, corner.y)
+                .at(pageNumber, corner.x - cornerSize, corner.y)
                 .add();
 
             // Vertical line
@@ -247,7 +247,7 @@ export async function drawBoundingBox(
                 .lineTo(corner.x, corner.y + cornerSize)
                 .strokeColor(color)
                 .strokeWidth(lineWidth + 0.5)
-                .at(pageIndex, corner.x, corner.y - cornerSize)
+                .at(pageNumber, corner.x, corner.y - cornerSize)
                 .add();
         }
     }
@@ -261,7 +261,7 @@ export async function drawBoundingBox(
         await pdf.newParagraph()
             .text(dimensionText, color)
             .font(StandardFonts.HELVETICA, 7)
-            .at(pageIndex, labelX, labelY)
+            .at(pageNumber, labelX, labelY)
             .add();
 
         // Position label
@@ -269,7 +269,7 @@ export async function drawBoundingBox(
         await pdf.newParagraph()
             .text(positionText, color)
             .font(StandardFonts.HELVETICA, 7)
-            .at(pageIndex, x, y + height + 2)
+            .at(pageNumber, x, y + height + 2)
             .add();
     }
 }
@@ -316,7 +316,7 @@ export async function drawCrosshair(
         color?: Color;
         size?: number;
         lineWidth?: number;
-        pageIndex?: number;
+        pageNumber?: number;
         label?: string;
     } = {}
 ): Promise<void> {
@@ -324,7 +324,7 @@ export async function drawCrosshair(
         color = new Color(255, 0, 0),
         size = 5,
         lineWidth = 1,
-        pageIndex = 0,
+        pageNumber = 1,
         label
     } = options;
 
@@ -334,7 +334,7 @@ export async function drawCrosshair(
         .lineTo(x + size, y)
         .strokeColor(color)
         .strokeWidth(lineWidth)
-        .at(pageIndex, x - size, y)
+        .at(pageNumber, x - size, y)
         .add();
 
     // Vertical line
@@ -343,7 +343,7 @@ export async function drawCrosshair(
         .lineTo(x, y + size)
         .strokeColor(color)
         .strokeWidth(lineWidth)
-        .at(pageIndex, x, y - size)
+        .at(pageNumber, x, y - size)
         .add();
 
     // Circle
@@ -355,7 +355,7 @@ export async function drawCrosshair(
         .bezierTo(x + size * 0.55, y - size, x + size, y - size * 0.55, x + size, y)
         .strokeColor(color)
         .strokeWidth(lineWidth)
-        .at(pageIndex, x - size, y - size)
+        .at(pageNumber, x - size, y - size)
         .add();
 
     // Add label if provided
@@ -363,7 +363,7 @@ export async function drawCrosshair(
         await pdf.newParagraph()
             .text(label, color)
             .font(StandardFonts.HELVETICA, 8)
-            .at(pageIndex, x + size + 2, y - 3)
+            .at(pageNumber, x + size + 2, y - 3)
             .add();
     }
 }
@@ -399,7 +399,7 @@ export async function highlightText(
     }
 
     const rect = position.boundingRect;
-    const pageIndex = position.pageIndex ?? 0;
+    const pageNumber = position.pageNumber ?? 1;
 
     await pdf.newPath()
         .moveTo(rect.x - padding, rect.y - padding)
@@ -408,7 +408,7 @@ export async function highlightText(
         .lineTo(rect.x - padding, rect.y + rect.height + padding)
         .lineTo(rect.x - padding, rect.y - padding)
         .fillColor(color)
-        .at(pageIndex, rect.x - padding, rect.y - padding)
+        .at(pageNumber, rect.x - padding, rect.y - padding)
         .add();
 }
 
@@ -434,7 +434,7 @@ export async function drawArrow(
         color?: Color;
         lineWidth?: number;
         arrowSize?: number;
-        pageIndex?: number;
+        pageNumber?: number;
         label?: string;
     } = {}
 ): Promise<void> {
@@ -442,7 +442,7 @@ export async function drawArrow(
         color = new Color(0, 0, 255),
         lineWidth = 1.5,
         arrowSize = 8,
-        pageIndex = 0,
+        pageNumber = 1,
         label
     } = options;
 
@@ -452,7 +452,7 @@ export async function drawArrow(
         .lineTo(toX, toY)
         .strokeColor(color)
         .strokeWidth(lineWidth)
-        .at(pageIndex, Math.min(fromX, toX), Math.min(fromY, toY))
+        .at(pageNumber, Math.min(fromX, toX), Math.min(fromY, toY))
         .add();
 
     // Calculate arrow head angle
@@ -468,7 +468,7 @@ export async function drawArrow(
         .lineTo(leftX, leftY)
         .strokeColor(color)
         .strokeWidth(lineWidth)
-        .at(pageIndex, Math.min(toX, leftX), Math.min(toY, leftY))
+        .at(pageNumber, Math.min(toX, leftX), Math.min(toY, leftY))
         .add();
 
     // Right arrow line
@@ -480,7 +480,7 @@ export async function drawArrow(
         .lineTo(rightX, rightY)
         .strokeColor(color)
         .strokeWidth(lineWidth)
-        .at(pageIndex, Math.min(toX, rightX), Math.min(toY, rightY))
+        .at(pageNumber, Math.min(toX, rightX), Math.min(toY, rightY))
         .add();
 
     // Add label if provided
@@ -491,7 +491,7 @@ export async function drawArrow(
         await pdf.newParagraph()
             .text(label, color)
             .font(StandardFonts.HELVETICA, 8)
-            .at(pageIndex, midX + 5, midY + 5)
+            .at(pageNumber, midX + 5, midY + 5)
             .add();
     }
 }

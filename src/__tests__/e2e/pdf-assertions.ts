@@ -33,7 +33,7 @@ export class PDFAssertions {
         return new PDFAssertions(pdf);
     }
 
-    private async aggregateCounts(pageIndex?: number) {
+    private async aggregateCounts(pageNumber?: number) {
         const [paragraphs, textLines, images, paths, forms, fields] = await Promise.all([
             this.pdf.selectParagraphs(),
             this.pdf.selectLines(),
@@ -43,11 +43,11 @@ export class PDFAssertions {
             this.pdf.selectFormFields()
         ]);
 
-        const filter = <T extends { position: { pageIndex?: number } }>(items: T[]): T[] => {
-            if (pageIndex === undefined) {
+        const filter = <T extends { position: { pageNumber?: number } }>(items: T[]): T[] => {
+            if (pageNumber === undefined) {
                 return items;
             }
-            return items.filter(item => item.position.pageIndex === pageIndex);
+            return items.filter(item => item.position.pageNumber === pageNumber);
         };
 
         return {
@@ -60,8 +60,8 @@ export class PDFAssertions {
         };
     }
 
-    async assertTotalNumberOfElements(expected: number, pageIndex?: number): Promise<this> {
-        const totals = await this.aggregateCounts(pageIndex);
+    async assertTotalNumberOfElements(expected: number, pageNumber?: number): Promise<this> {
+        const totals = await this.aggregateCounts(pageNumber);
         const actual = Object.values(totals).reduce((acc, count) => acc + count, 0);
         expect(actual).toBe(expected);
         return this;
@@ -79,10 +79,10 @@ export class PDFAssertions {
         return this;
     }
 
-    async assertPageDimension(width: number, height: number, orientation?: Orientation, pageIndex = 0): Promise<this> {
+    async assertPageDimension(width: number, height: number, orientation?: Orientation, pageNumber = 1): Promise<this> {
         const pages = await this.pdf.pages();
-        expect(pageIndex).toBeLessThan(pages.length);
-        const page = pages[pageIndex];
+        expect(pageNumber).toBeLessThanOrEqual(pages.length);
+        const page = pages[pageNumber - 1];
         expect(page.pageSize?.width).toBeCloseTo(width, 6);
         expect(page.pageSize?.height).toBeCloseTo(height, 6);
         if (orientation) {
@@ -91,7 +91,7 @@ export class PDFAssertions {
         return this;
     }
 
-    async assertParagraphIsAt(text: string, x: number, y: number, page = 0, epsilon = 4): Promise<this> { // adjust epsilon for baseline vs bounding box differences
+    async assertParagraphIsAt(text: string, x: number, y: number, page = 1, epsilon = 4): Promise<this> { // adjust epsilon for baseline vs bounding box differences
         const paragraphs = await this.pdf.page(page).selectParagraphsMatching(`.*${text}.*`);
         expect(paragraphs.length).toBeGreaterThan(0);
         const reference = paragraphs[0].objectRef();
@@ -103,7 +103,7 @@ export class PDFAssertions {
         return this;
     }
 
-    async assertTextHasFont(text: string, fontName: string, fontSize: number, page = 0): Promise<this> {
+    async assertTextHasFont(text: string, fontName: string, fontSize: number, page = 1): Promise<this> {
         await this.assertTextlineHasFont(text, fontName, fontSize, page);
 
         const paragraphs = await this.pdf.page(page).selectParagraphsMatching(`.*${text}.*`);
@@ -114,17 +114,17 @@ export class PDFAssertions {
         return this;
     }
 
-    async assertTextHasFontMatching(text: string, fontName: string, fontSize: number, page = 0): Promise<this> {
+    async assertTextHasFontMatching(text: string, fontName: string, fontSize: number, page = 1): Promise<this> {
         await this.assertTextlineHasFontMatching(text, fontName, fontSize, page);
         return this;
     }
 
-    async assertTextHasColor(text: string, color: Color, page = 0): Promise<this> {
+    async assertTextHasColor(text: string, color: Color, page = 1): Promise<this> {
         await this.assertTextlineHasColor(text, color, page);
         return this;
     }
 
-    async assertTextlineHasColor(text: string, color: Color, page = 0): Promise<this> {
+    async assertTextlineHasColor(text: string, color: Color, page = 1): Promise<this> {
         const lines = await this.pdf.page(page).selectTextLinesMatching(text);
         expect(lines.length).toBe(1);
         const reference = lines[0].objectRef();
@@ -134,7 +134,7 @@ export class PDFAssertions {
         return this;
     }
 
-    async assertTextlineHasFont(text: string, fontName: string, fontSize: number, page = 0): Promise<this> {
+    async assertTextlineHasFont(text: string, fontName: string, fontSize: number, page = 1): Promise<this> {
         const lines = await this.pdf.page(page).selectTextLinesStartingWith(text);
         expect(lines.length).toBe(1);
         const reference = lines[0].objectRef();
@@ -143,7 +143,7 @@ export class PDFAssertions {
         return this;
     }
 
-    async assertTextlineHasFontMatching(text: string, fontName: string, fontSize: number, page = 0): Promise<this> {
+    async assertTextlineHasFontMatching(text: string, fontName: string, fontSize: number, page = 1): Promise<this> {
         const lines = await this.pdf.page(page).selectTextLinesStartingWith(text);
         expect(lines.length).toBe(1);
         const reference = lines[0].objectRef();
@@ -152,7 +152,7 @@ export class PDFAssertions {
         return this;
     }
 
-    async assertTextlineIsAt(text: string, x: number, y: number, page = 0, epsilon = 1e-4): Promise<this> {
+    async assertTextlineIsAt(text: string, x: number, y: number, page = 1, epsilon = 1e-4): Promise<this> {
         const lines = await this.pdf.page(page).selectTextLinesStartingWith(text);
         expect(lines.length).toBe(1);
         const reference = lines[0].objectRef();
@@ -163,7 +163,7 @@ export class PDFAssertions {
         return this;
     }
 
-    async assertPathIsAt(internalId: string, x: number, y: number, page = 0, epsilon = 1e-4): Promise<this> {
+    async assertPathIsAt(internalId: string, x: number, y: number, page = 1, epsilon = 1e-4): Promise<this> {
         const paths = await this.pdf.page(page).selectPathsAt(x, y);
         expect(paths.length).toBe(1);
         const reference = paths[0];
@@ -173,7 +173,7 @@ export class PDFAssertions {
         return this;
     }
 
-    async assertNoPathAt(x: number, y: number, page = 0): Promise<this> {
+    async assertNoPathAt(x: number, y: number, page = 1): Promise<this> {
         const paths = await this.pdf.page(page).selectPathsAt(x, y);
         expect(paths.length).toBe(0);
         return this;
@@ -191,19 +191,19 @@ export class PDFAssertions {
         return this;
     }
 
-    async assertImageAt(x: number, y: number, page = 0): Promise<this> {
+    async assertImageAt(x: number, y: number, page = 1): Promise<this> {
         const images = await this.pdf.page(page).selectImagesAt(x, y, 0.1);
         expect(images.length).toBe(1);
         return this;
     }
 
-    async assertNoImageAt(x: number, y: number, page = 0): Promise<this> {
+    async assertNoImageAt(x: number, y: number, page = 1): Promise<this> {
         const images = await this.pdf.page(page).selectImagesAt(x, y);
         expect(images.length).toBe(0);
         return this;
     }
 
-    async assertImageWithIdAt(internalId: string, x: number, y: number, page = 0): Promise<this> {
+    async assertImageWithIdAt(internalId: string, x: number, y: number, page = 1): Promise<this> {
         const images = await this.pdf.page(page).selectImagesAt(x, y);
         expect(images.length).toBe(1);
         expect(images[0].internalId).toBe(internalId);
@@ -222,25 +222,25 @@ export class PDFAssertions {
         return this;
     }
 
-    async assertParagraphExists(text: string, page = 0): Promise<this> {
+    async assertParagraphExists(text: string, page = 1): Promise<this> {
         const paragraphs = await this.pdf.page(page).selectParagraphsStartingWith(text);
         expect(paragraphs.length).toBeGreaterThan(0);
         return this;
     }
 
-    async assertParagraphDoesNotExist(text: string, page = 0): Promise<this> {
+    async assertParagraphDoesNotExist(text: string, page = 1): Promise<this> {
         const paragraphs = await this.pdf.page(page).selectParagraphsStartingWith(text);
         expect(paragraphs.length).toBe(0);
         return this;
     }
 
-    async assertTextlineExists(text: string, page = 0): Promise<this> {
+    async assertTextlineExists(text: string, page = 1): Promise<this> {
         const lines = await this.pdf.page(page).selectTextLinesStartingWith(text);
         expect(lines.length).toBeGreaterThan(0);
         return this;
     }
 
-    async assertTextlineDoesNotExist(text: string, page = 0): Promise<this> {
+    async assertTextlineDoesNotExist(text: string, page = 1): Promise<this> {
         const lines = await this.pdf.page(page).selectTextLinesStartingWith(text);
         expect(lines.length).toBe(0);
         return this;

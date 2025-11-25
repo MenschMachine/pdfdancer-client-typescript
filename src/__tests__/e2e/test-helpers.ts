@@ -154,7 +154,7 @@ export function readFontFixture(filename: string): Uint8Array {
 /**
  * Draw a coordinate grid on a PDF page for testing
  * @param pdf - PDFDancer instance
- * @param pageIndex - Page index (default: 0)
+ * @param pageNumber - Page number (default: 1)
  * @param gridSpacing - Spacing between grid lines in points (default: 50)
  * @param showLabels - Whether to show coordinate labels (default: true)
  * @param labelFont - Font name for labels (default: 'Helvetica')
@@ -162,14 +162,14 @@ export function readFontFixture(filename: string): Uint8Array {
  */
 export async function drawCoordinateGrid(
     pdf: any,
-    pageIndex: number = 0,
+    pageNumber: number = 1,
     gridSpacing: number = 50,
     showLabels: boolean = true,
     labelFont: string = 'Helvetica',
     labelSize: number = 8
 ): Promise<void> {
     const pages = await pdf.pages();
-    const page = pages[pageIndex];
+    const page = pages[pageNumber];
     const width = page.pageSize?.width || 612;
     const height = page.pageSize?.height || 792;
 
@@ -178,7 +178,7 @@ export async function drawCoordinateGrid(
     const labelColor = new Color(100, 100, 100);
 
     for (let x = 0; x <= width; x += gridSpacing) {
-        await pdf.page(pageIndex)
+        await pdf.page(pageNumber)
             .newPath()
             .moveTo(x, 0)
             .lineTo(x, height)
@@ -187,7 +187,7 @@ export async function drawCoordinateGrid(
             .draw();
 
         if (showLabels && x > 0) {
-            await pdf.page(pageIndex)
+            await pdf.page(pageNumber)
                 .newParagraph()
                 .text(x.toString())
                 .font(labelFont, labelSize)
@@ -198,7 +198,7 @@ export async function drawCoordinateGrid(
     }
 
     for (let y = 0; y <= height; y += gridSpacing) {
-        await pdf.page(pageIndex)
+        await pdf.page(pageNumber)
             .newPath()
             .moveTo(0, y)
             .lineTo(width, y)
@@ -207,7 +207,7 @@ export async function drawCoordinateGrid(
             .draw();
 
         if (showLabels && y > 0) {
-            await pdf.page(pageIndex)
+            await pdf.page(pageNumber)
                 .newParagraph()
                 .text(y.toString())
                 .font(labelFont, labelSize)

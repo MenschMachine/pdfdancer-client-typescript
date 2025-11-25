@@ -47,7 +47,7 @@ export class PathBuilder {
     private _evenOddFill: boolean | undefined;
     private readonly _internals: PDFDancerInternals;
 
-    constructor(private _client: PDFDancer, private readonly _defaultPageIndex?: number) {
+    constructor(private _client: PDFDancer, private readonly _defaultPageNumber?: number) {
         // Cast to the internal interface to get access
         this._internals = this._client as unknown as PDFDancerInternals;
     }
@@ -166,18 +166,18 @@ export class PathBuilder {
 
     /**
      * Set the position where the path will be added.
-     * Can be called with (x, y) for page-level or (pageIndex, x, y) for document-level.
+     * Can be called with (x, y) for page-level or (pageNumber, x, y) for document-level.
      */
     at(x: number, y: number): this;
-    at(pageIndex: number, x: number, y: number): this;
-    at(pageIndexOrX: number, xOrY: number, maybeY?: number): this {
+    at(pageNumber: number, x: number, y: number): this;
+    at(pageNumberOrX: number, xOrY: number, maybeY?: number): this {
         if (maybeY === undefined) {
-            if (this._defaultPageIndex === undefined) {
+            if (this._defaultPageNumber === undefined) {
                 throw new Error('Page index must be provided when adding a path');
             }
-            this._position = Position.atPageCoordinates(this._defaultPageIndex, pageIndexOrX, xOrY);
+            this._position = Position.atPageCoordinates(this._defaultPageNumber, pageNumberOrX, xOrY);
         } else {
-            this._position = Position.atPageCoordinates(pageIndexOrX, xOrY, maybeY);
+            this._position = Position.atPageCoordinates(pageNumberOrX, xOrY, maybeY);
         }
         return this;
     }

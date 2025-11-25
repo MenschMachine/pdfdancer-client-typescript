@@ -6,14 +6,14 @@ import {Color, Font, Paragraph, Position} from '../models';
 
 
 describe('Position', () => {
-    test('should open position from page index', () => {
+    test('should open position from page number', () => {
         const position = Position.atPage(1);
-        expect(position.pageIndex).toBe(1);
+        expect(position.pageNumber).toBe(1);
     });
 
     test('should open position with coordinates', () => {
         const position = Position.atPageCoordinates(1, 100, 200);
-        expect(position.pageIndex).toBe(1);
+        expect(position.pageNumber).toBe(1);
         expect(position.getX()).toBe(100);
         expect(position.getY()).toBe(200);
     });

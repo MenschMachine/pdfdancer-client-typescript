@@ -18,8 +18,8 @@ describe('Image E2E Tests (v2 API)', () => {
         expect(images).toHaveLength(3);
         expect(images[0].type).toBe('IMAGE');
 
-        const imagesOnPage0 = await pdf.page(0).selectImages();
-        expect(imagesOnPage0).toHaveLength(2);
+        const imagesOnPage1 = await pdf.page(1).selectImages();
+        expect(imagesOnPage1).toHaveLength(2);
     });
 
     test('delete images', async () => {
@@ -44,7 +44,7 @@ describe('Image E2E Tests (v2 API)', () => {
         const assertions = await PDFAssertions.create(pdf);
         const pages = await pdf.pages();
         for (const page of pages) {
-            await assertions.assertNumberOfImages(0, page.position.pageIndex);
+            await assertions.assertNumberOfImages(0, page.position.pageNumber);
         }
     });
 
@@ -57,34 +57,34 @@ describe('Image E2E Tests (v2 API)', () => {
 
         const originalX = image.position.boundingRect?.x!;
         const originalY = image.position.boundingRect?.y!;
-        const pageIndex = image.position.pageIndex!;
+        const pageNumber = image.position.pageNumber!;
 
         expectWithin(originalX, 54, 0.5);
         expectWithin(originalY, 300, 1);
-        expect(pageIndex).toBe(11);
+        expect(pageNumber).toBe(12);
 
         const newX = 500.1;
         const newY = 600.1;
         await image.moveTo(newX, newY);
 
-        const moved = await pdf.page(pageIndex).selectImagesAt(newX, newY);
+        const moved = await pdf.page(pageNumber).selectImagesAt(newX, newY);
         expect(moved).toHaveLength(1);
         expectWithin(moved[0].position.boundingRect?.x, newX, 0.05);
         expectWithin(moved[0].position.boundingRect?.y, newY, 0.05);
 
         const assertions = await PDFAssertions.create(pdf);
-        await assertions.assertImageAt(newX, newY, pageIndex);
-        await assertions.assertNoImageAt(originalX, originalY, pageIndex);
+        await assertions.assertImageAt(newX, newY, pageNumber);
+        await assertions.assertNoImageAt(originalX, originalY, pageNumber);
     });
 
     test('find image by position', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const none = await pdf.page(11).selectImagesAt(0, 0);
+        const none = await pdf.page(12).selectImagesAt(0, 0);
         expect(none).toHaveLength(0);
 
-        const found = await pdf.page(11).selectImagesAt(54, 300, 1);
+        const found = await pdf.page(12).selectImagesAt(54, 300, 1);
         expect(found).toHaveLength(1);
         expect(found[0].internalId).toBe('IMAGE_000003');
     });
@@ -117,7 +117,7 @@ describe('Image E2E Tests (v2 API)', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         // Test with results - page 11 has images
-        const image = await pdf.page(11).selectImage();
+        const image = await pdf.page(12).selectImage();
         expect(image).not.toBeNull();
         expect(image!.internalId).toBe('IMAGE_000003');
 
@@ -126,22 +126,22 @@ describe('Image E2E Tests (v2 API)', () => {
         expect(imageFromPdf).not.toBeNull();
         expect(imageFromPdf!.internalId).toBe('IMAGE_000001');
 
-        // Test page 0 also has images (2 images)
-        const imageOnPage0 = await pdf.page(0).selectImage();
-        expect(imageOnPage0).not.toBeNull();
-        expect(imageOnPage0!.internalId).toBe('IMAGE_000001');
+        // Test page 1 also has images (2 images)
+        const imageOnPage1 = await pdf.page(1).selectImage();
+        expect(imageOnPage1).not.toBeNull();
+        expect(imageOnPage1!.internalId).toBe('IMAGE_000001');
     });
 
     test('selectImageAt returns first image at position or null', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const image = await pdf.page(11).selectImageAt(54, 300, 1);
+        const image = await pdf.page(12).selectImageAt(54, 300, 1);
         expect(image).not.toBeNull();
         expect(image!.internalId).toBe('IMAGE_000003');
 
         // Test with no match
-        const noMatch = await pdf.page(11).selectImageAt(0, 0);
+        const noMatch = await pdf.page(12).selectImageAt(0, 0);
         expect(noMatch).toBeNull();
     });
 });

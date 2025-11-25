@@ -63,7 +63,7 @@ describe('Create New PDF E2E Tests', () => {
         await assertions.assertTotalNumberOfElements(0);
         await assertions.assertPageCount(3);
         for (let index = 0; index < pages.length; index++) {
-            await assertions.assertPageDimension(842.0, 595.0, undefined, index);
+            await assertions.assertPageDimension(842.0, 595.0, undefined, index + 1);
         }
     });
 
@@ -85,14 +85,14 @@ describe('Create New PDF E2E Tests', () => {
         await assertions.assertTotalNumberOfElements(0);
         await assertions.assertPageCount(2);
         for (let index = 0; index < pages.length; index++) {
-            await assertions.assertPageDimension(612.0, 792.0, Orientation.PORTRAIT, index);
+            await assertions.assertPageDimension(612.0, 792.0, Orientation.PORTRAIT, index + 1);
         }
     });
 
     test('create new PDF add content and verify placement', async () => {
         const client = await PDFDancer.new(undefined, token, baseUrl);
 
-        await client.page(0)
+        await client.page(1)
             .newParagraph()
             .text('Hello from blank PDF')
             .font(StandardFonts.COURIER_BOLD_OBLIQUE, 9)

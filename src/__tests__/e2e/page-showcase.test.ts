@@ -36,7 +36,7 @@ describe('Page E2E Tests (Showcase)', () => {
 
         const page = pdf.page(2);
         expect(page).toBeDefined();
-        expect(page.position.pageIndex).toBe(2);
+        expect(page.position.pageNumber).toBe(2);
         expect(page.internalId).toBeDefined();
     });
 
@@ -61,8 +61,8 @@ describe('Page E2E Tests (Showcase)', () => {
         const pagesBefore = await pdf.pages();
         expect(pagesBefore.length).toBe(7);
 
-        const result = await pdf.movePage(0, 6);
-        expect(result.position.pageIndex).toBe(6);
+        const result = await pdf.movePage(1, 6);
+        expect(result.position.pageNumber).toBe(6);
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertParagraphExists('This is regular Sans text showing alignment and styles.', 6);
@@ -79,7 +79,7 @@ describe('Page E2E Tests (Showcase)', () => {
 
         const pagesAfter = await pdf.pages();
         expect(pagesAfter.length).toBe(8);
-        expect(pagesAfter[7].position.pageIndex).toBe(7);
+        expect(pagesAfter[7].position.pageNumber).toBe(8);
         expect(pagesAfter[7].internalId).toBeDefined();
     });
 
@@ -90,7 +90,7 @@ describe('Page E2E Tests (Showcase)', () => {
         expect((await pdf.pages()).length).toBe(7);
 
         const pageRef = await pdf.newPage().add();
-        expect(pageRef.position.pageIndex).toBe(7);
+        expect(pageRef.position.pageNumber).toBe(8);
         expect((await pdf.pages()).length).toBe(8);
     });
 
@@ -101,7 +101,7 @@ describe('Page E2E Tests (Showcase)', () => {
         expect((await pdf.pages()).length).toBe(7);
 
         const pageRef = await pdf.newPage().a4().portrait().add();
-        expect(pageRef.position.pageIndex).toBe(7);
+        expect(pageRef.position.pageNumber).toBe(8);
         expect((await pdf.pages()).length).toBe(8);
     });
 
@@ -112,23 +112,23 @@ describe('Page E2E Tests (Showcase)', () => {
         expect((await pdf.pages()).length).toBe(7);
 
         const pageRef = await pdf.newPage().letter().landscape().add();
-        expect(pageRef.position.pageIndex).toBe(7);
+        expect(pageRef.position.pageNumber).toBe(8);
         expect((await pdf.pages()).length).toBe(8);
     });
 
-    test('add page with builder at index', async () => {
+    test('add page with builder at page number', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         expect((await pdf.pages()).length).toBe(7);
 
-        const pageRef = await pdf.newPage().atIndex(5).a5().landscape().add();
-        expect(pageRef.position.pageIndex).toBe(5);
+        const pageRef = await pdf.newPage().atPage(5).a5().landscape().add();
+        expect(pageRef.position.pageNumber).toBe(5);
         expect((await pdf.pages()).length).toBe(8);
 
         const assertions = await PDFAssertions.create(pdf);
         const a5 = STANDARD_PAGE_SIZES.A5;
-        await assertions.assertPageDimension(a5.width, a5.height, Orientation.PORTRAIT, 5);
+        await assertions.assertPageDimension(a5.width, a5.height, Orientation.LANDSCAPE, 5);
         await assertions.assertTotalNumberOfElements(0, 5);
     });
 
@@ -139,7 +139,7 @@ describe('Page E2E Tests (Showcase)', () => {
         expect((await pdf.pages()).length).toBe(7);
 
         const pageRef = await pdf.newPage().customSize(400, 600).landscape().add();
-        expect(pageRef.position.pageIndex).toBe(7);
+        expect(pageRef.position.pageNumber).toBe(8);
         expect((await pdf.pages()).length).toBe(8);
     });
 
@@ -149,8 +149,8 @@ describe('Page E2E Tests (Showcase)', () => {
 
         expect((await pdf.pages()).length).toBe(7);
 
-        const pageRef = await pdf.newPage().atIndex(3).pageSize('A3').orientation(Orientation.LANDSCAPE).add();
-        expect(pageRef.position.pageIndex).toBe(3);
+        const pageRef = await pdf.newPage().atPage(3).pageSize('A3').orientation(Orientation.LANDSCAPE).add();
+        expect(pageRef.position.pageNumber).toBe(3);
         expect((await pdf.pages()).length).toBe(8);
     });
 });

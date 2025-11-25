@@ -14,7 +14,7 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         expect(allParagraphs.length).toBeGreaterThanOrEqual(20);
         expect(allParagraphs.length).toBeLessThanOrEqual(22);
 
-        const firstPageParas = await pdf.page(0).selectParagraphs();
+        const firstPageParas = await pdf.page(1).selectParagraphs();
         expect(firstPageParas).toHaveLength(3);
 
         const first = firstPageParas[0];
@@ -37,7 +37,7 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const paragraphs = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const paragraphs = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         expect(paragraphs).toHaveLength(1);
 
         const paragraph = paragraphs[0];
@@ -61,10 +61,10 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         const [baseUrl, token] = (await requireEnvAndFixture('Showcase.pdf')).slice(0, 2) as [string, string];
         const pdf = await PDFDancer.new({initialPageCount: 1}, token, baseUrl);
 
-        await pdf.newParagraph().text('Invoice #12345').font(StandardFonts.HELVETICA, 12).at(0, 100, 100).add();
-        await pdf.newParagraph().text('Date: 2024-01-15').font(StandardFonts.HELVETICA, 12).at(0, 100, 200).add();
-        await pdf.newParagraph().text('Total: $99.99').font(StandardFonts.HELVETICA, 12).at(0, 100, 300).add();
-        await pdf.newParagraph().text('Email: test@example.com').font(StandardFonts.HELVETICA, 12).at(0, 100, 400).add();
+        await pdf.newParagraph().text('Invoice #12345').font(StandardFonts.HELVETICA, 12).at(1, 100, 100).add();
+        await pdf.newParagraph().text('Date: 2024-01-15').font(StandardFonts.HELVETICA, 12).at(1, 100, 200).add();
+        await pdf.newParagraph().text('Total: $99.99').font(StandardFonts.HELVETICA, 12).at(1, 100, 300).add();
+        await pdf.newParagraph().text('Email: test@example.com').font(StandardFonts.HELVETICA, 12).at(1, 100, 400).add();
 
         const invoiceMatches = await pdf.selectParagraphsMatching('Invoice #[0-9]+');
         expect(invoiceMatches).toHaveLength(1);
@@ -87,8 +87,8 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         const [baseUrl, token] = (await requireEnvAndFixture('Showcase.pdf')).slice(0, 2) as [string, string];
         const pdf = await PDFDancer.new({initialPageCount: 3}, token, baseUrl);
 
-        await pdf.newParagraph().text('Chapter 1: Introduction').font(StandardFonts.HELVETICA, 14).at(0, 100, 100).add();
-        await pdf.newParagraph().text('Section 1.1').font(StandardFonts.HELVETICA, 12).at(0, 100, 200).add();
+        await pdf.newParagraph().text('Chapter 1: Introduction').font(StandardFonts.HELVETICA, 14).at(1, 100, 100).add();
+        await pdf.newParagraph().text('Section 1.1').font(StandardFonts.HELVETICA, 12).at(1, 100, 200).add();
         await pdf.newParagraph().text('Chapter 2: Methods').font(StandardFonts.HELVETICA, 14).at(1, 100, 100).add();
         await pdf.newParagraph().text('Section 2.1').font(StandardFonts.HELVETICA, 12).at(1, 100, 200).add();
         await pdf.newParagraph().text('Chapter 3: Results').font(StandardFonts.HELVETICA, 14).at(2, 100, 100).add();
@@ -98,16 +98,16 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         expect((await pdf.selectParagraphsMatching('^Section [0-9]+\\.[0-9]+')).length).toBe(3);
 
         const chaptersPage1 = await pdf.page(1).selectParagraphsMatching('^Chapter [0-9]+:');
-        expect(chaptersPage1.length).toBe(1);
-        expect(chaptersPage1[0].getText()).toContain('Chapter 2');
+        expect(chaptersPage1.length).toBe(2);
+        expect(chaptersPage1[1].getText()).toContain('Chapter 2');
     });
 
     test('select paragraphs matching empty results', async () => {
         const [baseUrl, token] = (await requireEnvAndFixture('Showcase.pdf')).slice(0, 2) as [string, string];
         const pdf = await PDFDancer.new({initialPageCount: 1}, token, baseUrl);
 
-        await pdf.newParagraph().text('Hello World').font(StandardFonts.HELVETICA, 12).at(0, 100, 100).add();
-        await pdf.newParagraph().text('Goodbye Moon').font(StandardFonts.HELVETICA, 12).at(0, 100, 200).add();
+        await pdf.newParagraph().text('Hello World').font(StandardFonts.HELVETICA, 12).at(1, 100, 100).add();
+        await pdf.newParagraph().text('Goodbye Moon').font(StandardFonts.HELVETICA, 12).at(1, 100, 200).add();
 
         expect((await pdf.selectParagraphsMatching('[0-9]{5}')).length).toBe(0);
         expect((await pdf.selectParagraphsMatching('^Nonexistent')).length).toBe(0);
@@ -117,9 +117,9 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         const [baseUrl, token] = (await requireEnvAndFixture('Showcase.pdf')).slice(0, 2) as [string, string];
         const pdf = await PDFDancer.new({initialPageCount: 1}, token, baseUrl);
 
-        await pdf.newParagraph().text('UPPERCASE TEXT').font(StandardFonts.HELVETICA, 12).at(0, 100, 100).add();
-        await pdf.newParagraph().text('lowercase text').font(StandardFonts.HELVETICA, 12).at(0, 100, 200).add();
-        await pdf.newParagraph().text('MixedCase Text').font(StandardFonts.HELVETICA, 12).at(0, 100, 300).add();
+        await pdf.newParagraph().text('UPPERCASE TEXT').font(StandardFonts.HELVETICA, 12).at(1, 100, 100).add();
+        await pdf.newParagraph().text('lowercase text').font(StandardFonts.HELVETICA, 12).at(1, 100, 200).add();
+        await pdf.newParagraph().text('MixedCase Text').font(StandardFonts.HELVETICA, 12).at(1, 100, 300).add();
 
         expect((await pdf.selectParagraphsMatching('UPPERCASE')).length).toBe(1);
         expect((await pdf.selectParagraphsMatching('lowercase')).length).toBe(1);
@@ -130,27 +130,27 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         const result = await paragraph.edit().moveTo(40, 40).apply();
         expect(result).toBe(true);
 
-        const [moved] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [moved] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         const status = moved.objectRef().status;
         expect(status).toBeDefined();
         expect(status?.getFontType()).toBe(FontType.EMBEDDED);
         expect(status?.isModified()).toBe(false);
 
         const assertions = await PDFAssertions.create(pdf);
-        await assertions.assertTextlineHasFont(SAMPLE_PARAGRAPH, 'AAAZPH+Roboto-Regular', 12, 0);
-        await assertions.assertTextlineHasColor(SAMPLE_PARAGRAPH, new Color(0, 0, 0), 0);
-        await assertions.assertParagraphIsAt(SAMPLE_PARAGRAPH, 40, 40, 0, 3);
+        await assertions.assertTextlineHasFont(SAMPLE_PARAGRAPH, 'AAAZPH+Roboto-Regular', 12, 1);
+        await assertions.assertTextlineHasColor(SAMPLE_PARAGRAPH, new Color(0, 0, 0), 1);
+        await assertions.assertParagraphIsAt(SAMPLE_PARAGRAPH, 40, 40, 1, 3);
     });
 
     test('add paragraph with styling on Showcase', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const success = await pdf.page(0).newParagraph()
+        const success = await pdf.page(1).newParagraph()
             .text('Showcase Heading\nIn Two Lines')
             .font(StandardFonts.HELVETICA_BOLD, 18)
             .color(new Color(32, 64, 96))
@@ -161,15 +161,15 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         expect(success).toBe(true);
 
         const assertions = await PDFAssertions.create(pdf);
-        await assertions.assertTextlineHasFont('Showcase Heading', 'Helvetica-Bold', 18, 0);
-        await assertions.assertTextlineHasColor('Showcase Heading', new Color(32, 64, 96), 0);
-        await assertions.assertParagraphIsAt('Showcase Heading', 300, 520, 0);
+        await assertions.assertTextlineHasFont('Showcase Heading', 'Helvetica-Bold', 18, 1);
+        await assertions.assertTextlineHasColor('Showcase Heading', new Color(32, 64, 96), 1);
+        await assertions.assertParagraphIsAt('Showcase Heading', 300, 520, 1);
     });
     test('modify paragraph full workflow', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         await paragraph.edit()
             .replace('Awesomely\nObvious!')
             .font('Helvetica', 12)
@@ -177,7 +177,7 @@ describe('Paragraph E2E Tests (Showcase)', () => {
             .moveTo(300.1, 500)
             .apply();
 
-        const moved = (await pdf.page(0).selectParagraphsAt(300.1, 500))[0];
+        const moved = (await pdf.page(1).selectParagraphsAt(300.1, 500))[0];
         const status = moved.objectRef().status;
         expect(status).toBeDefined();
         expect(status?.getFontType()).toBe(FontType.STANDARD);
@@ -188,14 +188,14 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         await assertions.assertTextlineHasFont('Obvious!', 'Helvetica', 12);
         await assertions.assertTextlineHasColor('Awesomely', new Color(0, 0, 0));
         await assertions.assertTextlineHasColor('Obvious!', new Color(0, 0, 0));
-        await assertions.assertParagraphIsAt('Awesomely', 300.1, 500, 0);
+        await assertions.assertParagraphIsAt('Awesomely', 300.1, 500, 1);
     });
 
     test('modify paragraph without position', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         const originalX = paragraph.position.getX()!;
         const originalY = paragraph.position.getY()!;
 
@@ -208,14 +208,14 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextlineHasFont('Awesomely', 'Helvetica', 12);
         await assertions.assertTextlineHasFont('Obvious!', 'Helvetica', 12);
-        await assertions.assertParagraphIsAt('Awesomely', originalX, originalY, 0);
+        await assertions.assertParagraphIsAt('Awesomely', originalX, originalY, 1);
     });
 
     test('modify paragraph without position and spacing', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         const originalX = paragraph.position.getX()!;
         const originalY = paragraph.position.getY()!;
 
@@ -227,17 +227,17 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextlineHasFont('Awesomely', 'Helvetica', 12);
         await assertions.assertTextlineHasFont('Obvious!', 'Helvetica', 12);
-        await assertions.assertParagraphIsAt('Awesomely', originalX, originalY, 0);
+        await assertions.assertParagraphIsAt('Awesomely', originalX, originalY, 1);
     });
 
     test('modify paragraph no-op', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         await paragraph.edit().apply();
 
-        const [updated] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [updated] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         const status = updated.objectRef().status;
         expect(status).toBeDefined();
         expect(status?.getFontType()).toBe(FontType.EMBEDDED);
@@ -252,10 +252,10 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         await paragraph.edit().replace('lorem\nipsum\nCaesar').apply();
 
-        const [updated] = await pdf.page(0).selectParagraphsStartingWith('lorem');
+        const [updated] = await pdf.page(1).selectParagraphsStartingWith('lorem');
         const status = updated.objectRef().status;
         expect(status).toBeDefined();
         expect(status?.getFontType()).toBe(FontType.EMBEDDED);
@@ -272,10 +272,10 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         await paragraph.edit().font('Helvetica', 28).apply();
 
-        const [updated] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [updated] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         const status = updated.objectRef().status;
         expect(status).toBeDefined();
         expect(status?.getFontType()).toBe(FontType.STANDARD);
@@ -289,10 +289,10 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         await paragraph.edit().moveTo(40, 40).apply();
 
-        const [updated] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [updated] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         const status = updated.objectRef().status;
         expect(status).toBeDefined();
         expect(status?.getFontType()).toBe(FontType.EMBEDDED);
@@ -300,7 +300,7 @@ describe('Paragraph E2E Tests (Showcase)', () => {
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextlineHasFont(SAMPLE_PARAGRAPH, 'AAAZPH+Roboto-Regular', 12);
-        await assertions.assertParagraphIsAt(SAMPLE_PARAGRAPH, 40, 40, 0);
+        await assertions.assertParagraphIsAt(SAMPLE_PARAGRAPH, 40, 40, 1);
         await assertions.assertTextlineHasColor(SAMPLE_PARAGRAPH, new Color(0, 0, 0));
     });
 
@@ -317,7 +317,7 @@ describe('Paragraph E2E Tests (Showcase)', () => {
                 .text('Awesomely\nObvious!')
                 .font('Roboto', 14)
                 .lineSpacing(0.7)
-                .at(0, 300.1, 500)
+                .at(1, 300.1, 500)
                 .add()
         ).rejects.toThrow();
     });
@@ -330,21 +330,21 @@ describe('Paragraph E2E Tests (Showcase)', () => {
             .text('Awesomely\nObvious!')
             .font('Roboto-Regular', 14)
             .lineSpacing(0.7)
-            .at(0, 300.1, 500)
+            .at(1, 300.1, 500)
             .add();
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextlineHasFontMatching('Awesomely', 'Roboto-Regular', 14);
         await assertions.assertTextlineHasFontMatching('Obvious!', 'Roboto-Regular', 14);
         await assertions.assertTextlineHasColor('Awesomely', new Color(0, 0, 0));
-        await assertions.assertParagraphIsAt('Awesomely', 300.1, 500, 0);
+        await assertions.assertParagraphIsAt('Awesomely', 300.1, 500, 1);
     });
 
     test('add paragraph with custom font via page builder', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        await pdf.page(0).newParagraph()
+        await pdf.page(1).newParagraph()
             .text('Awesomely\nObvious!')
             .font('Roboto-Regular', 14)
             .lineSpacing(0.7)
@@ -353,7 +353,7 @@ describe('Paragraph E2E Tests (Showcase)', () => {
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextlineHasFontMatching('Awesomely', 'Roboto-Regular', 14);
-        await assertions.assertParagraphIsAt('Awesomely', 300.1, 500, 0);
+        await assertions.assertParagraphIsAt('Awesomely', 300.1, 500, 1);
     });
 
     test('add paragraph using findFonts result', async () => {
@@ -368,13 +368,13 @@ describe('Paragraph E2E Tests (Showcase)', () => {
             .text('Awesomely\nObvious!')
             .font(roboto.name, roboto.size)
             .lineSpacing(0.7)
-            .at(0, 300.1, 500)
+            .at(1, 300.1, 500)
             .add();
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextlineHasFontMatching('Awesomely', 'Roboto', 14);
         await assertions.assertTextlineHasFontMatching('Obvious!', 'Roboto', 14);
-        await assertions.assertParagraphIsAt('Awesomely', 300.1, 500, 0);
+        await assertions.assertParagraphIsAt('Awesomely', 300.1, 500, 1);
     });
 
     test('add paragraph with custom font Asimovian', async () => {
@@ -389,12 +389,12 @@ describe('Paragraph E2E Tests (Showcase)', () => {
             .text('Awesomely\nObvious!')
             .font(asimov.name, asimov.size)
             .lineSpacing(0.7)
-            .at(0, 300.1, 500)
+            .at(1, 300.1, 500)
             .add();
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextlineHasFontMatching('Awesomely', 'Asimovian-Regular', 14);
-        await assertions.assertParagraphIsAt('Awesomely', 300.1, 500, 0, 5);
+        await assertions.assertParagraphIsAt('Awesomely', 300.1, 500, 1, 5);
     });
 
     test('add paragraph with font file', async () => {
@@ -406,16 +406,16 @@ describe('Paragraph E2E Tests (Showcase)', () => {
             .text('Awesomely\nObvious!')
             .fontFile(ttfPath, 24)
             .lineSpacing(1.8)
-            .color(new Color(0, 0, 255))
-            .at(0, 300.1, 500)
+            .color(new Color(0, 1, 255))
+            .at(1, 300.1, 500)
             .add();
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextlineHasFontMatching('Awesomely', 'DancingScript-Regular', 24);
         await assertions.assertTextlineHasFontMatching('Obvious!', 'DancingScript-Regular', 24);
-        await assertions.assertTextlineHasColor('Awesomely', new Color(0, 0, 255));
-        await assertions.assertTextlineHasColor('Obvious!', new Color(0, 0, 255));
-        await assertions.assertParagraphIsAt('Awesomely', 300.1, 500, 0, 7);
+        await assertions.assertTextlineHasColor('Awesomely', new Color(0, 1, 255));
+        await assertions.assertTextlineHasColor('Obvious!', new Color(0, 1, 255));
+        await assertions.assertParagraphIsAt('Awesomely', 300.1, 500, 1, 7);
     });
 
     test('add paragraph with standard font times', async () => {
@@ -425,12 +425,12 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         await pdf.newParagraph()
             .text('Times Roman Test')
             .font(StandardFonts.TIMES_ROMAN, 14)
-            .at(0, 150, 150)
+            .at(1, 150, 150)
             .add();
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextHasFont('Times Roman Test', StandardFonts.TIMES_ROMAN, 14);
-        await assertions.assertTextlineIsAt('Times Roman Test', 150, 150, 0, 4);
+        await assertions.assertTextlineIsAt('Times Roman Test', 150, 150, 1, 4);
     });
 
     test('add paragraph with standard font courier', async () => {
@@ -441,12 +441,12 @@ describe('Paragraph E2E Tests (Showcase)', () => {
             .text('Courier MonospacenCode Example')
             .font(StandardFonts.COURIER_BOLD, 12)
             .lineSpacing(1.5)
-            .at(0, 200, 200)
+            .at(1, 200, 200)
             .add();
 
         const assertions = await PDFAssertions.create(pdf);
-        await assertions.assertTextHasFont('Courier Monospace', StandardFonts.COURIER_BOLD, 12, 0);
-        await assertions.assertTextlineIsAt('Courier Monospace', 200, 200, 0, 4);
+        await assertions.assertTextHasFont('Courier Monospace', StandardFonts.COURIER_BOLD, 12, 1);
+        await assertions.assertTextlineIsAt('Courier Monospace', 200, 200, 1, 4);
     });
 
     test('paragraph color reading', async () => {
@@ -456,27 +456,27 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         await pdf.newParagraph()
             .text('Red Color Test')
             .font(StandardFonts.HELVETICA, 14)
-            .color(new Color(255, 0, 0))
-            .at(0, 100, 100)
+            .color(new Color(255, 1, 0))
+            .at(1, 100, 100)
             .add();
 
         await pdf.newParagraph()
             .text('Blue Color Test')
             .font(StandardFonts.HELVETICA, 14)
-            .color(new Color(0, 0, 255))
-            .at(0, 100, 120)
+            .color(new Color(0, 1, 255))
+            .at(1, 100, 120)
             .add();
 
         const assertions = await PDFAssertions.create(pdf);
-        await assertions.assertTextlineHasColor('Blue Color Test', new Color(0, 0, 255), 0);
-        await assertions.assertTextlineHasColor('Red Color Test', new Color(255, 0, 0), 0);
+        await assertions.assertTextlineHasColor('Blue Color Test', new Color(0, 1, 255), 1);
+        await assertions.assertTextlineHasColor('Red Color Test', new Color(255, 1, 0), 1);
     });
 
     test('add paragraph to new page', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Empty.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        await pdf.page(0).newParagraph()
+        await pdf.page(1).newParagraph()
             .text('Awesome')
             .font('Roboto-Regular', 14)
             .at(50, 100)
@@ -485,17 +485,17 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextlineHasFontMatching('Awesome', 'Roboto-Regular', 14);
         await assertions.assertTextlineHasColor('Awesome', new Color(0, 0, 0));
-        await assertions.assertParagraphIsAt('Awesome', 50, 100, 0, 4);
+        await assertions.assertParagraphIsAt('Awesome', 50, 100, 1, 4);
     });
 });
 test('delete paragraph', async () => {
     const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
     const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-    const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+    const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
     await paragraph.delete();
 
-    const remaining = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+    const remaining = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
     expect(remaining).toHaveLength(0);
 });
 
@@ -503,10 +503,10 @@ test('move paragraph via moveTo', async () => {
     const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
     const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-    const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+    const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
     await paragraph.moveTo(0.1, 300);
 
-    const moved = await pdf.page(0).selectParagraphsAt(0.1, 300);
+    const moved = await pdf.page(1).selectParagraphsAt(0.1, 300);
     expect(moved.length).toBeGreaterThan(0);
 
     const status = moved[0].objectRef().status;

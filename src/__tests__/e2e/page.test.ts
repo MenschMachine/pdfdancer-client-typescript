@@ -25,7 +25,7 @@ describe('Page E2E Tests', () => {
 
         const page = client.page(2);
         expect(page).toBeDefined();
-        expect(page!.position.pageIndex).toBe(2);
+        expect(page!.position.pageNumber).toBe(2);
         expect(page!.internalId).toBeDefined();
     });
 

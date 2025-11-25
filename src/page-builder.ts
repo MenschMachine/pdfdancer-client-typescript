@@ -45,7 +45,7 @@ const normalizePageSize = (value: PageSize | string): PageSize => {
 export class PageBuilder {
     private readonly _client: PDFDancer;
     private readonly _internals: PDFDancerInternals;
-    private _pageIndex?: number;
+    private _pageNumber?: number;
     private _orientation?: Orientation;
     private _pageSize?: PageSize;
 
@@ -57,15 +57,31 @@ export class PageBuilder {
         this._internals = this._client as unknown as PDFDancerInternals;
     }
 
-    atIndex(pageIndex: number): this {
-        if (pageIndex === null || pageIndex === undefined) {
-            throw new ValidationException('Page index cannot be null');
+    /**
+     * Sets the page number where the new page should be inserted (1-based).
+     * Page 1 is the first page.
+     *
+     * @param pageNumber - The 1-based page number (must be >= 1)
+     * @returns this builder for method chaining
+     * @throws ValidationException if pageNumber is less than 1
+     */
+    atPage(pageNumber: number): this {
+        if (pageNumber === null || pageNumber === undefined) {
+            throw new ValidationException('Page number cannot be null');
         }
-        if (!Number.isInteger(pageIndex) || pageIndex < 0) {
-            throw new ValidationException('Page index must be a non-negative integer');
+        if (!Number.isInteger(pageNumber) || pageNumber < 1) {
+            throw new ValidationException('Page number must be >= 1 (1-based indexing)');
         }
-        this._pageIndex = pageIndex;
+        this._pageNumber = pageNumber;
         return this;
+    }
+
+    /**
+     * @deprecated Use atPage() instead. This method will be removed in a future release.
+     */
+    atIndex(pageNumber: number): this {
+        console.warn('atIndex() is deprecated, use atPage() instead');
+        return this.atPage(pageNumber + 1);
     }
 
     orientation(orientation: Orientation | string): this {
@@ -122,9 +138,9 @@ export class PageBuilder {
     }
 
     private _buildRequest(): AddPageRequest | null {
-        if (this._pageIndex === undefined && this._orientation === undefined && this._pageSize === undefined) {
+        if (this._pageNumber === undefined && this._orientation === undefined && this._pageSize === undefined) {
             return null;
         }
-        return new AddPageRequest(this._pageIndex, this._pageSize, this._orientation);
+        return new AddPageRequest(this._pageNumber, this._pageSize, this._orientation);
     }
 }

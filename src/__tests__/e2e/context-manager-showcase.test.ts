@@ -18,20 +18,20 @@ describe('Paragraph Edit Session E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         await paragraph.edit().replace('This is replaced\ntext on two lines').apply();
 
         const assertions = await PDFAssertions.create(pdf);
-        await assertions.assertTextlineExists('This is replaced', 0);
-        await assertions.assertTextlineExists('text on two lines', 0);
-        await assertions.assertTextlineDoesNotExist(SAMPLE_PARAGRAPH, 0);
+        await assertions.assertTextlineExists('This is replaced', 1);
+        await assertions.assertTextlineExists('text on two lines', 1);
+        await assertions.assertTextlineDoesNotExist(SAMPLE_PARAGRAPH, 1);
     });
 
     test('edit font only', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         await paragraph.edit().font('Helvetica', 28).apply();
 
         const assertions = await PDFAssertions.create(pdf);
@@ -43,7 +43,7 @@ describe('Paragraph Edit Session E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         await paragraph.edit().replace('New Text\nHere').font('Helvetica', 16).apply();
 
         const assertions = await PDFAssertions.create(pdf);
@@ -56,11 +56,11 @@ describe('Paragraph Edit Session E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         await paragraph.edit()
             .replace('Fully\nModified')
             .font('Helvetica', 18)
-            .color(new Color(255, 0, 0))
+            .color(new Color(255, 1, 0))
             .lineSpacing(1.5)
             .moveTo(100, 200)
             .apply();
@@ -68,16 +68,16 @@ describe('Paragraph Edit Session E2E Tests (Showcase)', () => {
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextlineHasFont('Fully', 'Helvetica', 18);
         await assertions.assertTextlineHasFont('Modified', 'Helvetica', 18);
-        await assertions.assertTextlineHasColor('Fully', new Color(255, 0, 0));
-        await assertions.assertTextlineHasColor('Modified', new Color(255, 0, 0));
-        await assertions.assertParagraphIsAt('Fully', 100, 200, 0);
+        await assertions.assertTextlineHasColor('Fully', new Color(255, 1, 0));
+        await assertions.assertTextlineHasColor('Modified', new Color(255, 1, 0));
+        await assertions.assertParagraphIsAt('Fully', 100, 200, 1);
     });
 
     test('edit color only', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         await paragraph.edit().color(new Color(0, 255, 0)).apply();
 
         const assertions = await PDFAssertions.create(pdf);
@@ -88,7 +88,7 @@ describe('Paragraph Edit Session E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         await paragraph.edit().lineSpacing(2.0).apply();
 
         const assertions = await PDFAssertions.create(pdf);
@@ -99,22 +99,22 @@ describe('Paragraph Edit Session E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         await paragraph.edit().moveTo(150, 300).apply();
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextlineHasFont(SAMPLE_PARAGRAPH, 'AAAZPH+Roboto-Regular', 12);
-        await assertions.assertParagraphIsAt(SAMPLE_PARAGRAPH, 150, 300, 0);
+        await assertions.assertParagraphIsAt(SAMPLE_PARAGRAPH, 150, 300, 1);
     });
 
     test('multiple edits sequential', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [first] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [first] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         await first.edit().replace('First Edit').apply();
 
-        const [second] = await pdf.page(0).selectParagraphsStartingWith('First Edit');
+        const [second] = await pdf.page(1).selectParagraphsStartingWith('First Edit');
         await second.edit().replace('Second Edit').font('Helvetica', 20).apply();
 
         const assertions = await PDFAssertions.create(pdf);
@@ -127,7 +127,7 @@ describe('Paragraph Edit Session E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const paragraphs = await pdf.page(0).selectParagraphs();
+        const paragraphs = await pdf.page(1).selectParagraphs();
         await paragraphs[0].edit().replace('Modified First').font('Helvetica', 14).apply();
         await paragraphs[1].edit().replace('Modified Second').font('Helvetica', 14).apply();
 
@@ -140,7 +140,7 @@ describe('Paragraph Edit Session E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         const editor = paragraph.edit();
         editor.replace('Should Fail');
 
@@ -148,7 +148,7 @@ describe('Paragraph Edit Session E2E Tests (Showcase)', () => {
             throw new Error('boom');
         }).rejects.toThrow('boom');
 
-        const remaining = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const remaining = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         expect(remaining.length).toBeGreaterThan(0);
     });
 
@@ -157,13 +157,13 @@ describe('Paragraph Edit Session E2E Tests (Showcase)', () => {
         const pdf1 = await PDFDancer.open(pdfData, token, baseUrl);
         const pdf2 = await PDFDancer.new({initialPageCount: 1}, token, baseUrl);
 
-        await pdf2.page(0).newParagraph()
+        await pdf2.page(1).newParagraph()
             .text('Temporary Text')
             .font(StandardFonts.HELVETICA, 12)
             .at(50, 50)
             .apply();
 
-        const [paragraph] = await pdf1.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [paragraph] = await pdf1.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         await paragraph.edit().replace('Nested Edit').apply();
 
         const assertions = await PDFAssertions.create(pdf1);
@@ -174,11 +174,11 @@ describe('Paragraph Edit Session E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         const original = paragraph.position;
         await paragraph.edit().replace('No Move').apply();
 
-        const [updated] = await pdf.page(0).selectParagraphsStartingWith('No Move');
+        const [updated] = await pdf.page(1).selectParagraphsStartingWith('No Move');
         expect(updated.position.getX()).toBeCloseTo(original.getX()!, 5);
         expect(updated.position.getY()).toBeCloseTo(original.getY()!, 5);
     });
@@ -187,7 +187,7 @@ describe('Paragraph Edit Session E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         await paragraph.edit()
             .replace('Chained\nEdits')
             .font('Helvetica', 15)
@@ -205,7 +205,7 @@ describe('Paragraph Edit Session E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         await paragraph.edit().replace('Times Roman').font(StandardFonts.TIMES_ROMAN, 18).apply();
 
         const assertions = await PDFAssertions.create(pdf);
@@ -216,7 +216,7 @@ describe('Paragraph Edit Session E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         await paragraph.edit().replace('Line 1\nLine 2').font('Helvetica', 12).apply();
 
         const assertions = await PDFAssertions.create(pdf);
@@ -228,7 +228,7 @@ describe('Paragraph Edit Session E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         await paragraph.edit().replace('').font('Helvetica', 12).apply();
 
         const assertions = await PDFAssertions.create(pdf);
@@ -239,7 +239,7 @@ describe('Paragraph Edit Session E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph] = await pdf.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
         await paragraph.edit().replace('Awesomely\nObvious!').font('Helvetica', 12).apply();
 
         const assertions = await PDFAssertions.create(pdf);
@@ -252,15 +252,15 @@ describe('Paragraph Edit Session E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf1 = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const [paragraph1] = await pdf1.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
-        await paragraph1.edit().replace('Test Text').font('Helvetica', 14).color(new Color(255, 0, 0)).apply();
+        const [paragraph1] = await pdf1.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        await paragraph1.edit().replace('Test Text').font('Helvetica', 14).color(new Color(255, 1, 0)).apply();
 
         const assertions1 = await PDFAssertions.create(pdf1);
         await assertions1.assertTextlineHasFont('Test Text', 'Helvetica', 14);
 
         const pdf2 = await PDFDancer.open(pdfData, token, baseUrl);
-        const [paragraph2] = await pdf2.page(0).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
-        await paragraph2.edit().replace('Test Text').font('Helvetica', 14).color(new Color(255, 0, 0)).apply();
+        const [paragraph2] = await pdf2.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
+        await paragraph2.edit().replace('Test Text').font('Helvetica', 14).color(new Color(255, 1, 0)).apply();
 
         const assertions2 = await PDFAssertions.create(pdf2);
         await assertions2.assertTextlineHasFont('Test Text', 'Helvetica', 14);

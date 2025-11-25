@@ -6,9 +6,9 @@ describe('Snapshot E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const snapshot = await pdf.getPageSnapshot(0);
+        const snapshot = await pdf.getPageSnapshot(1);
         const snapshotParagraphs = snapshot.elements.filter(e => e.type === ObjectType.PARAGRAPH);
-        const selected = await pdf.page(0).selectParagraphs();
+        const selected = await pdf.page(1).selectParagraphs();
 
         expect(selected.length).toBe(snapshotParagraphs.length);
         const snapshotIds = new Set(snapshotParagraphs.map(e => e.internalId));
@@ -20,9 +20,9 @@ describe('Snapshot E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const snapshot = await pdf.getPageSnapshot(0);
+        const snapshot = await pdf.getPageSnapshot(1);
         const snapshotImages = snapshot.elements.filter(e => e.type === ObjectType.IMAGE);
-        const selected = await pdf.page(0).selectImages();
+        const selected = await pdf.page(1).selectImages();
 
         expect(selected.length).toBe(snapshotImages.length);
         if (selected.length > 0) {
@@ -36,9 +36,9 @@ describe('Snapshot E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const snapshot = await pdf.getPageSnapshot(0);
+        const snapshot = await pdf.getPageSnapshot(1);
         const snapshotForms = snapshot.elements.filter(e => e.type === ObjectType.FORM_X_OBJECT);
-        const selected = await pdf.page(0).selectForms();
+        const selected = await pdf.page(1).selectForms();
 
         expect(selected.length).toBe(snapshotForms.length);
         if (selected.length > 0) {
@@ -52,14 +52,14 @@ describe('Snapshot E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const snapshot = await pdf.getPageSnapshot(0);
+        const snapshot = await pdf.getPageSnapshot(1);
         const snapshotFields = snapshot.elements.filter(e => [
             ObjectType.FORM_FIELD,
             ObjectType.TEXT_FIELD,
             ObjectType.CHECKBOX,
             ObjectType.RADIO_BUTTON
         ].includes(e.type));
-        const selected = await pdf.page(0).selectFormFields();
+        const selected = await pdf.page(1).selectFormFields();
 
         expect(selected.length).toBe(snapshotFields.length);
         if (selected.length > 0) {
@@ -73,7 +73,7 @@ describe('Snapshot E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const snapshot = await pdf.getPageSnapshot(0);
+        const snapshot = await pdf.getPageSnapshot(1);
         const paragraphCount = snapshot.elements.filter(e => e.type === ObjectType.PARAGRAPH).length;
         const textLineCount = snapshot.elements.filter(e => e.type === ObjectType.TEXT_LINE).length;
 
@@ -92,7 +92,7 @@ describe('Snapshot E2E Tests (Showcase)', () => {
         const docSnapshot = await pdf.getDocumentSnapshot();
         for (let i = 0; i < docSnapshot.pageCount; i++) {
             const docPage = docSnapshot.pages[i];
-            const pageSnapshot = await pdf.getPageSnapshot(i);
+            const pageSnapshot = await pdf.getPageSnapshot(i + 1);
             expect(pageSnapshot.elements.length).toBe(docPage.elements.length);
 
             const docIds = new Set(docPage.elements.map(e => e.internalId));
@@ -105,8 +105,8 @@ describe('Snapshot E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const snapshot = await pdf.getPageSnapshot(0, [ObjectType.PARAGRAPH]);
-        const selected = await pdf.page(0).selectParagraphs();
+        const snapshot = await pdf.getPageSnapshot(1, [ObjectType.PARAGRAPH]);
+        const selected = await pdf.page(1).selectParagraphs();
 
         expect(snapshot.elements.length).toBe(selected.length);
         expect(snapshot.elements.every(e => e.type === ObjectType.PARAGRAPH)).toBe(true);
@@ -120,10 +120,10 @@ describe('Snapshot E2E Tests (Showcase)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const snapshot = await pdf.getPageSnapshot(0, [ObjectType.PARAGRAPH, ObjectType.TEXT_LINE]);
+        const snapshot = await pdf.getPageSnapshot(1, [ObjectType.PARAGRAPH, ObjectType.TEXT_LINE]);
         expect(snapshot.elements.every(e => e.type === ObjectType.PARAGRAPH || e.type === ObjectType.TEXT_LINE)).toBe(true);
 
-        const full = await pdf.getPageSnapshot(0);
+        const full = await pdf.getPageSnapshot(1);
         const expectedCount = full.elements.filter(e => e.type === ObjectType.PARAGRAPH || e.type === ObjectType.TEXT_LINE).length;
         expect(snapshot.elements.length).toBe(expectedCount);
     });
@@ -151,9 +151,9 @@ describe('Snapshot E2E Tests (Showcase)', () => {
 
         const limit = Math.min(3, docSnapshot.pageCount);
         for (let i = 0; i < limit; i++) {
-            const pageSnapshot = await pdf.getPageSnapshot(i);
+            const pageSnapshot = await pdf.getPageSnapshot(i + 1);
             expect(pageSnapshot).toBeDefined();
-            expect(pageSnapshot.pageRef.position.pageIndex).toBe(i);
+            expect(pageSnapshot.pageRef.position.pageNumber).toBe(i + 1);
         }
     });
 });
