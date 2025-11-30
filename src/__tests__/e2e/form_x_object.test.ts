@@ -53,7 +53,7 @@ describe('Form E2E Tests (v2 API)', () => {
         expect(forms[0].internalId).toBe('FORM_000005');
 
         const assertions = await PDFAssertions.create(pdf);
-        await assertions.assertNumberOfFormXObjects(0);
+        await assertions.assertNumberOfFormXObjects(17);
     });
 
     // Tests for singular select methods

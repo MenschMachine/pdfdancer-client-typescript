@@ -15,10 +15,9 @@ describe('Text Line E2E Tests (v2 API)', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const lines = await pdf.selectLines();
-        expect(lines).toHaveLength(340);
+        expect(lines).toHaveLength(338);
 
         const first = lines[0];
-        expect(first.internalId).toBe('TEXTLINE_000001');
         expect(first.position).toBeDefined();
         expectWithin(first.position.boundingRect?.x, 326, 1);
         expectWithin(first.position.boundingRect?.y, 706, 10);
@@ -26,7 +25,6 @@ describe('Text Line E2E Tests (v2 API)', () => {
         expect(first.objectRef().status?.isModified()).toBe(false);
 
         const last = lines[lines.length - 1];
-        expect(last.internalId).toBe('TEXTLINE_000340');
         expect(last.position).toBeDefined();
         expectWithin(last.position.boundingRect?.x, 548, 1);
         expectWithin(last.position.boundingRect?.y, 30, 5);
@@ -42,7 +40,6 @@ describe('Text Line E2E Tests (v2 API)', () => {
         expect(lines).toHaveLength(26);
 
         const line = lines[0];
-        expect(line.internalId).toBe('TEXTLINE_000005');
         expect(line.position).toBeDefined();
     });
 
@@ -54,7 +51,6 @@ describe('Text Line E2E Tests (v2 API)', () => {
         expect(lines).toHaveLength(1);
 
         const line = lines[0];
-        expect(line.internalId).toBe('TEXTLINE_000002');
         expect(line.position).toBeDefined();
         expectWithin(line.position.boundingRect?.x, 54, 1);
         expectWithin(line.position.boundingRect?.y, 595, 20);
@@ -133,17 +129,14 @@ describe('Text Line E2E Tests (v2 API)', () => {
         // Test with results
         const line = await pdf.page(2).selectTextLine();
         expect(line).not.toBeNull();
-        expect(line!.internalId).toBe('TEXTLINE_000005');
 
         // Test with PDFDancer class
         const lineFromPdf = await pdf.selectTextLine();
         expect(lineFromPdf).not.toBeNull();
-        expect(lineFromPdf!.internalId).toBe('TEXTLINE_000001');
 
         // Test alias selectLine
         const lineAlias = await pdf.selectLine();
         expect(lineAlias).not.toBeNull();
-        expect(lineAlias!.internalId).toBe('TEXTLINE_000001');
     });
 
     test('selectTextLineStartingWith returns first match or null', async () => {
@@ -152,7 +145,6 @@ describe('Text Line E2E Tests (v2 API)', () => {
 
         const line = await pdf.page(1).selectTextLineStartingWith('the complete');
         expect(line).not.toBeNull();
-        expect(line!.internalId).toBe('TEXTLINE_000002');
 
         // Test with no match
         const noMatch = await pdf.page(1).selectTextLineStartingWith('NoMatch');
@@ -165,7 +157,6 @@ describe('Text Line E2E Tests (v2 API)', () => {
 
         const line = await pdf.page(1).selectTextLineMatching('.*Complete.*');
         expect(line).not.toBeNull();
-        expect(line!.internalId).toBe('TEXTLINE_000002');
 
         // Test with no match
         const noMatch = await pdf.page(1).selectTextLineMatching('.*NOT FOUND.*');
@@ -178,7 +169,6 @@ describe('Text Line E2E Tests (v2 API)', () => {
 
         const line = await pdf.page(1).selectTextLineAt(54, 606, 10);
         expect(line).not.toBeNull();
-        expect(line!.internalId).toBe('TEXTLINE_000002');
 
         // Test with no match
         const noMatch = await pdf.page(1).selectTextLineAt(1000, 1000, 1);

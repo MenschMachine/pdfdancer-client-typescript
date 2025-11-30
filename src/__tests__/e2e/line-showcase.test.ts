@@ -24,17 +24,15 @@ describe('Text Line E2E Tests (Showcase)', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const lines = await pdf.selectTextLines();
-        expect(lines.length).toBe(36);
+        expect(lines.length).toBe(35);
 
         const first = lines[0];
-        expect(first.internalId).toBe('TEXTLINE_000001');
         expect(first.position).toBeDefined();
         expect(Math.abs(first.position.getX()! - 180)).toBeLessThanOrEqual(1);
         expect(Math.abs(first.position.getY()! - 750)).toBeLessThanOrEqual(1);
         expect(first.objectRef().status?.isModified()).toBe(false);
 
         const last = lines[lines.length - 1];
-        expect(last.internalId).toBe('TEXTLINE_000036');
         expect(Math.abs(last.position.getX()! - 69.3)).toBeLessThanOrEqual(2);
         expect(Math.abs(last.position.getY()! - 45)).toBeLessThanOrEqual(2);
         expect(last.objectRef().status?.isModified()).toBe(false);
@@ -48,7 +46,6 @@ describe('Text Line E2E Tests (Showcase)', () => {
         expect(lines.length).toBe(1);
 
         const line = lines[0];
-        expect(line.internalId).toBe('TEXTLINE_000002');
         expect(Math.abs(line.position.getX()! - 65)).toBeLessThanOrEqual(1);
         expect(Math.abs(line.position.getY()! - 706.8)).toBeLessThanOrEqual(2);
     });

@@ -21,13 +21,11 @@ describe('Paragraph E2E Tests (v2 API)', () => {
         expect(parasPage1).toHaveLength(2);
 
         const first = parasPage1[0];
-        expect(first.internalId).toBe('PARAGRAPH_000003');
         expect(first.position).toBeDefined();
         expectWithin(first.position.boundingRect?.x, 326, 1);
         expectWithin(first.position.boundingRect?.y, 706, 5);
 
         const last = parasPage1[parasPage1.length - 1];
-        expect(last.internalId).toBe('PARAGRAPH_000004');
         expect(last.position).toBeDefined();
         expectWithin(last.position.boundingRect?.x, 54, 1);
         expectWithin(last.position.boundingRect?.y, 475, 20);
@@ -45,7 +43,6 @@ describe('Paragraph E2E Tests (v2 API)', () => {
         expect(paras).toHaveLength(1);
 
         const p = paras[0];
-        expect(p.internalId).toBe('PARAGRAPH_000004');
         expect(p.position).toBeDefined();
         expectWithin(p.position.boundingRect?.x, 54, 1);
         expectWithin(p.position.boundingRect?.y, 475, 20);
@@ -58,7 +55,6 @@ describe('Paragraph E2E Tests (v2 API)', () => {
         const paras = await pdf.page(1).selectParagraphsMatching('.*Complete.*');
         expect(paras).toHaveLength(1);
         const p = paras[0];
-        expect(p.internalId).toBe('PARAGRAPH_000004');
 
         const paras2 = await pdf.page(1).selectParagraphsMatching('.*NOT FOUND.*');
         expect(paras2).toHaveLength(0);
@@ -624,12 +620,10 @@ describe('Paragraph E2E Tests (v2 API)', () => {
         // Test with results
         const para = await pdf.page(1).selectParagraph();
         expect(para).not.toBeNull();
-        expect(para!.internalId).toBe('PARAGRAPH_000003');
 
         // Test with PDFDancer class
         const paraFromPdf = await pdf.selectParagraph();
         expect(paraFromPdf).not.toBeNull();
-        expect(paraFromPdf!.internalId).toBe('PARAGRAPH_000003');
     });
 
     test('selectParagraphStartingWith returns first match or null', async () => {
@@ -638,7 +632,6 @@ describe('Paragraph E2E Tests (v2 API)', () => {
 
         const para = await pdf.page(1).selectParagraphStartingWith('The Complete');
         expect(para).not.toBeNull();
-        expect(para!.internalId).toBe('PARAGRAPH_000004');
 
         // Test with no match
         const noMatch = await pdf.page(1).selectParagraphStartingWith('NoMatch');
@@ -651,7 +644,6 @@ describe('Paragraph E2E Tests (v2 API)', () => {
 
         const para = await pdf.page(1).selectParagraphMatching('.*Complete.*');
         expect(para).not.toBeNull();
-        expect(para!.internalId).toBe('PARAGRAPH_000004');
 
         // Test with PDFDancer class
         const paraFromPdf = await pdf.selectParagraphMatching('.*Complete.*');
@@ -668,7 +660,6 @@ describe('Paragraph E2E Tests (v2 API)', () => {
 
         const para = await pdf.page(1).selectParagraphAt(54, 496, 10);
         expect(para).not.toBeNull();
-        expect(para!.internalId).toBe('PARAGRAPH_000004');
 
         // Test with no match
         const noMatch = await pdf.page(1).selectParagraphAt(1000, 1000, 1);

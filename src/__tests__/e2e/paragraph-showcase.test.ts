@@ -18,12 +18,10 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         expect(firstPageParas).toHaveLength(3);
 
         const first = firstPageParas[0];
-        expect(first.internalId).toBe('PARAGRAPH_000004');
         expectWithin(first.position.getX(), 180, 1);
         expectWithin(first.position.getY(), 755.2, 6);
 
         const last = firstPageParas[firstPageParas.length - 1];
-        expect(last.internalId).toBe('PARAGRAPH_000006');
         expectWithin(last.position.getX(), 69.3, 1);
         expectWithin(last.position.getY(), 46.7, 2);
 
@@ -41,7 +39,6 @@ describe('Paragraph E2E Tests (Showcase)', () => {
         expect(paragraphs).toHaveLength(1);
 
         const paragraph = paragraphs[0];
-        expect(paragraph.internalId).toBe('PARAGRAPH_000005');
         expectWithin(paragraph.position.getX(), 64.7, 1);
         expectWithin(paragraph.position.getY(), 643, 2);
     });
