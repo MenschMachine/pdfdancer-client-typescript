@@ -54,7 +54,6 @@ describe('Paragraph E2E Tests (v2 API)', () => {
 
         const paras = await pdf.page(1).selectParagraphsMatching('.*Complete.*');
         expect(paras).toHaveLength(1);
-        const p = paras[0];
 
         const paras2 = await pdf.page(1).selectParagraphsMatching('.*NOT FOUND.*');
         expect(paras2).toHaveLength(0);
