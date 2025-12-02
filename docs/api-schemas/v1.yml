@@ -1,0 +1,3776 @@
+openapi: 3.0.1
+info:
+  title: PDFDancer API
+  version: 0.1.3
+paths:
+  /font/find:
+    get:
+      operationId: findFontV1
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: fontName
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: findFontV1 200 response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /font/get:
+    get:
+      operationId: getAllFontNamesV1
+      parameters:
+      - name: X-Session-Id
+        in: header
+        schema:
+          type: string
+          nullable: true
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getAllFontNamesV1 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FontNamesResponse"
+  /font/get/{fontName}:
+    get:
+      operationId: getFontV1
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: fontName
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getFontV1 200 response
+          content:
+            font/ttf:
+              schema:
+                type: string
+                format: binary
+  /font/register:
+    post:
+      operationId: registerFontV1
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                ttfFile:
+                  type: string
+                  format: binary
+            encoding:
+              ttfFile:
+                contentType: application/octet-stream
+                explode: false
+        required: true
+      responses:
+        "200":
+          description: registerFontV1 200 response
+          content:
+            application/json:
+              schema:
+                type: string
+  /keys/anon:
+    post:
+      operationId: issueAnonymousKeyV1
+      parameters:
+      - name: X-Fingerprint
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: issueAnonymousKeyV1 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiTokenCreateResponse"
+  /metrics/buffer-stats:
+    get:
+      summary: |-
+        GET /api/dashboard/buffer-stats
+
+
+        Returns current metrics buffer statistics:
+        - Total events published
+        - Total events flushed
+        - Current buffer size
+
+
+        Useful for monitoring the health of the metrics collection system.
+      description: |-
+        GET /api/dashboard/buffer-stats
+
+
+        Returns current metrics buffer statistics:
+        - Total events published
+        - Total events flushed
+        - Current buffer size
+
+
+        Useful for monitoring the health of the metrics collection system.
+
+
+        Requires authentication with ADMIN role.
+      operationId: getBufferStats
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getBufferStats 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetricsBuffer.BufferStats"
+  /metrics/errors:
+    get:
+      summary: |-
+        GET /metrics/errors
+
+
+        Returns latest errors ordered by timestamp descending.
+      description: |-
+        GET /metrics/errors
+
+
+        Returns latest errors ordered by timestamp descending.
+        Includes comprehensive error context:
+        - Timestamp, event type, operation type, error message
+        - Session ID, user ID, tenant ID, plan code
+        - Client location (country, region, IP)
+        - Cloudflare ray ID for debugging
+
+
+        Query params:
+        - limit: Number of results to return (default: 100, max: 1000)
+        - offset: Number of results to skip (default: 0)
+
+
+        Requires authentication with ADMIN role.
+      operationId: getErrors
+      parameters:
+      - name: limit
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          default: 100
+      - name: offset
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getErrors 200 response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AnalyticsService.MetricError"
+  /metrics/event-types:
+    get:
+      summary: |-
+        GET /api/dashboard/event-types
+
+
+        Returns all event types present in the database with:
+        - Event type name
+        - Total count of events
+        - Timestamp of most recent event
+
+
+        Sorted by total count (descending).
+      description: |-
+        GET /api/dashboard/event-types
+
+
+        Returns all event types present in the database with:
+        - Event type name
+        - Total count of events
+        - Timestamp of most recent event
+
+
+        Sorted by total count (descending).
+        Useful for discovering what metrics are being tracked and their activity levels.
+
+
+        Requires authentication with ADMIN role.
+      operationId: getEventTypes
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getEventTypes 200 response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AnalyticsService.EventTypeInfo"
+  /metrics/jvm-stats:
+    get:
+      summary: |-
+        GET /api/dashboard/jvm-stats
+
+
+        Returns current JVM and OS statistics snapshot:
+        - Runtime information (VM name, version, uptime)
+        - Memory usage (heap, non-heap, memory pools)
+        - Thread statistics (current, peak, daemon)
+        - Garbage collection statistics
+        - Operating system metrics (CPU, memory, load average)
+        - NIO buffer pools
+        - Caffeine cache statistics
+
+
+        This provides a real-time snapshot of JVM health, unlike the dashboard
+        summary which shows historical averages.
+      description: |-
+        GET /api/dashboard/jvm-stats
+
+
+        Returns current JVM and OS statistics snapshot:
+        - Runtime information (VM name, version, uptime)
+        - Memory usage (heap, non-heap, memory pools)
+        - Thread statistics (current, peak, daemon)
+        - Garbage collection statistics
+        - Operating system metrics (CPU, memory, load average)
+        - NIO buffer pools
+        - Caffeine cache statistics
+
+
+        This provides a real-time snapshot of JVM health, unlike the dashboard
+        summary which shows historical averages.
+
+
+        Requires authentication with ADMIN role.
+      operationId: getJvmStats
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getJvmStats 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JvmStatsService.JvmStats"
+  /metrics/operations:
+    get:
+      summary: |-
+        GET /api/dashboard/operations
+
+
+        Returns daily operation counts and trends:
+        - Pages generated per day
+        - Image/text/vector manipulations per day
+        - Average duration per operation
+
+
+        Query params:
+        - days: Number of days to include (default: 30)
+
+
+        Requires authentication with ADMIN role.
+      description: |-
+        GET /api/dashboard/operations
+
+
+        Returns daily operation counts and trends:
+        - Pages generated per day
+        - Image/text/vector manipulations per day
+        - Average duration per operation
+
+
+        Query params:
+        - days: Number of days to include (default: 30)
+
+
+        Requires authentication with ADMIN role.
+      operationId: getOperations
+      parameters:
+      - name: days
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          default: 30
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getOperations 200 response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AnalyticsService.DailyOperationCount"
+  /metrics/performance:
+    get:
+      summary: |-
+        GET /api/dashboard/performance
+
+
+        Returns performance metrics broken down by operation type:
+        - Average ms per operation
+        - Percentiles (p50, p95, p99)
+        - Min/max durations
+        - Operation counts
+
+
+        Query params:
+        - days: Number of days to include (default: 30)
+
+
+        Requires authentication with ADMIN role.
+      description: |-
+        GET /api/dashboard/performance
+
+
+        Returns performance metrics broken down by operation type:
+        - Average ms per operation
+        - Percentiles (p50, p95, p99)
+        - Min/max durations
+        - Operation counts
+
+
+        Query params:
+        - days: Number of days to include (default: 30)
+
+
+        Requires authentication with ADMIN role.
+      operationId: getPerformance
+      parameters:
+      - name: days
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          default: 30
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getPerformance 200 response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AnalyticsService.PerformanceMetric"
+  /metrics/session/{sessionId}/events:
+    get:
+      summary: |-
+        GET /metrics/session/{sessionId}/events
+
+
+        Returns paginated events for a specific session.
+      description: |-
+        GET /metrics/session/{sessionId}/events
+
+
+        Returns paginated events for a specific session.
+        Useful for understanding what happened during a session for product analytics.
+
+
+        Query params:
+        - limit: Number of results to return (default: 100, max: 1000)
+        - offset: Number of results to skip (default: 0)
+        - eventType: Optional filter by event type (e.g., PDF_DOCUMENT_GENERATED)
+
+
+        Results are ordered by timestamp DESC (most recent first).
+
+
+        Requires authentication with ADMIN role.
+      operationId: getSessionEvents
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          default: 100
+      - name: offset
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: eventType
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getSessionEvents 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventsPageResponse_SessionEventDto_"
+  /metrics/sessions:
+    get:
+      summary: |-
+        GET /api/dashboard/sessions
+
+
+        Returns session statistics:
+        - Total sessions
+        - Active sessions (1h, 24h, 7d)
+
+
+        Query params:
+        - days: Number of days to include (default: 30)
+
+
+        Requires authentication with ADMIN role.
+      description: |-
+        GET /api/dashboard/sessions
+
+
+        Returns session statistics:
+        - Total sessions
+        - Active sessions (1h, 24h, 7d)
+
+
+        Query params:
+        - days: Number of days to include (default: 30)
+
+
+        Requires authentication with ADMIN role.
+      operationId: getSessions
+      parameters:
+      - name: days
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          default: 30
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getSessions 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsService.SessionStats"
+  /metrics/summary:
+    get:
+      summary: |-
+        GET /api/dashboard/summary
+
+
+        Returns comprehensive dashboard summary including:
+        - Pages generated
+        - Average ms per page
+        - Total and active sessions
+        - Total and active users
+        - Operation counts (image, text, vector)
+        - Error rate
+
+
+        Query params:
+        - days: Number of days to include (default: 30)
+      description: |-
+        GET /api/dashboard/summary
+
+
+        Returns comprehensive dashboard summary including:
+        - Pages generated
+        - Average ms per page
+        - Total and active sessions
+        - Total and active users
+        - Operation counts (image, text, vector)
+        - Error rate
+
+
+        Query params:
+        - days: Number of days to include (default: 30)
+      operationId: getSummary
+      parameters:
+      - name: days
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          default: 30
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getSummary 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsService.DashboardSummary"
+  /metrics/summary/windows:
+    get:
+      summary: |-
+        GET /api/dashboard/summary/windows
+
+
+        Returns dashboard summaries for multiple time windows (1h, 1d, 7d, 30d).
+      description: |-
+        GET /api/dashboard/summary/windows
+
+
+        Returns dashboard summaries for multiple time windows (1h, 1d, 7d, 30d).
+        This provides trend analysis across different time periods with all metrics including:
+        - PDF operations (documents, pages, objects)
+        - Image and text manipulations
+        - HTTP status codes and API health
+        - JVM performance metrics (CPU, memory, threads, GC)
+        - Average durations per operation type
+        - Session and user activity
+        - Error rates
+
+
+        Each time window contains a complete DashboardSummary with all 74 metrics.
+      operationId: getMultiWindowSummary
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getMultiWindowSummary 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsService.MultiWindowSummary"
+  /metrics/user-requests:
+    get:
+      summary: |-
+        GET /api/dashboard/user-requests
+
+
+        Returns user requests grouped by user_id and connecting_ip:
+        - User ID
+        - CF-Connecting-IP (client IP address)
+        - Client region
+        - Client country
+        - ASN (Autonomous System Number)
+        - AS Name (Autonomous System organization name)
+        - AS Domain (Autonomous System domain)
+        - Last event timestamp
+
+
+        One row per unique combination of user_id + connecting_ip.
+      description: |-
+        GET /api/dashboard/user-requests
+
+
+        Returns user requests grouped by user_id and connecting_ip:
+        - User ID
+        - CF-Connecting-IP (client IP address)
+        - Client region
+        - Client country
+        - ASN (Autonomous System Number)
+        - AS Name (Autonomous System organization name)
+        - AS Domain (Autonomous System domain)
+        - Last event timestamp
+
+
+        One row per unique combination of user_id + connecting_ip.
+        Ordered by last event timestamp (descending).
+        ASN data is looked up from IP address ranges at query time.
+
+
+        Requires authentication with ADMIN role.
+
+
+        Query params:
+        - limit: Number of results to return (default: 100)
+        - offset: Number of results to skip (default: 0)
+      operationId: getUserRequests
+      parameters:
+      - name: limit
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          default: 100
+      - name: offset
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getUserRequests 200 response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AnalyticsService.UserRequest"
+  /metrics/user/{userId}/events:
+    get:
+      summary: |-
+        GET /metrics/user/{userId}/events
+
+
+        Returns paginated events for a specific user across all their sessions.
+      description: |-
+        GET /metrics/user/{userId}/events
+
+
+        Returns paginated events for a specific user across all their sessions.
+        Useful for understanding user behavior patterns for product analytics.
+
+
+        Query params:
+        - limit: Number of results to return (default: 100, max: 1000)
+        - offset: Number of results to skip (default: 0)
+        - eventType: Optional filter by event type (e.g., PDF_DOCUMENT_GENERATED)
+
+
+        Results are ordered by timestamp DESC (most recent first).
+        Each event includes the sessionId to identify which session it belongs to.
+
+
+        Requires authentication with ADMIN role.
+      operationId: getUserEvents
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          default: 100
+      - name: offset
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: eventType
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getUserEvents 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventsPageResponse_UserEventDto_"
+  /metrics/users:
+    get:
+      summary: |-
+        GET /api/dashboard/users
+
+
+        Returns user statistics:
+        - Total users
+        - Active users (24h, 7d, 30d)
+
+
+        Query params:
+        - days: Number of days to include (default: 30)
+
+
+        Requires authentication with ADMIN role.
+      description: |-
+        GET /api/dashboard/users
+
+
+        Returns user statistics:
+        - Total users
+        - Active users (24h, 7d, 30d)
+
+
+        Query params:
+        - days: Number of days to include (default: 30)
+
+
+        Requires authentication with ADMIN role.
+      operationId: getUsers
+      parameters:
+      - name: days
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          default: 30
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getUsers 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsService.UserStats"
+  /pdf/add:
+    post:
+      summary: Adds new objects to the PDF document.
+      description: Adds new objects to the PDF document.
+      operationId: addObject
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddRequestV1"
+        required: true
+      responses:
+        "200":
+          description: addObject 200 response
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /pdf/delete:
+    delete:
+      summary: Removes specified objects from the PDF document.
+      description: Removes specified objects from the PDF document.
+      operationId: deleteObject
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteRequestV1"
+        required: true
+      responses:
+        "200":
+          description: deleteObject 200 response
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /pdf/document/snapshot:
+    get:
+      summary: Retrieves a complete snapshot of the entire PDF document.
+      description: Retrieves a complete snapshot of the entire PDF document. Response
+        uses 1-based page numbers in all position data.
+      operationId: getDocumentSnapshot
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: types
+        in: query
+        explode: false
+        schema:
+          type: string
+          nullable: true
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getDocumentSnapshot 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentSnapshotV1"
+  /pdf/find:
+    post:
+      summary: Searches for PDF objects within the document.
+      description: Searches for PDF objects within the document.
+      operationId: findObject
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FindRequestV1"
+        required: true
+      responses:
+        "200":
+          description: findObject 200 response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ObjectRefV1"
+  /pdf/modify:
+    put:
+      summary: Modifies existing objects in the PDF document.
+      description: Modifies existing objects in the PDF document.
+      operationId: modifyObject
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModifyRequestV1"
+        required: true
+      responses:
+        "200":
+          description: modifyObject 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommandResult"
+  /pdf/modify/formField:
+    put:
+      summary: Modifies form field values.
+      description: Modifies form field values.
+      operationId: changeFormField
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeFormFieldRequest"
+        required: true
+      responses:
+        "200":
+          description: changeFormField 200 response
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /pdf/move:
+    put:
+      summary: Moves PDF objects to new positions within the document.
+      description: Moves PDF objects to new positions within the document.
+      operationId: moveObject
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MoveRequestV1"
+        required: true
+      responses:
+        "200":
+          description: moveObject 200 response
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /pdf/page/add:
+    post:
+      summary: Adds a new blank page to the PDF document.
+      description: "Adds a new blank page to the PDF document. If pageNumber is specified,\
+        \ inserts at that position (1-based). If null, appends to the end."
+      operationId: addPage
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddPageRequestV1"
+        required: true
+      responses:
+        "200":
+          description: addPage 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PageRefV1"
+  /pdf/page/delete:
+    delete:
+      summary: Removes a page from the PDF document.
+      description: Removes a page from the PDF document.
+      operationId: deletePage
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ObjectRef"
+        required: true
+      responses:
+        "200":
+          description: deletePage 200 response
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /pdf/page/find:
+    post:
+      summary: Searches for pages within the PDF document.
+      description: Searches for pages within the PDF document. Uses 1-based pageNumber
+        parameter.
+      operationId: findPage
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: pageNumber
+        in: query
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          nullable: true
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: findPage 200 response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PageRefV1"
+  /pdf/page/modify:
+    put:
+      summary: Modifies page-level properties (placeholder).
+      description: Modifies page-level properties (placeholder).
+      operationId: modifyPage
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeFormFieldRequest"
+        required: true
+      responses:
+        "200":
+          description: modifyPage 200 response
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /pdf/page/move:
+    put:
+      summary: Moves a page to a different position within the PDF document.
+      description: Moves a page to a different position within the PDF document. Both
+        fromPage and toPage use 1-based numbering.
+      operationId: movePage
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PageMoveRequestV1"
+        required: true
+      responses:
+        "200":
+          description: movePage 200 response
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /pdf/page/{pageNumber}/snapshot:
+    get:
+      summary: Retrieves a snapshot of a single PDF page.
+      description: Retrieves a snapshot of a single PDF page. Uses 1-based pageNumber
+        in URL path. Response uses 1-based page numbers in all position data.
+      operationId: getPageSnapshot
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: pageNumber
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - name: types
+        in: query
+        explode: false
+        schema:
+          type: string
+          nullable: true
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getPageSnapshot 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PageSnapshotV1"
+  /pdf/redact:
+    post:
+      summary: Redacts content from the PDF document based on the provided targets.
+      description: "Redacts content from the PDF document based on the provided targets.\
+        \ This operation finds and redacts matching objects in a single batch operation.\
+        \ Text content is replaced with a replacement string, while images and paths\
+        \ are replaced with solid color placeholder rectangles. Position pageNumber\
+        \ values are automatically converted to 0-based pageIndex."
+      operationId: redact
+      parameters:
+      - name: X-Session-Id
+        in: header
+        description: unique identifier for the user session containing the PDF
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        description: redaction specifications including targets and options
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RedactRequestV1"
+        required: true
+      responses:
+        "200":
+          description: HTTP response containing the redaction result with count and
+            any warnings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RedactResponse"
+  /pdf/text/line:
+    put:
+      summary: Modifies text line content.
+      description: Modifies text line content.
+      operationId: modifyTextLine
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModifyTextRequest"
+        required: true
+      responses:
+        "200":
+          description: modifyTextLine 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommandResult"
+  /pdf/text/paragraph:
+    put:
+      summary: Modifies paragraph content.
+      description: Modifies paragraph content.
+      operationId: modifyParagraph
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModifyTextRequest"
+        required: true
+      responses:
+        "200":
+          description: modifyParagraph 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommandResult"
+  /session/create:
+    post:
+      operationId: createSessionV1
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                pdf:
+                  type: string
+                  format: binary
+            encoding:
+              pdf:
+                contentType: application/octet-stream
+                explode: false
+        required: true
+      responses:
+        "200":
+          description: createSessionV1 200 response
+          content:
+            application/json:
+              schema:
+                type: string
+  /session/new:
+    post:
+      operationId: createBlankPdfV1
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBlankPdfRequest"
+        required: true
+      responses:
+        "200":
+          description: createBlankPdfV1 200 response
+          content:
+            application/json:
+              schema:
+                type: string
+  /session/{sessionId}:
+    delete:
+      operationId: deleteSessionV1
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: deleteSessionV1 200 response
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /session/{sessionId}/pdf:
+    get:
+      operationId: getSessionPdfV1
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getSessionPdfV1 200 response
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+components:
+  schemas:
+    AddPageRequestV1:
+      required:
+      - orientation
+      - pageNumber
+      - pageSize
+      type: object
+      properties:
+        pageNumber:
+          type: integer
+          format: int32
+        orientation:
+          $ref: "#/components/schemas/Orientation"
+        pageSize:
+          $ref: "#/components/schemas/PageSize"
+    AddRequestV1:
+      required:
+      - object
+      type: object
+      properties:
+        object:
+          $ref: "#/components/schemas/PDFObject"
+    AnalyticsService.DailyOperationCount:
+      required:
+      - avgDuration
+      - count
+      - date
+      - eventType
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        eventType:
+          type: string
+        count:
+          type: integer
+          format: int64
+        avgDuration:
+          type: number
+          format: double
+    AnalyticsService.DashboardSummary:
+      required:
+      - activeSessions
+      - activeUsers
+      - activeUsers24h
+      - anonKeysIssued
+      - apiRequests
+      - apiTokensCreated
+      - apiTokensValidated
+      - avgCacheHitRate
+      - avgDurationApiRequest
+      - avgDurationDocumentGenerated
+      - avgDurationDocumentParsed
+      - avgDurationDocumentSaved
+      - avgDurationFontRegistered
+      - avgDurationFormFieldChanged
+      - avgDurationImageAdded
+      - avgDurationImageDeleted
+      - avgDurationImageMoved
+      - avgDurationMs
+      - avgDurationObjectAdded
+      - avgDurationObjectModified
+      - avgDurationPageGenerated
+      - avgDurationPageParsed
+      - avgDurationParagraphAdded
+      - avgDurationParagraphDeleted
+      - avgDurationParagraphMoved
+      - avgHeapUsagePercent
+      - avgProcessCpuLoad
+      - avgProcessingTimeMs
+      - avgRoundTripMs
+      - avgSystemCpuLoad
+      - avgThreadCount
+      - documentsGenerated
+      - documentsParsed
+      - documentsSaved
+      - errorRatePercent
+      - fontsRegistered
+      - formFieldsChanged
+      - http2xxSuccess
+      - http4xxClientError
+      - http5xxServerError
+      - httpStatus200
+      - httpStatus201
+      - httpStatus204
+      - httpStatus400
+      - httpStatus401
+      - httpStatus403
+      - httpStatus404
+      - httpStatus429
+      - httpStatus500
+      - httpStatus502
+      - httpStatus503
+      - imagesAdded
+      - imagesDeleted
+      - imagesMoved
+      - objectsAdded
+      - objectsDeleted
+      - objectsModified
+      - pagesDeleted
+      - pagesGenerated
+      - pagesMoved
+      - pagesParsed
+      - paragraphsAdded
+      - paragraphsDeleted
+      - paragraphsMoved
+      - processingTimeRequests
+      - roundTripRequests
+      - servicePercentiles
+      - sessionsCreated
+      - sessionsDeleted
+      - sessionsRetrieved
+      - tenantsCreated
+      - textOperations
+      - totalErrors
+      - totalEvents
+      - totalGcCollections
+      - totalGcTimeMs
+      - totalSessions
+      - totalUsers
+      - usersCreated
+      - vectorOperations
+      type: object
+      properties:
+        documentsGenerated:
+          type: integer
+          format: int64
+        documentsSaved:
+          type: integer
+          format: int64
+        documentsParsed:
+          type: integer
+          format: int64
+        pagesGenerated:
+          type: integer
+          format: int64
+        pagesParsed:
+          type: integer
+          format: int64
+        pagesDeleted:
+          type: integer
+          format: int64
+        pagesMoved:
+          type: integer
+          format: int64
+        objectsAdded:
+          type: integer
+          format: int64
+        objectsModified:
+          type: integer
+          format: int64
+        objectsDeleted:
+          type: integer
+          format: int64
+        imagesAdded:
+          type: integer
+          format: int64
+        imagesDeleted:
+          type: integer
+          format: int64
+        imagesMoved:
+          type: integer
+          format: int64
+        paragraphsAdded:
+          type: integer
+          format: int64
+        paragraphsDeleted:
+          type: integer
+          format: int64
+        paragraphsMoved:
+          type: integer
+          format: int64
+        textOperations:
+          type: integer
+          format: int64
+        vectorOperations:
+          type: integer
+          format: int64
+        fontsRegistered:
+          type: integer
+          format: int64
+        formFieldsChanged:
+          type: integer
+          format: int64
+        sessionsCreated:
+          type: integer
+          format: int64
+        sessionsDeleted:
+          type: integer
+          format: int64
+        sessionsRetrieved:
+          type: integer
+          format: int64
+        tenantsCreated:
+          type: integer
+          format: int64
+        usersCreated:
+          type: integer
+          format: int64
+        apiTokensCreated:
+          type: integer
+          format: int64
+        apiTokensValidated:
+          type: integer
+          format: int64
+        anonKeysIssued:
+          type: integer
+          format: int64
+        apiRequests:
+          type: integer
+          format: int64
+        roundTripRequests:
+          type: integer
+          format: int64
+        avgRoundTripMs:
+          type: number
+          format: double
+        processingTimeRequests:
+          type: integer
+          format: int64
+        avgProcessingTimeMs:
+          type: number
+          format: double
+        httpStatus200:
+          type: integer
+          format: int64
+        httpStatus201:
+          type: integer
+          format: int64
+        httpStatus204:
+          type: integer
+          format: int64
+        httpStatus400:
+          type: integer
+          format: int64
+        httpStatus401:
+          type: integer
+          format: int64
+        httpStatus403:
+          type: integer
+          format: int64
+        httpStatus404:
+          type: integer
+          format: int64
+        httpStatus429:
+          type: integer
+          format: int64
+        httpStatus500:
+          type: integer
+          format: int64
+        httpStatus502:
+          type: integer
+          format: int64
+        httpStatus503:
+          type: integer
+          format: int64
+        http2xxSuccess:
+          type: integer
+          format: int64
+        http4xxClientError:
+          type: integer
+          format: int64
+        http5xxServerError:
+          type: integer
+          format: int64
+        totalSessions:
+          type: integer
+          format: int64
+        activeSessions:
+          type: integer
+          format: int64
+        totalUsers:
+          type: integer
+          format: int64
+        activeUsers:
+          type: integer
+          format: int64
+        activeUsers24h:
+          type: integer
+          format: int64
+        avgDurationDocumentGenerated:
+          type: number
+          format: double
+        avgDurationDocumentSaved:
+          type: number
+          format: double
+        avgDurationDocumentParsed:
+          type: number
+          format: double
+        avgDurationPageGenerated:
+          type: number
+          format: double
+        avgDurationPageParsed:
+          type: number
+          format: double
+        avgDurationObjectAdded:
+          type: number
+          format: double
+        avgDurationObjectModified:
+          type: number
+          format: double
+        avgDurationImageAdded:
+          type: number
+          format: double
+        avgDurationImageDeleted:
+          type: number
+          format: double
+        avgDurationImageMoved:
+          type: number
+          format: double
+        avgDurationParagraphAdded:
+          type: number
+          format: double
+        avgDurationParagraphDeleted:
+          type: number
+          format: double
+        avgDurationParagraphMoved:
+          type: number
+          format: double
+        avgDurationFontRegistered:
+          type: number
+          format: double
+        avgDurationFormFieldChanged:
+          type: number
+          format: double
+        avgDurationApiRequest:
+          type: number
+          format: double
+        avgDurationMs:
+          type: number
+          format: double
+        totalErrors:
+          type: integer
+          format: int64
+        errorRatePercent:
+          type: number
+          format: double
+        totalEvents:
+          type: integer
+          format: int64
+        avgHeapUsagePercent:
+          type: number
+          format: double
+        avgProcessCpuLoad:
+          type: number
+          format: double
+        avgSystemCpuLoad:
+          type: number
+          format: double
+        avgThreadCount:
+          type: number
+          format: double
+        avgCacheHitRate:
+          type: number
+          format: double
+        totalGcCollections:
+          type: integer
+          format: int64
+        totalGcTimeMs:
+          type: integer
+          format: int64
+        servicePercentiles:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/AnalyticsService.ServicePercentiles"
+    AnalyticsService.EventTypeInfo:
+      required:
+      - eventType
+      - latestEvent
+      - totalCount
+      type: object
+      properties:
+        eventType:
+          type: string
+        totalCount:
+          type: integer
+          format: int64
+        latestEvent:
+          type: string
+          format: date-time
+    AnalyticsService.MetricError:
+      required:
+      - clientCountry
+      - clientRegion
+      - cloudflareRay
+      - connectingIp
+      - errorMessage
+      - eventType
+      - operationType
+      - planCode
+      - sessionId
+      - tenantId
+      - timestamp
+      - userId
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        eventType:
+          type: string
+        operationType:
+          type: string
+        errorMessage:
+          type: string
+        sessionId:
+          type: string
+        userId:
+          type: string
+        tenantId:
+          type: string
+        planCode:
+          type: string
+        clientCountry:
+          type: string
+        clientRegion:
+          type: string
+        cloudflareRay:
+          type: string
+        connectingIp:
+          type: string
+    AnalyticsService.MultiWindowSummary:
+      required:
+      - last1Day
+      - last1Hour
+      - last30Days
+      - last7Days
+      type: object
+      properties:
+        last1Hour:
+          $ref: "#/components/schemas/AnalyticsService.DashboardSummary"
+        last1Day:
+          $ref: "#/components/schemas/AnalyticsService.DashboardSummary"
+        last7Days:
+          $ref: "#/components/schemas/AnalyticsService.DashboardSummary"
+        last30Days:
+          $ref: "#/components/schemas/AnalyticsService.DashboardSummary"
+    AnalyticsService.PerformanceMetric:
+      required:
+      - avgMs
+      - maxMs
+      - minMs
+      - operationCount
+      - operationType
+      - p50Ms
+      - p95Ms
+      - p99Ms
+      type: object
+      properties:
+        operationType:
+          type: string
+        operationCount:
+          type: integer
+          format: int64
+        avgMs:
+          type: number
+          format: double
+        p50Ms:
+          type: number
+          format: double
+        p95Ms:
+          type: number
+          format: double
+        p99Ms:
+          type: number
+          format: double
+        minMs:
+          type: integer
+          format: int32
+        maxMs:
+          type: integer
+          format: int32
+    AnalyticsService.ServicePercentiles:
+      required:
+      - p50Ms
+      - p90Ms
+      - p95Ms
+      - p99Ms
+      type: object
+      properties:
+        p50Ms:
+          type: number
+          format: double
+        p90Ms:
+          type: number
+          format: double
+        p95Ms:
+          type: number
+          format: double
+        p99Ms:
+          type: number
+          format: double
+    AnalyticsService.SessionStats:
+      required:
+      - active1h
+      - active24h
+      - active7d
+      - totalSessions
+      type: object
+      properties:
+        totalSessions:
+          type: integer
+          format: int64
+        active1h:
+          type: integer
+          format: int64
+        active24h:
+          type: integer
+          format: int64
+        active7d:
+          type: integer
+          format: int64
+    AnalyticsService.UserRequest:
+      required:
+      - asDomain
+      - asName
+      - asn
+      - connectingIp
+      - country
+      - lastEventTimestamp
+      - region
+      - userId
+      type: object
+      properties:
+        userId:
+          type: string
+        connectingIp:
+          type: string
+        region:
+          type: string
+        country:
+          type: string
+        asn:
+          type: string
+        asName:
+          type: string
+        asDomain:
+          type: string
+        lastEventTimestamp:
+          type: string
+          format: date-time
+    AnalyticsService.UserStats:
+      required:
+      - active24h
+      - active30d
+      - active7d
+      - totalUsers
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+          format: int64
+        active24h:
+          type: integer
+          format: int64
+        active7d:
+          type: integer
+          format: int64
+        active30d:
+          type: integer
+          format: int64
+    ApiTokenCreateResponse:
+      required:
+      - metadata
+      - token
+      type: object
+      properties:
+        token:
+          type: string
+        metadata:
+          $ref: "#/components/schemas/ApiTokenCreateResponse.ApiTokenMetadata"
+    ApiTokenCreateResponse.ApiTokenMetadata:
+      required:
+      - createdAt
+      - expiresAt
+      - id
+      - name
+      - prefix
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        prefix:
+          type: string
+        createdAt:
+          type: string
+        expiresAt:
+          type: string
+    Bezier:
+      required:
+      - p0
+      - p1
+      - p2
+      - p3
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/PathSegment"
+      - $ref: "#/components/schemas/PDFObject"
+      - type: object
+        properties:
+          p0:
+            $ref: "#/components/schemas/Point"
+          p1:
+            $ref: "#/components/schemas/Point"
+          p2:
+            $ref: "#/components/schemas/Point"
+          p3:
+            $ref: "#/components/schemas/Point"
+          objectType:
+            $ref: "#/components/schemas/ObjectType"
+    BoundingRect:
+      required:
+      - height
+      - width
+      - x
+      - "y"
+      type: object
+      properties:
+        origin:
+          $ref: "#/components/schemas/Point"
+        x:
+          type: number
+          format: double
+        "y":
+          type: number
+          format: double
+        width:
+          type: number
+          format: double
+        height:
+          type: number
+          format: double
+    ChangeFormFieldRequest:
+      required:
+      - ref
+      - value
+      type: object
+      properties:
+        ref:
+          $ref: "#/components/schemas/ObjectRef"
+        value:
+          type: string
+    Color:
+      type: object
+      properties:
+        red:
+          type: integer
+          format: int32
+        green:
+          type: integer
+          format: int32
+        blue:
+          type: integer
+          format: int32
+        alpha:
+          type: integer
+          format: int32
+    CommandResult:
+      required:
+      - commandName
+      - elementId
+      - message
+      - success
+      - warning
+      type: object
+      properties:
+        commandName:
+          type: string
+        elementId:
+          type: string
+        message:
+          type: string
+        success:
+          type: boolean
+        warning:
+          type: string
+    CreateBlankPdfRequest:
+      required:
+      - initialPageCount
+      - orientation
+      - pageSize
+      type: object
+      properties:
+        pageSize:
+          $ref: "#/components/schemas/PageSize"
+        orientation:
+          $ref: "#/components/schemas/Orientation"
+        initialPageCount:
+          type: integer
+          format: int32
+    DeleteRequestV1:
+      required:
+      - objectRef
+      type: object
+      properties:
+        objectRef:
+          $ref: "#/components/schemas/ObjectRef"
+    DocumentFontInfoDto:
+      required:
+      - documentFontName
+      - systemFontName
+      type: object
+      properties:
+        documentFontName:
+          type: string
+        systemFontName:
+          type: string
+    DocumentSnapshotV1:
+      required:
+      - fonts
+      - pageCount
+      - pages
+      type: object
+      properties:
+        pageCount:
+          type: integer
+          format: int32
+        fonts:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentFontInfoDto"
+        pages:
+          type: array
+          items:
+            $ref: "#/components/schemas/PageSnapshotV1"
+    EventsPageResponse_SessionEventDto_:
+      required:
+      - events
+      - limit
+      - offset
+      - total
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionEventDto"
+        total:
+          type: integer
+          format: int64
+        limit:
+          type: integer
+          format: int32
+        offset:
+          type: integer
+          format: int32
+    EventsPageResponse_UserEventDto_:
+      required:
+      - events
+      - limit
+      - offset
+      - total
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserEventDto"
+        total:
+          type: integer
+          format: int64
+        limit:
+          type: integer
+          format: int32
+        offset:
+          type: integer
+          format: int32
+    FindRequestV1:
+      required:
+      - hint
+      - objectType
+      - position
+      type: object
+      properties:
+        objectType:
+          $ref: "#/components/schemas/ObjectType"
+        position:
+          $ref: "#/components/schemas/Position"
+        hint:
+          type: string
+    Font:
+      type: object
+      properties:
+        name:
+          type: string
+        size:
+          type: number
+          format: double
+        embedded:
+          type: boolean
+    FontNamesResponse:
+      required:
+      - fontNames
+      type: object
+      properties:
+        fontNames:
+          type: array
+          items:
+            type: string
+    FontType:
+      type: string
+      enum:
+      - SYSTEM
+      - STANDARD
+      - EMBEDDED
+    Form:
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/PDFObject"
+      - type: object
+        properties:
+          name:
+            type: string
+          type:
+            $ref: "#/components/schemas/Form.FormType"
+          value:
+            type: string
+          size:
+            $ref: "#/components/schemas/Size"
+          font:
+            $ref: "#/components/schemas/Font"
+          objectType:
+            $ref: "#/components/schemas/ObjectType"
+    Form.FormType:
+      type: string
+      enum:
+      - TEXT_FIELD
+      - CHECKBOX
+      - RADIO_BUTTON
+      - DROPDOWN
+      - BUTTON
+    FormFieldRef:
+      required:
+      - name
+      - value
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/ObjectRef"
+      - type: object
+        properties:
+          name:
+            type: string
+          value:
+            type: string
+    FormFieldRefV1:
+      required:
+      - name
+      - value
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/ObjectRefV1"
+      - type: object
+        properties:
+          name:
+            type: string
+          value:
+            type: string
+    Image:
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/PDFObject"
+      - type: object
+        properties:
+          format:
+            type: string
+          size:
+            $ref: "#/components/schemas/Size"
+          data:
+            type: string
+            format: byte
+          objectType:
+            $ref: "#/components/schemas/ObjectType"
+    JvmStatsService.BufferPoolStats:
+      required:
+      - count
+      - name
+      - totalCapacityBytes
+      - usedBytes
+      type: object
+      properties:
+        name:
+          type: string
+        count:
+          type: integer
+          format: int64
+        usedBytes:
+          type: integer
+          format: int64
+        totalCapacityBytes:
+          type: integer
+          format: int64
+    JvmStatsService.CacheStats:
+      required:
+      - evictions
+      - hitRatePercent
+      - hits
+      - loadFailures
+      - loadSuccess
+      - misses
+      - name
+      - size
+      type: object
+      properties:
+        name:
+          type: string
+        size:
+          type: integer
+          format: int64
+        hits:
+          type: integer
+          format: int64
+        misses:
+          type: integer
+          format: int64
+        hitRatePercent:
+          type: number
+          format: double
+        loadSuccess:
+          type: integer
+          format: int64
+        loadFailures:
+          type: integer
+          format: int64
+        evictions:
+          type: integer
+          format: int64
+    JvmStatsService.GcStats:
+      required:
+      - collectionCount
+      - collectionTimeMs
+      - name
+      type: object
+      properties:
+        name:
+          type: string
+        collectionCount:
+          type: integer
+          format: int64
+        collectionTimeMs:
+          type: integer
+          format: int64
+    JvmStatsService.JvmStats:
+      required:
+      - bufferPools
+      - caches
+      - garbageCollectors
+      - memory
+      - memoryPools
+      - operatingSystem
+      - runtime
+      - threads
+      type: object
+      properties:
+        runtime:
+          $ref: "#/components/schemas/JvmStatsService.RuntimeStats"
+        memory:
+          $ref: "#/components/schemas/JvmStatsService.MemoryStats"
+        threads:
+          $ref: "#/components/schemas/JvmStatsService.ThreadStats"
+        garbageCollectors:
+          type: array
+          items:
+            $ref: "#/components/schemas/JvmStatsService.GcStats"
+        memoryPools:
+          type: array
+          items:
+            $ref: "#/components/schemas/JvmStatsService.MemoryPoolStats"
+        operatingSystem:
+          $ref: "#/components/schemas/JvmStatsService.OsStats"
+        bufferPools:
+          type: array
+          items:
+            $ref: "#/components/schemas/JvmStatsService.BufferPoolStats"
+        caches:
+          type: array
+          items:
+            $ref: "#/components/schemas/JvmStatsService.CacheStats"
+    JvmStatsService.MemoryPoolStats:
+      required:
+      - committedBytes
+      - maxBytes
+      - name
+      - type
+      - usagePercent
+      - usedBytes
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        usedBytes:
+          type: integer
+          format: int64
+        committedBytes:
+          type: integer
+          format: int64
+        maxBytes:
+          type: integer
+          format: int64
+        usagePercent:
+          type: number
+          format: double
+    JvmStatsService.MemoryStats:
+      required:
+      - heap
+      - nonHeap
+      type: object
+      properties:
+        heap:
+          $ref: "#/components/schemas/JvmStatsService.MemoryUsageStats"
+        nonHeap:
+          $ref: "#/components/schemas/JvmStatsService.MemoryUsageStats"
+    JvmStatsService.MemoryUsageStats:
+      required:
+      - committedBytes
+      - maxBytes
+      - usagePercent
+      - usedBytes
+      type: object
+      properties:
+        usedBytes:
+          type: integer
+          format: int64
+        committedBytes:
+          type: integer
+          format: int64
+        maxBytes:
+          type: integer
+          format: int64
+        usagePercent:
+          type: number
+          format: double
+    JvmStatsService.OsStats:
+      required:
+      - arch
+      - availableProcessors
+      - freeMemoryBytes
+      - freeSwapBytes
+      - memoryUsagePercent
+      - name
+      - processCpuPercent
+      - systemCpuPercent
+      - systemLoadAverage
+      - totalMemoryBytes
+      - totalSwapBytes
+      - version
+      type: object
+      properties:
+        name:
+          type: string
+        arch:
+          type: string
+        version:
+          type: string
+        availableProcessors:
+          type: integer
+          format: int32
+        systemLoadAverage:
+          type: number
+          format: double
+        processCpuPercent:
+          type: number
+          format: double
+        systemCpuPercent:
+          type: number
+          format: double
+        totalMemoryBytes:
+          type: integer
+          format: int64
+        freeMemoryBytes:
+          type: integer
+          format: int64
+        memoryUsagePercent:
+          type: number
+          format: double
+        totalSwapBytes:
+          type: integer
+          format: int64
+        freeSwapBytes:
+          type: integer
+          format: int64
+    JvmStatsService.RuntimeStats:
+      required:
+      - startTimeMs
+      - uptimeMs
+      - vmName
+      - vmVersion
+      type: object
+      properties:
+        vmName:
+          type: string
+        vmVersion:
+          type: string
+        uptimeMs:
+          type: integer
+          format: int64
+        startTimeMs:
+          type: integer
+          format: int64
+    JvmStatsService.ThreadStats:
+      required:
+      - current
+      - daemon
+      - peak
+      - totalStarted
+      type: object
+      properties:
+        current:
+          type: integer
+          format: int32
+        peak:
+          type: integer
+          format: int32
+        daemon:
+          type: integer
+          format: int32
+        totalStarted:
+          type: integer
+          format: int64
+    Line:
+      required:
+      - p0
+      - p1
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/PathSegment"
+      - $ref: "#/components/schemas/PDFObject"
+      - type: object
+        properties:
+          p1:
+            $ref: "#/components/schemas/Point"
+          p0:
+            $ref: "#/components/schemas/Point"
+          objectType:
+            $ref: "#/components/schemas/ObjectType"
+    MetricsBuffer.BufferStats:
+      required:
+      - configEnabled
+      - currentBufferSize
+      - maxBufferSize
+      - operationallyEnabled
+      - totalDropped
+      - totalFlushed
+      - totalOverflowDropped
+      - totalPublished
+      type: object
+      properties:
+        configEnabled:
+          type: boolean
+        operationallyEnabled:
+          type: boolean
+        totalPublished:
+          type: integer
+          format: int64
+        totalFlushed:
+          type: integer
+          format: int64
+        totalDropped:
+          type: integer
+          format: int64
+        totalOverflowDropped:
+          type: integer
+          format: int64
+        currentBufferSize:
+          type: integer
+          format: int32
+        maxBufferSize:
+          type: integer
+          format: int32
+    ModifyRequestV1:
+      required:
+      - newObject
+      - ref
+      type: object
+      properties:
+        ref:
+          $ref: "#/components/schemas/ObjectRef"
+        newObject:
+          $ref: "#/components/schemas/PDFObject"
+    ModifyTextRequest:
+      required:
+      - newTextLine
+      - ref
+      type: object
+      properties:
+        ref:
+          $ref: "#/components/schemas/ObjectRef"
+        newTextLine:
+          type: string
+    MoveRequestV1:
+      required:
+      - newPosition
+      - objectRef
+      type: object
+      properties:
+        objectRef:
+          $ref: "#/components/schemas/ObjectRef"
+        newPosition:
+          $ref: "#/components/schemas/Position"
+    ObjectRef:
+      required:
+      - internalId
+      - position
+      - type
+      type: object
+      properties:
+        internalId:
+          type: string
+        position:
+          $ref: "#/components/schemas/Position"
+        type:
+          $ref: "#/components/schemas/ObjectType"
+      discriminator:
+        propertyName: objectRefType
+        mapping:
+          CHECKBOX: "#/components/schemas/FormFieldRef"
+          FORM_FIELD: "#/components/schemas/FormFieldRef"
+          RADIO_BUTTON: "#/components/schemas/FormFieldRef"
+          PARAGRAPH: "#/components/schemas/TextTypeObjectRef"
+          TEXT_LINE: "#/components/schemas/TextTypeObjectRef"
+          PAGE: "#/components/schemas/PageRef"
+          TEXT_FIELD: "#/components/schemas/FormFieldRef"
+      oneOf:
+      - $ref: "#/components/schemas/TextTypeObjectRef"
+      - $ref: "#/components/schemas/PageRef"
+      - $ref: "#/components/schemas/FormFieldRef"
+    ObjectRefV1:
+      required:
+      - internalId
+      - position
+      - type
+      type: object
+      properties:
+        internalId:
+          type: string
+        type:
+          $ref: "#/components/schemas/ObjectType"
+        position:
+          $ref: "#/components/schemas/PositionV1"
+      discriminator:
+        propertyName: objectRefType
+        mapping:
+          CHECKBOX: "#/components/schemas/FormFieldRefV1"
+          FORM_FIELD: "#/components/schemas/FormFieldRefV1"
+          RADIO_BUTTON: "#/components/schemas/FormFieldRefV1"
+          PARAGRAPH: "#/components/schemas/TextTypeObjectRefV1"
+          TEXT_LINE: "#/components/schemas/TextTypeObjectRefV1"
+          PAGE: "#/components/schemas/PageRefV1"
+          TEXT_FIELD: "#/components/schemas/FormFieldRefV1"
+      oneOf:
+      - $ref: "#/components/schemas/TextTypeObjectRefV1"
+      - $ref: "#/components/schemas/PageRefV1"
+      - $ref: "#/components/schemas/FormFieldRefV1"
+    ObjectType:
+      type: string
+      enum:
+      - PDF
+      - PAGE
+      - TEXT_ELEMENT
+      - PARAGRAPH
+      - IMAGE
+      - PATH
+      - LINE
+      - RECTANGLE
+      - BEZIER
+      - CLIPPING
+      - FORM_X_OBJECT
+      - FORM_FIELD
+      - WORD
+      - TEXT_LINE
+      - TEXT_FIELD
+      - RADIO_BUTTON
+      - BUTTON
+      - DROPDOWN
+      - CHECKBOX
+    Orientation:
+      type: string
+      enum:
+      - PORTRAIT
+      - LANDSCAPE
+    PDFObject:
+      type: object
+      properties:
+        id:
+          type: string
+        position:
+          $ref: "#/components/schemas/Position"
+        objectType:
+          $ref: "#/components/schemas/ObjectType"
+      discriminator:
+        propertyName: type
+        mapping:
+          PATH: "#/components/schemas/Path"
+          image: "#/components/schemas/Image"
+          path: "#/components/schemas/Path"
+          paragraph: "#/components/schemas/Paragraph"
+          IMAGE: "#/components/schemas/Image"
+          form: "#/components/schemas/Form"
+          FORM: "#/components/schemas/Form"
+          PARAGRAPH: "#/components/schemas/Paragraph"
+          TEXT_LINE: "#/components/schemas/TextLine"
+          textLine: "#/components/schemas/TextLine"
+      oneOf:
+      - $ref: "#/components/schemas/Image"
+      - $ref: "#/components/schemas/Path"
+      - $ref: "#/components/schemas/Form"
+      - $ref: "#/components/schemas/Paragraph"
+      - $ref: "#/components/schemas/TextLine"
+    PageMoveRequestV1:
+      required:
+      - fromPage
+      - toPage
+      type: object
+      properties:
+        fromPage:
+          type: integer
+          format: int32
+        toPage:
+          type: integer
+          format: int32
+    PageRef:
+      required:
+      - orientation
+      - pageSize
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/ObjectRef"
+      - type: object
+        properties:
+          pageSize:
+            $ref: "#/components/schemas/PageSize"
+          orientation:
+            $ref: "#/components/schemas/Orientation"
+    PageRefV1:
+      required:
+      - orientation
+      - pageSize
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/ObjectRefV1"
+      - type: object
+        properties:
+          pageSize:
+            $ref: "#/components/schemas/PageSize"
+          orientation:
+            $ref: "#/components/schemas/Orientation"
+          pageNumber:
+            type: integer
+            format: int32
+    PageSize:
+      type: object
+      properties:
+        name:
+          type: string
+        width:
+          type: number
+          format: double
+        height:
+          type: number
+          format: double
+    PageSnapshotV1:
+      required:
+      - elements
+      - fonts
+      - pageRef
+      type: object
+      properties:
+        pageRef:
+          $ref: "#/components/schemas/PageRefV1"
+        elements:
+          type: array
+          items:
+            $ref: "#/components/schemas/ObjectRefV1"
+        fonts:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentFontInfoDto"
+    Paragraph:
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/PDFObject"
+      - type: object
+        properties:
+          objectType:
+            $ref: "#/components/schemas/ObjectType"
+          lines:
+            type: array
+            items:
+              $ref: "#/components/schemas/TextLine"
+          lineSpacings:
+            type: array
+            items:
+              type: number
+              format: double
+          font:
+            $ref: "#/components/schemas/Font"
+          text:
+            type: string
+    Path:
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/PDFObject"
+      - type: object
+        properties:
+          pathSegments:
+            type: array
+            items:
+              $ref: "#/components/schemas/PathSegment"
+          evenOddFill:
+            type: boolean
+          objectType:
+            $ref: "#/components/schemas/ObjectType"
+    PathSegment:
+      type: object
+      properties:
+        strokeColor:
+          $ref: "#/components/schemas/Color"
+        fillColor:
+          $ref: "#/components/schemas/Color"
+        dashArray:
+          type: array
+          items:
+            type: number
+            format: double
+        dashPhase:
+          type: number
+          format: double
+        strokeWidth:
+          type: number
+          format: double
+      discriminator:
+        propertyName: segmentType
+        mapping:
+          line: "#/components/schemas/Line"
+          LINE: "#/components/schemas/Line"
+          BEZIER: "#/components/schemas/Bezier"
+          bezier: "#/components/schemas/Bezier"
+      allOf:
+      - $ref: "#/components/schemas/PDFObject"
+      oneOf:
+      - $ref: "#/components/schemas/Line"
+      - $ref: "#/components/schemas/Bezier"
+    Point:
+      required:
+      - x
+      - "y"
+      type: object
+      properties:
+        x:
+          type: number
+          format: double
+        "y":
+          type: number
+          format: double
+    Position:
+      type: object
+      properties:
+        textStartsWith:
+          type: string
+        name:
+          type: string
+        textPattern:
+          type: string
+        x:
+          type: number
+          format: double
+        "y":
+          type: number
+          format: double
+        pageIndex:
+          type: integer
+          format: int32
+        shape:
+          $ref: "#/components/schemas/Position.ShapeType"
+        mode:
+          $ref: "#/components/schemas/Position.PositionMode"
+        boundingRect:
+          $ref: "#/components/schemas/BoundingRect"
+        pageNumber:
+          type: integer
+          format: int32
+        effectivePageIndex:
+          type: integer
+          format: int32
+    Position.PositionMode:
+      type: string
+      enum:
+      - INTERSECT
+      - CONTAINS
+    Position.ShapeType:
+      type: string
+      enum:
+      - POINT
+      - LINE
+      - CIRCLE
+      - RECT
+    PositionV1:
+      type: object
+      properties:
+        name:
+          type: string
+        pageNumber:
+          type: integer
+          format: int32
+        shape:
+          $ref: "#/components/schemas/Position.ShapeType"
+        mode:
+          $ref: "#/components/schemas/Position.PositionMode"
+        boundingRect:
+          $ref: "#/components/schemas/BoundingRect"
+        textStartsWith:
+          type: string
+        textPattern:
+          type: string
+        x:
+          type: number
+          format: double
+        "y":
+          type: number
+          format: double
+    RedactRequestV1:
+      required:
+      - defaultReplacement
+      - placeholderColor
+      - targets
+      type: object
+      properties:
+        targets:
+          type: array
+          items:
+            $ref: "#/components/schemas/RedactTarget"
+        defaultReplacement:
+          type: string
+        placeholderColor:
+          $ref: "#/components/schemas/Color"
+      description: API v1 version of RedactRequest that accepts pageNumber (1-based)
+        in positions. Converts to internal RedactRequest with pageIndex (0-based)
+        for processing.
+    RedactResponse:
+      required:
+      - count
+      - success
+      - warnings
+      type: object
+      properties:
+        count:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        warnings:
+          type: array
+          items:
+            type: string
+      description: Response from a redaction operation indicating the results of the
+        redaction.
+    RedactTarget:
+      required:
+      - objectType
+      - position
+      - replacement
+      type: object
+      properties:
+        objectType:
+          $ref: "#/components/schemas/ObjectType"
+        position:
+          $ref: "#/components/schemas/Position"
+        replacement:
+          type: string
+      description: "Represents a single redaction target specifying what content to\
+        \ find and redact. Each target defines an object type and position criteria\
+        \ to search for, with an optional replacement string that overrides the default."
+    SessionEventDto:
+      required:
+      - durationMs
+      - errorMessage
+      - eventType
+      - metadata
+      - operationType
+      - sessionId
+      - success
+      - timestamp
+      - userId
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        sessionId:
+          type: string
+        userId:
+          type: string
+        eventType:
+          type: string
+        operationType:
+          type: string
+        durationMs:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        errorMessage:
+          type: string
+        metadata:
+          type: string
+    Size:
+      type: object
+      properties:
+        width:
+          type: number
+          format: double
+        height:
+          type: number
+          format: double
+        area:
+          type: number
+          format: double
+    TextElement:
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/PDFObject"
+      - type: object
+        properties:
+          text:
+            type: string
+          font:
+            $ref: "#/components/schemas/Font"
+          color:
+            $ref: "#/components/schemas/Color"
+          objectType:
+            $ref: "#/components/schemas/ObjectType"
+          status:
+            $ref: "#/components/schemas/TextStatus"
+    TextLine:
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/PDFObject"
+      - type: object
+        properties:
+          fontSize:
+            type: number
+            format: double
+          fontName:
+            type: string
+          objectType:
+            $ref: "#/components/schemas/ObjectType"
+          textElements:
+            type: array
+            items:
+              $ref: "#/components/schemas/TextElement"
+          color:
+            $ref: "#/components/schemas/Color"
+          text:
+            type: string
+    TextStatus:
+      required:
+      - fontType
+      type: object
+      properties:
+        modified:
+          type: boolean
+        encodable:
+          type: boolean
+        fontType:
+          $ref: "#/components/schemas/FontType"
+        fontInfoDto:
+          $ref: "#/components/schemas/DocumentFontInfoDto"
+        warning:
+          type: string
+    TextTypeObjectRef:
+      required:
+      - children
+      - color
+      - fontName
+      - fontSize
+      - lineSpacings
+      - status
+      - text
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/ObjectRef"
+      - type: object
+        properties:
+          text:
+            type: string
+          fontName:
+            type: string
+          fontSize:
+            type: number
+            format: double
+          lineSpacings:
+            type: array
+            items:
+              type: number
+              format: double
+          children:
+            type: array
+            items:
+              $ref: "#/components/schemas/TextTypeObjectRef"
+          color:
+            $ref: "#/components/schemas/Color"
+          status:
+            $ref: "#/components/schemas/TextStatus"
+    TextTypeObjectRefV1:
+      required:
+      - children
+      - color
+      - fontName
+      - fontSize
+      - lineSpacings
+      - status
+      - text
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/ObjectRefV1"
+      - type: object
+        properties:
+          text:
+            type: string
+          fontName:
+            type: string
+          fontSize:
+            type: number
+            format: double
+          lineSpacings:
+            type: array
+            items:
+              type: number
+              format: double
+          children:
+            type: array
+            items:
+              $ref: "#/components/schemas/TextTypeObjectRefV1"
+          color:
+            $ref: "#/components/schemas/Color"
+          status:
+            $ref: "#/components/schemas/TextStatus"
+    UserEventDto:
+      required:
+      - durationMs
+      - errorMessage
+      - eventType
+      - metadata
+      - operationType
+      - sessionId
+      - success
+      - timestamp
+      - userId
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        sessionId:
+          type: string
+        userId:
+          type: string
+        eventType:
+          type: string
+        operationType:
+          type: string
+        durationMs:
+          type: integer
+          format: int32
+        success:
+          type: boolean
+        errorMessage:
+          type: string
+        metadata:
+          type: string
