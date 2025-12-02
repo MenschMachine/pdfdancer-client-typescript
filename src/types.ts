@@ -1,4 +1,4 @@
-import {Color, CommandResult, Font, FormFieldRef, ObjectRef, ObjectType, Paragraph, Position, TextObjectRef} from "./models";
+import {Color, CommandResult, Font, FormFieldRef, ObjectRef, ObjectType, Paragraph, Position, RedactOptions, RedactResponse, RedactTarget, TextObjectRef} from "./models";
 import {PDFDancer} from "./pdfdancer_v1";
 import {ParagraphBuilder} from "./paragraph-builder";
 import {ValidationException} from "./exceptions";
@@ -14,6 +14,8 @@ interface PDFDancerInternals {
     modifyTextLine(objectRef: ObjectRef, newText: string): Promise<CommandResult>;
 
     modifyParagraph(objectRef: ObjectRef, update: Paragraph | string | null): Promise<CommandResult>;
+
+    redact(targets: RedactTarget[], options?: RedactOptions): Promise<RedactResponse>;
 }
 
 export class BaseObject<TRef extends ObjectRef = ObjectRef> {
@@ -43,6 +45,31 @@ export class BaseObject<TRef extends ObjectRef = ObjectRef> {
 
     async moveTo(x: number, y: number) {
         return this._internals.move(this.ref(), Position.atPageCoordinates(this.position.pageNumber!, x, y));
+    }
+
+    /**
+     * Redacts this object from the PDF.
+     * For text objects, replaces content with the replacement string.
+     * For images/paths, replaces with a solid color placeholder.
+     * @param replacementOrOptions For text: replacement string. For images/paths: options with color.
+     */
+    async redact(replacementOrOptions?: string | { color?: Color }): Promise<RedactResponse> {
+        const target: RedactTarget = {
+            objectType: this.type,
+            position: this.position,
+        };
+
+        // Text objects get string replacement
+        if (typeof replacementOrOptions === 'string') {
+            target.replacement = replacementOrOptions;
+        }
+
+        const options: RedactOptions = {};
+        if (typeof replacementOrOptions === 'object' && replacementOrOptions.color) {
+            options.placeholderColor = replacementOrOptions.color;
+        }
+
+        return this._internals.redact([target], options);
     }
 }
 

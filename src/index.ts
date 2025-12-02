@@ -47,7 +47,10 @@ export {
   DocumentFontInfo,
   FontType,
   DocumentSnapshot,
-  PageSnapshot
+  PageSnapshot,
+  RedactTarget,
+  RedactOptions,
+  RedactResponse
 } from './models';
 
 export { DocumentFontInfo as FontRecommendation } from './models';

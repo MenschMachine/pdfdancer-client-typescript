@@ -1169,6 +1169,32 @@ export class DocumentSnapshot {
     }
 }
 
+/**
+ * Represents a target for redaction operations.
+ */
+export interface RedactTarget {
+    objectType: ObjectType;
+    position: Position;
+    replacement?: string;
+}
+
+/**
+ * Options for redaction operations.
+ */
+export interface RedactOptions {
+    defaultReplacement?: string;
+    placeholderColor?: Color;
+}
+
+/**
+ * Response from a redaction operation.
+ */
+export interface RedactResponse {
+    count: number;
+    success: boolean;
+    warnings: string[];
+}
+
 // Helper function to convert Position to dictionary for JSON serialization
 function positionToDict(position: Position): Record<string, any> {
     const result: Record<string, any> = {
