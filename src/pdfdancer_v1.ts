@@ -1558,31 +1558,10 @@ export class PDFDancer {
             return { count: 0, success: true, warnings: [] };
         }
 
-        const positionToDict = (pos: Position) => {
-            const result: Record<string, any> = {
-                pageNumber: pos.pageNumber,
-                textStartsWith: pos.textStartsWith,
-                textPattern: pos.textPattern,
-                name: pos.name
-            };
-            if (pos.shape) result.shape = pos.shape;
-            if (pos.mode) result.mode = pos.mode;
-            if (pos.boundingRect) {
-                result.boundingRect = {
-                    x: pos.boundingRect.x,
-                    y: pos.boundingRect.y,
-                    width: pos.boundingRect.width,
-                    height: pos.boundingRect.height
-                };
-            }
-            return result;
-        };
-
         const request = {
             targets: targets.map(t => ({
-                objectType: t.objectType,
-                position: positionToDict(t.position),
-                replacement: t.replacement ?? options?.defaultReplacement ?? '[REDACTED]'
+                id: t.id,
+                replacement: t.replacement
             })),
             defaultReplacement: options?.defaultReplacement ?? '[REDACTED]',
             placeholderColor: options?.placeholderColor

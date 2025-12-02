@@ -54,15 +54,14 @@ export class BaseObject<TRef extends ObjectRef = ObjectRef> {
      * @param replacementOrOptions For text: replacement string. For images/paths: options with color.
      */
     async redact(replacementOrOptions?: string | { color?: Color }): Promise<RedactResponse> {
-        const target: RedactTarget = {
-            objectType: this.type,
-            position: this.position,
-        };
+        const replacement = typeof replacementOrOptions === 'string'
+            ? replacementOrOptions
+            : '[REDACTED]';
 
-        // Text objects get string replacement
-        if (typeof replacementOrOptions === 'string') {
-            target.replacement = replacementOrOptions;
-        }
+        const target: RedactTarget = {
+            id: this.internalId,
+            replacement,
+        };
 
         const options: RedactOptions = {};
         if (typeof replacementOrOptions === 'object' && replacementOrOptions.color) {

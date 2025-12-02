@@ -2173,6 +2173,10 @@ paths:
                 $ref: "#/components/schemas/CommandResult"
   /ping:
     get:
+      summary: Basic health check endpoint that confirms server availability.
+      description: Basic health check endpoint that confirms server availability.
+        This endpoint provides a simple way for monitoring systems to verify that
+        the API server is running and capable of handling requests.
       operationId: index
       parameters:
       - name: v
@@ -2197,7 +2201,7 @@ paths:
           type: string
       responses:
         "200":
-          description: index 200 response
+          description: a simple "Pong" response indicating the server is operational
           content:
             text/plain:
               schema:
@@ -2551,6 +2555,12 @@ paths:
                 $ref: "#/components/schemas/Subscription"
   /test:
     get:
+      summary: Authenticated test endpoint that verifies API token authentication
+        is working.
+      description: Authenticated test endpoint that verifies API token authentication
+        is working. This endpoint requires a valid API token (Bearer) and serves as
+        a way to test that the authentication mechanism is functioning properly without
+        affecting any actual application data.
       operationId: test
       parameters:
       - name: v
@@ -2575,7 +2585,7 @@ paths:
           type: string
       responses:
         "200":
-          description: test 200 response
+          description: a confirmation message indicating successful authentication
           content:
             text/plain:
               schema:
@@ -2702,6 +2712,10 @@ components:
       properties:
         object:
           $ref: "#/components/schemas/PDFObject"
+      description: "Request record for adding new PDF objects to a document. This\
+        \ immutable record encapsulates the data needed to add new content elements\
+        \ to a PDF document, including the complete object specification with getPosition,\
+        \ properties, and content data."
     AnalyticsService.DailyOperationCount:
       required:
       - avgDuration
@@ -3064,7 +3078,10 @@ components:
     AnalyticsService.MetricError:
       required:
       - clientCountry
+      - clientInfo
+      - clientLanguage
       - clientRegion
+      - clientVersion
       - cloudflareRay
       - connectingIp
       - errorMessage
@@ -3101,6 +3118,12 @@ components:
         cloudflareRay:
           type: string
         connectingIp:
+          type: string
+        clientInfo:
+          type: string
+        clientLanguage:
+          type: string
+        clientVersion:
           type: string
     AnalyticsService.MultiWindowSummary:
       required:
@@ -3198,6 +3221,9 @@ components:
       - asDomain
       - asName
       - asn
+      - clientInfo
+      - clientLanguage
+      - clientVersion
       - connectingIp
       - country
       - lastEventTimestamp
@@ -3213,15 +3239,21 @@ components:
           type: string
         country:
           type: string
+        lastEventTimestamp:
+          type: string
+          format: date-time
+        clientInfo:
+          type: string
+        clientLanguage:
+          type: string
+        clientVersion:
+          type: string
         asn:
           type: string
         asName:
           type: string
         asDomain:
           type: string
-        lastEventTimestamp:
-          type: string
-          format: date-time
     AnalyticsService.UserStats:
       required:
       - active24h
@@ -3252,6 +3284,7 @@ components:
           type: string
         expiresAt:
           type: string
+      description: Request to create a new API token.
     ApiTokenCreateResponse:
       required:
       - metadata
@@ -3262,6 +3295,8 @@ components:
           type: string
         metadata:
           $ref: "#/components/schemas/ApiTokenCreateResponse.ApiTokenMetadata"
+      description: Response when creating a new API token. Contains the raw token
+        (shown only once) plus metadata.
     ApiTokenCreateResponse.ApiTokenMetadata:
       required:
       - createdAt
@@ -3303,6 +3338,7 @@ components:
           type: string
         expiresAt:
           type: string
+      description: Response for listing API tokens (does not include the raw token).
     Authentication:
       required:
       - attributes
@@ -3327,19 +3363,32 @@ components:
       - p2
       - p3
       type: object
+      description: "Represents a cubic Bezier curve path segment defined by four control\
+        \ points. This class implements a cubic Bezier curve with start point, two\
+        \ control points, and end point, providing smooth curved path segments for\
+        \ complex vector graphics. Includes mathematical evaluation methods for point\
+        \ calculation along the curve."
       allOf:
       - $ref: "#/components/schemas/PathSegment"
       - $ref: "#/components/schemas/PDFObject"
       - type: object
         properties:
           p0:
-            $ref: "#/components/schemas/Point"
+            description: Returns the starting point p0 of this Bezier segment.
+            allOf:
+            - $ref: "#/components/schemas/Point"
           p1:
-            $ref: "#/components/schemas/Point"
+            description: Returns the first control point p1 of this Bezier segment.
+            allOf:
+            - $ref: "#/components/schemas/Point"
           p2:
-            $ref: "#/components/schemas/Point"
+            description: Returns the second control point p2 of this Bezier segment.
+            allOf:
+            - $ref: "#/components/schemas/Point"
           p3:
-            $ref: "#/components/schemas/Point"
+            description: Returns the ending point p3 of this Bezier segment.
+            allOf:
+            - $ref: "#/components/schemas/Point"
           objectType:
             $ref: "#/components/schemas/ObjectType"
     BoundingRect:
@@ -3351,19 +3400,31 @@ components:
       type: object
       properties:
         origin:
-          $ref: "#/components/schemas/Point"
+          description: Returns the origin point of this bounding rectangle. The origin
+            represents the bottom-left corner in PDF coordinate system.
+          allOf:
+          - $ref: "#/components/schemas/Point"
         x:
           type: number
+          description: X-coordinate of the rectangle's origin (left edge).
           format: double
         "y":
           type: number
+          description: Y-coordinate of the rectangle's origin (bottom edge in PDF
+            coordinates).
           format: double
         width:
           type: number
+          description: Width of the rectangle extending rightward from the origin.
           format: double
         height:
           type: number
+          description: Height of the rectangle extending upward from the origin.
           format: double
+      description: "Represents a rectangular area defined by getPosition and dimensions.\
+        \ This class encapsulates bounding box information for PDF objects, providing\
+        \ spatial extent data used for positioning, collision detection, and layout\
+        \ operations within PDF documents."
     ChangeFormFieldRequest:
       required:
       - ref
@@ -3379,16 +3440,26 @@ components:
       properties:
         red:
           type: integer
+          description: Red color component (0-255).
           format: int32
         green:
           type: integer
+          description: Green color component (0-255).
           format: int32
         blue:
           type: integer
+          description: Blue color component (0-255).
           format: int32
         alpha:
           type: integer
+          description: "Alpha (transparency) component (0-255, where 255 is fully\
+            \ opaque)."
           format: int32
+      description: "Represents color information using RGBA (Red, Green, Blue, Alpha)\
+        \ color model. This class encapsulates color data for PDF objects, supporting\
+        \ both opaque and transparent colors with integer values ranging from 0-255\
+        \ for each component. Provides convenient constructors and utility methods\
+        \ for color manipulation."
     CommandResult:
       required:
       - commandName
@@ -3422,6 +3493,7 @@ components:
         initialPageCount:
           type: integer
           format: int32
+      description: Request to create a new blank PDF session.
     DeleteRequest:
       required:
       - objectRef
@@ -3429,6 +3501,9 @@ components:
       properties:
         objectRef:
           $ref: "#/components/schemas/ObjectRef"
+      description: Request record for deleting PDF objects from a document. This immutable
+        record encapsulates the object reference needed to identify and remove specific
+        PDF objects from a document during editing operations.
     DocumentFontInfoDto:
       required:
       - documentFontName
@@ -3457,6 +3532,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PageSnapshot"
+      description: "Represents a complete snapshot of a PDF document including metadata\
+        \ and all pages. This response provides document-level information and aggregates\
+        \ all page snapshots, allowing clients to retrieve the entire document structure\
+        \ in a single API call."
     EventsPageResponse_SessionEventDto_:
       required:
       - events
@@ -3467,17 +3546,22 @@ components:
       properties:
         events:
           type: array
+          description: the list of events for this page
           items:
             $ref: "#/components/schemas/SessionEventDto"
         total:
           type: integer
+          description: total number of matching events (for pagination UI)
           format: int64
         limit:
           type: integer
+          description: number of events requested per page
           format: int32
         offset:
           type: integer
+          description: number of events skipped
           format: int32
+      description: Paginated response wrapper for event queries.
     EventsPageResponse_UserEventDto_:
       required:
       - events
@@ -3488,17 +3572,22 @@ components:
       properties:
         events:
           type: array
+          description: the list of events for this page
           items:
             $ref: "#/components/schemas/UserEventDto"
         total:
           type: integer
+          description: total number of matching events (for pagination UI)
           format: int64
         limit:
           type: integer
+          description: number of events requested per page
           format: int32
         offset:
           type: integer
+          description: number of events skipped
           format: int32
+      description: Paginated response wrapper for event queries.
     FindRequest:
       required:
       - hint
@@ -3512,16 +3601,27 @@ components:
           $ref: "#/components/schemas/Position"
         hint:
           type: string
+      description: "Request record for searching PDF objects within a document. This\
+        \ immutable record encapsulates search criteria for locating PDF objects based\
+        \ on type, getPosition constraints, and optional search hints, enabling flexible\
+        \ and efficient object discovery within PDF documents."
     Font:
       type: object
       properties:
         name:
           type: string
+          description: "Font family name (e.g., \"Arial\", \"Times New Roman\", \"\
+            Helvetica\")."
         size:
           type: number
+          description: Font size in points.
           format: double
         embedded:
           type: boolean
+      description: "Represents font properties for text rendering in PDF documents.\
+        \ This class encapsulates font characteristics including typeface name, size,\
+        \ and styling attributes such as bold, italic, and underline formatting. Used\
+        \ throughout the API for consistent text formatting and style management."
     FontNamesResponse:
       required:
       - fontNames
@@ -3539,24 +3639,45 @@ components:
       - EMBEDDED
     Form:
       type: object
+      description: "Represents an interactive form field within a PDF document. This\
+        \ class encapsulates form field properties including type, value, appearance,\
+        \ and behavior for various interactive PDF form elements such as text fields,\
+        \ checkboxes, radio buttons, and dropdowns."
       allOf:
       - $ref: "#/components/schemas/PDFObject"
       - type: object
         properties:
           name:
             type: string
+            description: Field name identifier used in form processing.
           type:
-            $ref: "#/components/schemas/Form.FormType"
+            description: Type of form field determining its behavior and appearance.
+            allOf:
+            - $ref: "#/components/schemas/Form.FormType"
           value:
             type: string
+            description: Current value or content of the form field.
           size:
-            $ref: "#/components/schemas/Size"
+            description: Dimensions of the form field's visual representation.
+            allOf:
+            - $ref: "#/components/schemas/Size"
           font:
-            $ref: "#/components/schemas/Font"
+            description: Font properties for text-based form fields.
+            allOf:
+            - $ref: "#/components/schemas/Font"
           objectType:
-            $ref: "#/components/schemas/ObjectType"
+            description: Returns the object type for this form field.
+            allOf:
+            - $ref: "#/components/schemas/ObjectType"
     Form.FormType:
       type: string
+      description: Enumeration of supported PDF form field types.
+      x-enum-descriptions:
+      - Single-line or multi-line text input field
+      - Checkbox for binary selections
+      - Radio button for mutually exclusive selections
+      - Dropdown list with selectable options
+      - Clickable button element
       enum:
       - TEXT_FIELD
       - CHECKBOX
@@ -3581,6 +3702,8 @@ components:
       - name
       - value
       type: object
+      description: API v1 version of FormFieldRef that uses 1-based page numbers in
+        position.
       allOf:
       - $ref: "#/components/schemas/ObjectRefV1"
       - type: object
@@ -3591,19 +3714,29 @@ components:
             type: string
     Image:
       type: object
+      description: "Represents an image object within a PDF document. This class encapsulates\
+        \ image data, format information, and dimensional properties for embedded\
+        \ or overlaid images in PDF documents. Supports various image formats and\
+        \ provides utilities for loading images from files."
       allOf:
       - $ref: "#/components/schemas/PDFObject"
       - type: object
         properties:
           format:
             type: string
+            description: "Image format (e.g., \"JPEG\", \"PNG\", \"GIF\")."
           size:
-            $ref: "#/components/schemas/Size"
+            description: Dimensions of the image in PDF coordinate units.
+            allOf:
+            - $ref: "#/components/schemas/Size"
           data:
             type: string
+            description: Raw image data bytes.
             format: byte
           objectType:
-            $ref: "#/components/schemas/ObjectType"
+            description: Returns the object type for this image.
+            allOf:
+            - $ref: "#/components/schemas/ObjectType"
     JvmStatsService.BufferPoolStats:
       required:
       - count
@@ -3857,17 +3990,26 @@ components:
       - p0
       - p1
       type: object
+      description: "Represents a straight line path segment between two points. This\
+        \ class defines a linear path element connecting two coordinate points, commonly\
+        \ used in vector graphics and geometric shapes within PDF documents."
       allOf:
       - $ref: "#/components/schemas/PathSegment"
       - $ref: "#/components/schemas/PDFObject"
       - type: object
         properties:
           p1:
-            $ref: "#/components/schemas/Point"
+            description: Returns the ending point of this line segment.
+            allOf:
+            - $ref: "#/components/schemas/Point"
           p0:
-            $ref: "#/components/schemas/Point"
+            description: Returns the starting point of this line segment.
+            allOf:
+            - $ref: "#/components/schemas/Point"
           objectType:
-            $ref: "#/components/schemas/ObjectType"
+            description: Returns the object type for this line segment.
+            allOf:
+            - $ref: "#/components/schemas/ObjectType"
     MetricsBuffer.BufferStats:
       required:
       - configEnabled
@@ -3932,6 +4074,10 @@ components:
           $ref: "#/components/schemas/ObjectRef"
         newPosition:
           $ref: "#/components/schemas/Position"
+      description: "Request record for moving PDF objects to new positions within\
+        \ a document. This immutable record encapsulates both the object to be moved\
+        \ and its target getPosition, enabling precise repositioning operations during\
+        \ PDF editing."
     ObjectRef:
       required:
       - internalId
@@ -3941,10 +4087,21 @@ components:
       properties:
         internalId:
           type: string
+          description: Returns the internal identifier for the referenced object.
         position:
-          $ref: "#/components/schemas/Position"
+          description: Returns the current getPosition information for the referenced
+            object.
+          allOf:
+          - $ref: "#/components/schemas/Position"
         type:
-          $ref: "#/components/schemas/ObjectType"
+          description: Returns the type classification of the referenced object.
+          allOf:
+          - $ref: "#/components/schemas/ObjectType"
+      description: Lightweight reference to a PDF object providing identity and type
+        information. Object references enable efficient API operations by providing
+        a way to identify and reference PDF objects without transferring their complete
+        content. This design pattern reduces payload sizes and improves performance
+        for operations that only need object identification and basic properties.
       discriminator:
         propertyName: objectRefType
         mapping:
@@ -3972,6 +4129,7 @@ components:
           $ref: "#/components/schemas/ObjectType"
         position:
           $ref: "#/components/schemas/PositionV1"
+      description: API v1 version of ObjectRef that uses 1-based page numbers in position.
       discriminator:
         propertyName: objectRefType
         mapping:
@@ -3988,6 +4146,31 @@ components:
       - $ref: "#/components/schemas/FormFieldRefV1"
     ObjectType:
       type: string
+      description: "Enumeration of PDF object types supported by the PDFDancer API.\
+        \ This enum categorizes the different types of objects that can exist within\
+        \ a PDF document, enabling type-safe operations and filtering across the API.\
+        \ Each type represents a distinct category of PDF content with specific manipulation\
+        \ capabilities and properties."
+      x-enum-descriptions:
+      - Root PDF document object containing all pages and metadata
+      - Individual page within the PDF document
+      - Single character or glyph element
+      - Text paragraph or block element
+      - Embedded image or graphics element
+      - Vector path or shape element
+      - Linear path segment
+      - Rectangular shape element
+      - Bezier curve path element
+      - Clipping region or mask
+      - FormXObject container
+      - Interactive acroform field element
+      - ""
+      - ""
+      - ""
+      - ""
+      - ""
+      - ""
+      - ""
       enum:
       - PDF
       - PAGE
@@ -4010,6 +4193,10 @@ components:
       - CHECKBOX
     Orientation:
       type: string
+      description: Enumeration of page orientations.
+      x-enum-descriptions:
+      - Portrait orientation (height \> width)
+      - Landscape orientation (width \> height)
       enum:
       - PORTRAIT
       - LANDSCAPE
@@ -4018,10 +4205,24 @@ components:
       properties:
         id:
           type: string
+          description: Returns the unique identifier for this PDF object.
         position:
-          $ref: "#/components/schemas/Position"
+          description: Returns the spatial getPosition information for this object.
+          allOf:
+          - $ref: "#/components/schemas/Position"
         objectType:
-          $ref: "#/components/schemas/ObjectType"
+          description: "Returns the specific object type for this PDF object. This\
+            \ method must be implemented by concrete subclasses to identify their\
+            \ specific type, enabling type-safe operations and filtering."
+          allOf:
+          - $ref: "#/components/schemas/ObjectType"
+      description: |-
+        Abstract base class for all PDF objects that can be manipulated within the API. This class provides the fundamental properties and behaviors shared by all PDF content elements, including getPosition tracking, identification, and object reference generation.
+
+
+        The class uses Jackson polymorphic serialization to handle different concrete types
+        during JSON serialization/deserialization, enabling type-safe API operations
+        while maintaining flexibility for different PDF object types.
       discriminator:
         propertyName: type
         mapping:
@@ -4053,6 +4254,10 @@ components:
         toPageIndex:
           type: integer
           format: int32
+      description: "Request record for reordering pages within a PDF document. This\
+        \ immutable record specifies a page movement operation, defining which page\
+        \ should be moved and where it should be repositioned in the document's page\
+        \ sequence."
     PageRef:
       required:
       - orientation
@@ -4071,6 +4276,7 @@ components:
       - orientation
       - pageSize
       type: object
+      description: API v1 version of PageRef that uses 1-based page numbers in position.
       allOf:
       - $ref: "#/components/schemas/ObjectRefV1"
       - type: object
@@ -4081,6 +4287,7 @@ components:
             $ref: "#/components/schemas/Orientation"
           pageNumber:
             type: integer
+            description: Convenience method to get the 1-based page number from position.
             format: int32
     PageSize:
       type: object
@@ -4093,6 +4300,8 @@ components:
         height:
           type: number
           format: double
+      description: "Represents PDF page dimensions, supporting both standard sizes\
+        \ and custom dimensions. Dimensions are specified in points (1/72 inch)."
     PageSnapshot:
       required:
       - elements
@@ -4110,20 +4319,31 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DocumentFontInfoDto"
+      description: "Represents a complete snapshot of a single PDF page including\
+        \ its metadata and all elements. This response aggregates page information\
+        \ and all contained objects (paragraphs, images, etc.) into a single response,\
+        \ reducing the number of API calls needed to retrieve page content."
     Paragraph:
       type: object
+      description: Represents a paragraph or text block within a PDF document. This
+        class encapsulates paragraph-level text content with unified formatting properties
+        and access to individual character elements for detailed manipulation. Provides
+        both block-level text operations and character-level granularity.
       allOf:
       - $ref: "#/components/schemas/PDFObject"
       - type: object
         properties:
           objectType:
-            $ref: "#/components/schemas/ObjectType"
+            description: Returns the object type for this paragraph.
+            allOf:
+            - $ref: "#/components/schemas/ObjectType"
           lines:
             type: array
             items:
               $ref: "#/components/schemas/TextLine"
           lineSpacings:
             type: array
+            description: Gets the line spacing factors between consecutive lines.
             items:
               type: number
               format: double
@@ -4133,36 +4353,59 @@ components:
             type: string
     Path:
       type: object
+      description: "Represents a complex vector path consisting of multiple path segments.\
+        \ This class encapsulates vector graphics data within PDF documents, composed\
+        \ of various path elements like lines, curves, and shapes. Provides automatic\
+        \ getPosition calculation based on constituent segments."
       allOf:
       - $ref: "#/components/schemas/PDFObject"
       - type: object
         properties:
           pathSegments:
             type: array
+            description: Returns the list of path segments that compose this path.
             items:
               $ref: "#/components/schemas/PathSegment"
           evenOddFill:
             type: boolean
+            description: Returns whether even-odd fill rule should be used (true)
+              or nonzero (false). Null means default (nonzero).
           objectType:
-            $ref: "#/components/schemas/ObjectType"
+            description: Returns the object type for this path.
+            allOf:
+            - $ref: "#/components/schemas/ObjectType"
     PathSegment:
       type: object
       properties:
         strokeColor:
-          $ref: "#/components/schemas/Color"
+          description: Color used for drawing the segment's outline or stroke.
+          allOf:
+          - $ref: "#/components/schemas/Color"
         fillColor:
-          $ref: "#/components/schemas/Color"
+          description: Color used for filling the segment's interior area (if applicable).
+          allOf:
+          - $ref: "#/components/schemas/Color"
         dashArray:
           type: array
+          description: Dash pattern for stroking the path segment. Interpreted as
+            alternating on/off lengths. Null or empty means solid line. Values are
+            in user space units.
           items:
             type: number
             format: double
         dashPhase:
           type: number
+          description: Dash phase (offset) into the dash pattern in user space units.
+            Null or zero means no offset.
           format: double
         strokeWidth:
           type: number
+          description: Width of the stroke line in PDF coordinate units.
           format: double
+      description: "Abstract base class for individual path segments within vector\
+        \ paths. This class provides common properties for path elements including\
+        \ stroke and fill colors, line width, and positioning. Concrete subclasses\
+        \ implement specific geometric shapes like lines, curves, and bezier segments."
       discriminator:
         propertyName: segmentType
         mapping:
@@ -4202,6 +4445,10 @@ components:
         "y":
           type: number
           format: double
+      description: "Immutable point record representing 2D coordinates. This record\
+        \ provides a simple and efficient way to represent coordinate pairs within\
+        \ PDF documents, with conversion utilities for interoperability with Java's\
+        \ standard geometry classes."
     Position:
       type: object
       properties:
@@ -4213,32 +4460,65 @@ components:
           type: string
         x:
           type: number
+          description: "Returns the X coordinate of this getPosition. If no bounding\
+            \ rectangle is defined, returns -1 as a sentinel value."
           format: double
         "y":
           type: number
+          description: "Returns the Y coordinate of this getPosition. If no bounding\
+            \ rectangle is defined, returns -1 as a sentinel value."
           format: double
         pageIndex:
           type: integer
+          description: Returns the page number where this getPosition is located.
           format: int32
         shape:
-          $ref: "#/components/schemas/Position.ShapeType"
+          description: Returns the geometric shape type of this getPosition.
+          allOf:
+          - $ref: "#/components/schemas/Position.ShapeType"
         mode:
-          $ref: "#/components/schemas/Position.PositionMode"
+          description: Returns the getPosition matching mode.
+          allOf:
+          - $ref: "#/components/schemas/Position.PositionMode"
         boundingRect:
-          $ref: "#/components/schemas/BoundingRect"
+          description: Returns the bounding rectangle defining the spatial extent
+            of this getPosition.
+          allOf:
+          - $ref: "#/components/schemas/BoundingRect"
         pageNumber:
           type: integer
+          description: Gets the 1-based page number (for v1 API compatibility).
           format: int32
         effectivePageIndex:
           type: integer
+          description: "Returns the effective page index, converting from pageNumber\
+            \ if necessary. This method ensures that either pageIndex or pageNumber\
+            \ can be used, with pageNumber being converted on-the-fly if pageIndex\
+            \ is not set."
           format: int32
+      description: "Represents spatial positioning and location information for PDF\
+        \ objects. This class encapsulates various ways to specify object locations\
+        \ within PDF documents, including page-based coordinates, bounding rectangles,\
+        \ and different positioning modes. It supports both precise coordinate positioning\
+        \ and area-based location specifications."
     Position.PositionMode:
       type: string
+      description: Defines how getPosition matching should be performed when searching
+        for objects.
+      x-enum-descriptions:
+      - Objects that intersect with the specified getPosition area
+      - Objects completely contained within the specified getPosition area
       enum:
       - INTERSECT
       - CONTAINS
     Position.ShapeType:
       type: string
+      description: Defines the geometric shape type used for getPosition specification.
+      x-enum-descriptions:
+      - Single point coordinate
+      - Linear shape between two points
+      - Circular area with radius
+      - Rectangular area with width and height
       enum:
       - POINT
       - LINE
@@ -4268,6 +4548,9 @@ components:
         "y":
           type: number
           format: double
+      description: API v1 version of Position that uses 1-based page numbers instead
+        of 0-based indexes. This is a view/wrapper class that converts from internal
+        0-based indexing to 1-based for API consumers.
     Principal:
       type: object
       properties:
@@ -4358,22 +4641,19 @@ components:
         redaction.
     RedactTarget:
       required:
-      - objectType
-      - position
+      - id
       - replacement
       type: object
       properties:
-        objectType:
-          $ref: "#/components/schemas/ObjectType"
-        position:
-          $ref: "#/components/schemas/Position"
+        id:
+          type: string
         replacement:
           type: string
-      description: "Represents a single redaction target specifying what content to\
-        \ find and redact. Each target defines an object type and position criteria\
-        \ to search for, with an optional replacement string that overrides the default."
+      description: Represents a single redaction target specifying what content to
+        redact. Each target identifies an object by its internal ID.
     SessionEventDto:
       required:
+      - clientInfo
       - durationMs
       - errorMessage
       - eventType
@@ -4405,18 +4685,30 @@ components:
           type: string
         metadata:
           type: string
+        clientInfo:
+          type: string
+      description: DTO representing a single event within a session. Used for session
+        event queries to understand what happened during a session.
     Size:
       type: object
       properties:
         width:
           type: number
+          description: Returns the width dimension.
           format: double
         height:
           type: number
+          description: Returns the height dimension.
           format: double
         area:
           type: number
+          description: "Calculates and returns the total area. This method computes\
+            \ the area by multiplying width and height, useful for size comparisons\
+            \ and layout calculations."
           format: double
+      description: "Represents dimensional measurements with width and height properties.\
+        \ This class encapsulates size information for PDF objects (images, forms,\
+        \ etc.), providing both individual dimension access and calculated area methods."
     Subscription:
       required:
       - end
@@ -4434,22 +4726,38 @@ components:
           $ref: "#/components/schemas/Product"
     TextElement:
       type: object
+      description: "Represents a single character or glyph within a PDF document.\
+        \ This class encapsulates individual character properties including the character\
+        \ content, font styling, color, and getPosition for fine-grained text manipulation\
+        \ and character-level formatting operations."
       allOf:
       - $ref: "#/components/schemas/PDFObject"
       - type: object
         properties:
           text:
             type: string
+            description: The character or glyph content (typically a single character
+              string).
           font:
-            $ref: "#/components/schemas/Font"
+            description: Font properties for rendering this character.
+            allOf:
+            - $ref: "#/components/schemas/Font"
           color:
-            $ref: "#/components/schemas/Color"
+            description: Color properties for rendering this character.
+            allOf:
+            - $ref: "#/components/schemas/Color"
           objectType:
-            $ref: "#/components/schemas/ObjectType"
+            description: Returns the object type for this character.
+            allOf:
+            - $ref: "#/components/schemas/ObjectType"
           status:
             $ref: "#/components/schemas/TextStatus"
     TextLine:
       type: object
+      description: Represents a paragraph or text block within a PDF document. This
+        class encapsulates paragraph-level text content with unified formatting properties
+        and access to individual character elements for detailed manipulation. Provides
+        both block-level text operations and character-level granularity.
       allOf:
       - $ref: "#/components/schemas/PDFObject"
       - type: object
@@ -4460,7 +4768,9 @@ components:
           fontName:
             type: string
           objectType:
-            $ref: "#/components/schemas/ObjectType"
+            description: Returns the object type for this paragraph.
+            allOf:
+            - $ref: "#/components/schemas/ObjectType"
           textElements:
             type: array
             items:
@@ -4507,6 +4817,7 @@ components:
             format: double
           lineSpacings:
             type: array
+            description: Gets the line spacing factors between consecutive lines.
             items:
               type: number
               format: double
@@ -4528,6 +4839,8 @@ components:
       - status
       - text
       type: object
+      description: API v1 version of TextTypeObjectRef that uses 1-based page numbers
+        in position.
       allOf:
       - $ref: "#/components/schemas/ObjectRefV1"
       - type: object
@@ -4561,6 +4874,7 @@ components:
       - YEAR
     UserEventDto:
       required:
+      - clientInfo
       - durationMs
       - errorMessage
       - eventType
@@ -4592,6 +4906,10 @@ components:
           type: string
         metadata:
           type: string
+        clientInfo:
+          type: string
+      description: DTO representing a single event for a user across all their sessions.
+        Includes sessionId to identify which session each event belongs to.
     UserTenantResponse:
       required:
       - planCode
@@ -4614,6 +4932,7 @@ components:
           type: string
         status:
           type: string
+      description: Response containing user's tenant information with their role.
     VersionResponse:
       required:
       - color
