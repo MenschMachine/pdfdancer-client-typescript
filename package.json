@@ -10,7 +10,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "node scripts/generate-version.js && tsc",
     "test": "jest",
     "test:unit": "jest --selectProjects unit",
     "test:e2e": "jest --selectProjects e2e",
