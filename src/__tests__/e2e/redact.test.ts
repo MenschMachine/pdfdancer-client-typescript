@@ -115,8 +115,7 @@ describe('Redact E2E Tests', () => {
 
         // Check that we have fewer paths now
         const assertions = await PDFAssertions.create(pdf);
-        const pathsAfter = await pdf.page(1).selectPaths();
-        expect(pathsAfter.length).toBeLessThan(initialPathCount);
+        await assertions.assertNumberOfPaths(initialPathCount - 1, 1);
     });
 
     test('redact multiple paragraphs on page', async () => {
