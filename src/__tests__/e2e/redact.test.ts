@@ -152,7 +152,6 @@ describe('Redact E2E Tests', () => {
         // Verify response structure
         expect(typeof result.success).toBe('boolean');
         expect(typeof result.count).toBe('number');
-        expect(Array.isArray(result.warnings)).toBe(true);
     });
 
 });

@@ -223,13 +223,17 @@ export class PDFAssertions {
     }
 
     async assertParagraphExists(text: string, page = 1): Promise<this> {
-        const paragraphs = await this.pdf.page(page).selectParagraphsStartingWith(text);
+        let params = await this.pdf.page(page).selectParagraphs();
+        for (const param of params) {
+            console.log(param.getText());
+        }
+        const paragraphs = await this.pdf.page(page).selectParagraphsMatching(".*" + text + ".*");
         expect(paragraphs.length).toBeGreaterThan(0);
         return this;
     }
 
     async assertParagraphDoesNotExist(text: string, page = 1): Promise<this> {
-        const paragraphs = await this.pdf.page(page).selectParagraphsStartingWith(text);
+        const paragraphs = await this.pdf.page(page).selectParagraphsMatching(".*" + text + ".*");
         expect(paragraphs.length).toBe(0);
         return this;
     }

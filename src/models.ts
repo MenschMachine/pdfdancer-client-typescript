@@ -1171,11 +1171,11 @@ export class DocumentSnapshot {
 
 /**
  * Represents a target for redaction operations.
+ * Targets are identified by element ID.
  */
 export interface RedactTarget {
-    objectType: ObjectType;
-    position: Position;
-    replacement?: string;
+    id: string;
+    replacement: string;
 }
 
 /**
