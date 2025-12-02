@@ -42,6 +42,9 @@ import {
     Path,
     Position,
     PositionMode,
+    RedactOptions,
+    RedactResponse,
+    RedactTarget,
     ShapeType,
     TextObjectRef,
     TextStatus
@@ -1533,6 +1536,57 @@ export class PDFDancer {
         const requestData = new DeleteRequest(objectRef).toDict();
         const response = await this._makeRequest('DELETE', '/pdf/delete', requestData);
         const result = await response.json() as boolean;
+
+        // Invalidate cache after mutation
+        this._invalidateCache();
+
+        return result;
+    }
+
+    /**
+     * Redacts content from the PDF document.
+     * Text is replaced with the replacement string.
+     * Images/paths are replaced with solid color placeholders.
+     */
+    private async redact(targets: RedactTarget[], options?: RedactOptions): Promise<RedactResponse> {
+        if (!targets || targets.length === 0) {
+            return { count: 0, success: true, warnings: [] };
+        }
+
+        const positionToDict = (pos: Position) => {
+            const result: Record<string, any> = {
+                pageNumber: pos.pageNumber,
+                textStartsWith: pos.textStartsWith,
+                textPattern: pos.textPattern,
+                name: pos.name
+            };
+            if (pos.shape) result.shape = pos.shape;
+            if (pos.mode) result.mode = pos.mode;
+            if (pos.boundingRect) {
+                result.boundingRect = {
+                    x: pos.boundingRect.x,
+                    y: pos.boundingRect.y,
+                    width: pos.boundingRect.width,
+                    height: pos.boundingRect.height
+                };
+            }
+            return result;
+        };
+
+        const request = {
+            targets: targets.map(t => ({
+                objectType: t.objectType,
+                position: positionToDict(t.position),
+                replacement: t.replacement ?? options?.defaultReplacement ?? '[REDACTED]'
+            })),
+            defaultReplacement: options?.defaultReplacement ?? '[REDACTED]',
+            placeholderColor: options?.placeholderColor
+                ? { red: options.placeholderColor.r, green: options.placeholderColor.g, blue: options.placeholderColor.b, alpha: options.placeholderColor.a }
+                : { red: 0, green: 0, blue: 0, alpha: 255 }
+        };
+
+        const response = await this._makeRequest('POST', '/pdf/redact', request);
+        const result = await response.json() as RedactResponse;
 
         // Invalidate cache after mutation
         this._invalidateCache();
