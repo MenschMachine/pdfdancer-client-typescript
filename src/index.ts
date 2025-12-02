@@ -52,4 +52,4 @@ export {
 
 export { DocumentFontInfo as FontRecommendation } from './models';
 
-export const VERSION = "2.0.1";
+export { VERSION } from './version';
