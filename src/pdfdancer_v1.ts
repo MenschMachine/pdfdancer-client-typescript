@@ -57,6 +57,7 @@ import fs from "fs";
 import path from "node:path";
 
 const DEFAULT_TOLERANCE = 0.01;
+const CLIENT_VERSION = "2.0.1";
 
 /**
  * Configuration for retry mechanism on REST API calls.
@@ -724,7 +725,8 @@ export class PDFDancer {
                         'Authorization': `Bearer ${resolvedToken}`,
                         'Content-Type': 'application/json',
                         'X-Generated-At': generateTimestamp(),
-                        'X-Fingerprint': fingerprint
+                        'X-Fingerprint': fingerprint,
+                        'X-PDFDancer-Client': `typescript/${CLIENT_VERSION}`
                     },
                     body: JSON.stringify(createRequest.toDict()),
                     signal: resolvedTimeout > 0 ? AbortSignal.timeout(resolvedTimeout) : undefined
@@ -781,7 +783,8 @@ export class PDFDancer {
                     headers: {
                         'Content-Type': 'application/json',
                         'X-Fingerprint': fingerprint,
-                        'X-Generated-At': generateTimestamp()
+                        'X-Generated-At': generateTimestamp(),
+                        'X-PDFDancer-Client': `typescript/${CLIENT_VERSION}`
                     },
                     signal: timeout > 0 ? AbortSignal.timeout(timeout) : undefined
                 },
@@ -935,7 +938,8 @@ export class PDFDancer {
                     headers: {
                         'Authorization': `Bearer ${this._token}`,
                         'X-Generated-At': generateTimestamp(),
-                        'X-Fingerprint': fingerprint
+                        'X-Fingerprint': fingerprint,
+                        'X-PDFDancer-Client': `typescript/${CLIENT_VERSION}`
                     },
                     body: formData,
                     signal: this._readTimeout > 0 ? AbortSignal.timeout(this._readTimeout) : undefined
@@ -1019,7 +1023,8 @@ export class PDFDancer {
             'Content-Type': 'application/json',
             'X-Generated-At': generateTimestamp(),
             'X-Fingerprint': fingerprint,
-            'X-API-VERSION': '1'
+            'X-API-VERSION': '1',
+            'X-PDFDancer-Client': `typescript/${CLIENT_VERSION}`
         };
 
         try {
@@ -1791,7 +1796,8 @@ export class PDFDancer {
                         'Authorization': `Bearer ${this._token}`,
                         'X-Session-Id': this._sessionId,
                         'X-Generated-At': generateTimestamp(),
-                        'X-Fingerprint': fingerprint
+                        'X-Fingerprint': fingerprint,
+                        'X-PDFDancer-Client': `typescript/${CLIENT_VERSION}`
                     },
                     body: formData,
                     signal: AbortSignal.timeout(60000)
