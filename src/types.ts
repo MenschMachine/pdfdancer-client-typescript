@@ -15,7 +15,7 @@ interface PDFDancerInternals {
 
     modifyParagraph(objectRef: ObjectRef, update: Paragraph | string | null): Promise<CommandResult>;
 
-    redact(targets: RedactTarget[], options?: RedactOptions): Promise<RedactResponse>;
+    _redactTargets(targets: RedactTarget[], options?: RedactOptions): Promise<RedactResponse>;
 }
 
 export class BaseObject<TRef extends ObjectRef = ObjectRef> {
@@ -68,7 +68,7 @@ export class BaseObject<TRef extends ObjectRef = ObjectRef> {
             options.placeholderColor = replacementOrOptions.color;
         }
 
-        return this._internals.redact([target], options);
+        return this._internals._redactTargets([target], options);
     }
 }
 

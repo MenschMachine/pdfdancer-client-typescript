@@ -52,7 +52,7 @@ import {
 import {ParagraphBuilder} from './paragraph-builder';
 import {PageBuilder} from './page-builder';
 import {loadEnv} from './env-loader';
-import {FormFieldObject, FormXObject, ImageObject, ParagraphObject, PathObject, TextLineObject} from "./types";
+import {BaseObject, FormFieldObject, FormXObject, ImageObject, ParagraphObject, PathObject, TextLineObject} from "./types";
 import {ImageBuilder} from "./image-builder";
 import {PathBuilder} from "./path-builder";
 import {generateFingerprint} from "./fingerprint";
@@ -1549,11 +1549,29 @@ export class PDFDancer {
     }
 
     /**
-     * Redacts content from the PDF document.
+     * Redacts multiple objects from the PDF document in a single batch operation.
      * Text is replaced with the replacement string.
      * Images/paths are replaced with solid color placeholders.
+     * @param objects Array of objects to redact (paragraphs, text lines, images, paths)
+     * @param options Redaction options including default replacement text and placeholder color
      */
-    private async redact(targets: RedactTarget[], options?: RedactOptions): Promise<RedactResponse> {
+    async redact(objects: BaseObject[], options?: RedactOptions): Promise<RedactResponse> {
+        if (!objects || objects.length === 0) {
+            return { count: 0, success: true, warnings: [] };
+        }
+
+        const targets: RedactTarget[] = objects.map(obj => ({
+            id: obj.internalId,
+            replacement: options?.defaultReplacement ?? '[REDACTED]'
+        }));
+
+        return this._redactTargets(targets, options);
+    }
+
+    /**
+     * Internal method to redact by targets (used by BaseObject.redact())
+     */
+    private async _redactTargets(targets: RedactTarget[], options?: RedactOptions): Promise<RedactResponse> {
         if (!targets || targets.length === 0) {
             return { count: 0, success: true, warnings: [] };
         }

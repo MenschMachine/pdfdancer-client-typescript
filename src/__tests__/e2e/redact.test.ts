@@ -153,4 +153,54 @@ describe('Redact E2E Tests', () => {
         expect(typeof result.count).toBe('number');
     });
 
+    test('batch redact multiple paragraphs in single API call', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const paragraphs = await pdf.page(1).selectParagraphs();
+        const initialCount = paragraphs.length;
+        expect(initialCount).toBeGreaterThan(1);
+
+        // Batch redact all paragraphs in single call
+        const result = await pdf.redact(paragraphs);
+
+        expect(result.success).toBe(true);
+        expect(result.count).toBe(initialCount);
+
+        // Verify redacted text exists
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertParagraphExists('[REDACTED]', 1);
+    });
+
+    test('batch redact with custom replacement', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const paragraphs = await pdf.page(1).selectParagraphs();
+        expect(paragraphs.length).toBeGreaterThan(0);
+
+        const result = await pdf.redact(paragraphs, { defaultReplacement: '[REMOVED]' });
+
+        expect(result.success).toBe(true);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertParagraphExists('[REMOVED]', 1);
+    });
+
+    test('batch redact mixed object types', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const paragraphs = await pdf.page(1).selectParagraphs();
+        const images = await pdf.page(1).selectImages();
+
+        const mixedObjects = [...paragraphs.slice(0, 2), ...images.slice(0, 1)];
+        expect(mixedObjects.length).toBeGreaterThan(0);
+
+        const result = await pdf.redact(mixedObjects);
+
+        expect(result.success).toBe(true);
+        expect(result.count).toBe(mixedObjects.length);
+    });
+
 });
