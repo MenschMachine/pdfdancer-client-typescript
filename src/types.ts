@@ -1,4 +1,21 @@
-import {Color, CommandResult, FlipDirection, Font, FormFieldRef, Image, ImageTransformRequest, ImageTransformType, ObjectRef, ObjectType, Paragraph, Position, RedactOptions, RedactResponse, RedactTarget, Size, TextObjectRef} from "./models";
+import {
+    Color,
+    CommandResult,
+    FlipDirection,
+    Font,
+    FormFieldRef,
+    Image,
+    ImageTransformRequest,
+    ImageTransformType,
+    ObjectRef,
+    ObjectType,
+    Paragraph,
+    Position,
+    RedactOptions,
+    RedactResponse,
+    RedactTarget,
+    TextObjectRef
+} from "./models";
 import {PDFDancer} from "./pdfdancer_v1";
 import {ParagraphBuilder} from "./paragraph-builder";
 import {ValidationException} from "./exceptions";

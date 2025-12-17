@@ -23,13 +23,11 @@ import {
     DocumentFontInfo,
     DocumentSnapshot,
     FindRequest,
-    FlipDirection,
     Font,
     FontType,
     FormFieldRef,
     Image,
     ImageTransformRequest,
-    ImageTransformType,
     ModifyRequest,
     ModifyTextRequest,
     MovePageRequest,
@@ -49,7 +47,6 @@ import {
     RedactResponse,
     RedactTarget,
     ShapeType,
-    Size,
     TextObjectRef,
     TextStatus
 } from './models';
