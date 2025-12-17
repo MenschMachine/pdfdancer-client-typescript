@@ -1195,6 +1195,121 @@ export interface RedactResponse {
     warnings: string[];
 }
 
+/**
+ * Types of image transformations supported.
+ */
+export enum ImageTransformType {
+    /** Replace image content while keeping position */
+    REPLACE = "REPLACE",
+    /** Scale/resize the image */
+    SCALE = "SCALE",
+    /** Rotate the image */
+    ROTATE = "ROTATE",
+    /** Crop the image by trimming edges */
+    CROP = "CROP",
+    /** Set the opacity/transparency of the image */
+    OPACITY = "OPACITY",
+    /** Flip the image horizontally or vertically */
+    FLIP = "FLIP"
+}
+
+/**
+ * Direction for flip operations.
+ */
+export enum FlipDirection {
+    /** Flip horizontally (mirror left-right) */
+    HORIZONTAL = "HORIZONTAL",
+    /** Flip vertically (mirror top-bottom) */
+    VERTICAL = "VERTICAL",
+    /** Flip both horizontally and vertically */
+    BOTH = "BOTH"
+}
+
+/**
+ * Represents dimensional measurements with width and height properties.
+ */
+export interface Size {
+    width: number;
+    height: number;
+}
+
+/**
+ * Request for image transformation operations.
+ * Supports replace, scale, rotate, crop, opacity, and flip operations on PDF images.
+ */
+export class ImageTransformRequest {
+    constructor(
+        public objectRef: ObjectRef,
+        public transformType: ImageTransformType,
+        public newImage?: Image,
+        public scaleFactor?: number,
+        public targetSize?: Size,
+        public preserveAspectRatio?: boolean,
+        public rotationAngle?: number,
+        public cropLeft?: number,
+        public cropTop?: number,
+        public cropRight?: number,
+        public cropBottom?: number,
+        public opacity?: number,
+        public flipDirection?: FlipDirection
+    ) {}
+
+    toDict(): Record<string, any> {
+        const result: Record<string, any> = {
+            objectRef: this.objectRef.toDict(),
+            transformType: this.transformType
+        };
+
+        if (this.newImage) {
+            const size = this.newImage.width !== undefined && this.newImage.height !== undefined
+                ? { width: this.newImage.width, height: this.newImage.height }
+                : null;
+            const dataB64 = this.newImage.data ? btoa(String.fromCharCode(...this.newImage.data)) : null;
+
+            result.newImage = {
+                type: "IMAGE",
+                position: this.newImage.position ? positionToDict(this.newImage.position) : null,
+                format: this.newImage.format || null,
+                size,
+                data: dataB64
+            };
+        }
+
+        if (this.scaleFactor !== undefined) {
+            result.scaleFactor = this.scaleFactor;
+        }
+        if (this.targetSize !== undefined) {
+            result.targetSize = { width: this.targetSize.width, height: this.targetSize.height };
+        }
+        if (this.preserveAspectRatio !== undefined) {
+            result.preserveAspectRatio = this.preserveAspectRatio;
+        }
+        if (this.rotationAngle !== undefined) {
+            result.rotationAngle = this.rotationAngle;
+        }
+        if (this.cropLeft !== undefined) {
+            result.cropLeft = this.cropLeft;
+        }
+        if (this.cropTop !== undefined) {
+            result.cropTop = this.cropTop;
+        }
+        if (this.cropRight !== undefined) {
+            result.cropRight = this.cropRight;
+        }
+        if (this.cropBottom !== undefined) {
+            result.cropBottom = this.cropBottom;
+        }
+        if (this.opacity !== undefined) {
+            result.opacity = this.opacity;
+        }
+        if (this.flipDirection !== undefined) {
+            result.flipDirection = this.flipDirection;
+        }
+
+        return result;
+    }
+}
+
 // Helper function to convert Position to dictionary for JSON serialization
 function positionToDict(position: Position): Record<string, any> {
     const result: Record<string, any> = {

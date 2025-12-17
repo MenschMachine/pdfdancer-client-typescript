@@ -50,7 +50,10 @@ export {
   PageSnapshot,
   RedactTarget,
   RedactOptions,
-  RedactResponse
+  RedactResponse,
+  ImageTransformType,
+  FlipDirection,
+  Size
 } from './models';
 
 export { DocumentFontInfo as FontRecommendation } from './models';

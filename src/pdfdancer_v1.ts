@@ -23,10 +23,13 @@ import {
     DocumentFontInfo,
     DocumentSnapshot,
     FindRequest,
+    FlipDirection,
     Font,
     FontType,
     FormFieldRef,
     Image,
+    ImageTransformRequest,
+    ImageTransformType,
     ModifyRequest,
     ModifyTextRequest,
     MovePageRequest,
@@ -46,6 +49,7 @@ import {
     RedactResponse,
     RedactTarget,
     ShapeType,
+    Size,
     TextObjectRef,
     TextStatus
 } from './models';
@@ -1589,6 +1593,26 @@ export class PDFDancer {
 
         const response = await this._makeRequest('POST', '/pdf/redact', request);
         const result = await response.json() as RedactResponse;
+
+        // Invalidate cache after mutation
+        this._invalidateCache();
+
+        return result;
+    }
+
+    /**
+     * Transforms an image in the PDF document.
+     * Supports replace, scale, rotate, crop, opacity, and flip operations.
+     * @param request The transformation request containing the image reference and transformation parameters
+     * @returns CommandResult indicating success or failure
+     */
+    private async transformImage(request: ImageTransformRequest): Promise<CommandResult> {
+        if (!request.objectRef) {
+            throw new ValidationException("Object reference cannot be null");
+        }
+
+        const response = await this._makeRequest('PUT', '/pdf/image/transform', request.toDict());
+        const result = CommandResult.fromDict(await response.json());
 
         // Invalidate cache after mutation
         this._invalidateCache();
