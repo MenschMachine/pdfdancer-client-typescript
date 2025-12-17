@@ -210,6 +210,66 @@ export class PDFAssertions {
         return this;
     }
 
+    /**
+     * Asserts that an image has the expected dimensions.
+     * @param internalId The internal ID of the image
+     * @param expectedWidth Expected width in points
+     * @param expectedHeight Expected height in points
+     * @param page Page number (1-based)
+     * @param epsilon Tolerance for comparison (default 0.5)
+     */
+    async assertImageSize(internalId: string, expectedWidth: number, expectedHeight: number, page = 1, epsilon = 0.5): Promise<this> {
+        const images = await this.pdf.page(page).selectImages();
+        const image = images.find(img => img.internalId === internalId);
+        expect(image).toBeDefined();
+
+        const boundingRect = image!.position.boundingRect;
+        expect(boundingRect).toBeDefined();
+
+        expectWithin(boundingRect!.width, expectedWidth, epsilon);
+        expectWithin(boundingRect!.height, expectedHeight, epsilon);
+        return this;
+    }
+
+    /**
+     * Asserts that an image has the expected aspect ratio (width/height).
+     * @param internalId The internal ID of the image
+     * @param expectedRatio Expected aspect ratio (width / height)
+     * @param page Page number (1-based)
+     * @param epsilon Tolerance for comparison (default 0.01)
+     */
+    async assertImageAspectRatio(internalId: string, expectedRatio: number, page = 1, epsilon = 0.01): Promise<this> {
+        const images = await this.pdf.page(page).selectImages();
+        const image = images.find(img => img.internalId === internalId);
+        expect(image).toBeDefined();
+
+        const boundingRect = image!.position.boundingRect;
+        expect(boundingRect).toBeDefined();
+
+        const actualRatio = boundingRect!.width / boundingRect!.height;
+        expectWithin(actualRatio, expectedRatio, epsilon);
+        return this;
+    }
+
+    /**
+     * Gets the dimensions of an image by its internal ID.
+     * Useful for capturing dimensions before a transformation.
+     * @param internalId The internal ID of the image
+     * @param page Page number (1-based)
+     * @returns Object with width and height, or undefined if not found
+     */
+    async getImageSize(internalId: string, page = 1): Promise<{ width: number; height: number } | undefined> {
+        const images = await this.pdf.page(page).selectImages();
+        const image = images.find(img => img.internalId === internalId);
+        if (!image || !image.position.boundingRect) {
+            return undefined;
+        }
+        return {
+            width: image.position.boundingRect.width,
+            height: image.position.boundingRect.height
+        };
+    }
+
     async assertNumberOfFormXObjects(expected: number, page?: number): Promise<this> {
         const forms = page === undefined ? await this.pdf.selectForms() : await this.pdf.page(page).selectForms();
         expect(forms.length).toBe(expected);

@@ -1,4 +1,4 @@
-import {Color, CommandResult, Font, FormFieldRef, ObjectRef, ObjectType, Paragraph, Position, RedactOptions, RedactResponse, RedactTarget, TextObjectRef} from "./models";
+import {Color, CommandResult, FlipDirection, Font, FormFieldRef, Image, ImageTransformRequest, ImageTransformType, ObjectRef, ObjectType, Paragraph, Position, RedactOptions, RedactResponse, RedactTarget, Size, TextObjectRef} from "./models";
 import {PDFDancer} from "./pdfdancer_v1";
 import {ParagraphBuilder} from "./paragraph-builder";
 import {ValidationException} from "./exceptions";
@@ -16,6 +16,8 @@ interface PDFDancerInternals {
     modifyParagraph(objectRef: ObjectRef, update: Paragraph | string | null): Promise<CommandResult>;
 
     _redactTargets(targets: RedactTarget[], options?: RedactOptions): Promise<RedactResponse>;
+
+    transformImage(request: ImageTransformRequest): Promise<CommandResult>;
 }
 
 export class BaseObject<TRef extends ObjectRef = ObjectRef> {
@@ -83,6 +85,162 @@ export class ImageObject extends BaseObject {
 
     static fromRef(_client: PDFDancer, objectRef: ObjectRef) {
         return new ImageObject(_client, objectRef.internalId, objectRef.type, objectRef.position);
+    }
+
+    /**
+     * Replaces this image with a new image while keeping the same position.
+     * @param newImage The new image to replace this one with
+     * @returns CommandResult indicating success or failure
+     */
+    async replace(newImage: Image): Promise<CommandResult> {
+        if (!newImage) {
+            throw new ValidationException("New image cannot be null");
+        }
+        const request = new ImageTransformRequest(
+            this.ref(),
+            ImageTransformType.REPLACE,
+            newImage
+        );
+        return this._internals.transformImage(request);
+    }
+
+    /**
+     * Scales the image by a factor.
+     * @param factor Scale factor (e.g., 0.5 for half size, 2.0 for double size)
+     * @returns CommandResult indicating success or failure
+     */
+    async scale(factor: number): Promise<CommandResult> {
+        if (factor <= 0) {
+            throw new ValidationException(`Scale factor must be positive, got ${factor}`);
+        }
+        const request = new ImageTransformRequest(
+            this.ref(),
+            ImageTransformType.SCALE,
+            undefined,
+            factor
+        );
+        return this._internals.transformImage(request);
+    }
+
+    /**
+     * Scales the image to a target size.
+     * @param width Target width in points
+     * @param height Target height in points
+     * @param preserveAspectRatio Whether to preserve the aspect ratio (default: true)
+     * @returns CommandResult indicating success or failure
+     */
+    async scaleTo(width: number, height: number, preserveAspectRatio: boolean = true): Promise<CommandResult> {
+        if (width <= 0 || height <= 0) {
+            throw new ValidationException(`Target size must be positive, got ${width}x${height}`);
+        }
+        const request = new ImageTransformRequest(
+            this.ref(),
+            ImageTransformType.SCALE,
+            undefined,
+            undefined,
+            { width, height },
+            preserveAspectRatio
+        );
+        return this._internals.transformImage(request);
+    }
+
+    /**
+     * Rotates the image by the specified angle.
+     * @param angle Rotation angle in degrees (positive = clockwise)
+     * @returns CommandResult indicating success or failure
+     */
+    async rotate(angle: number): Promise<CommandResult> {
+        const request = new ImageTransformRequest(
+            this.ref(),
+            ImageTransformType.ROTATE,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            angle
+        );
+        return this._internals.transformImage(request);
+    }
+
+    /**
+     * Crops the image by trimming edges.
+     * @param left Pixels to trim from the left edge
+     * @param top Pixels to trim from the top edge
+     * @param right Pixels to trim from the right edge
+     * @param bottom Pixels to trim from the bottom edge
+     * @returns CommandResult indicating success or failure
+     */
+    async crop(left: number, top: number, right: number, bottom: number): Promise<CommandResult> {
+        if (left < 0 || top < 0 || right < 0 || bottom < 0) {
+            throw new ValidationException("Crop values cannot be negative");
+        }
+        const request = new ImageTransformRequest(
+            this.ref(),
+            ImageTransformType.CROP,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            left,
+            top,
+            right,
+            bottom
+        );
+        return this._internals.transformImage(request);
+    }
+
+    /**
+     * Sets the opacity/transparency of the image.
+     * @param opacity Opacity value from 0.0 (fully transparent) to 1.0 (fully opaque)
+     * @returns CommandResult indicating success or failure
+     */
+    async setOpacity(opacity: number): Promise<CommandResult> {
+        if (opacity < 0 || opacity > 1) {
+            throw new ValidationException(`Opacity must be between 0.0 and 1.0, got ${opacity}`);
+        }
+        const request = new ImageTransformRequest(
+            this.ref(),
+            ImageTransformType.OPACITY,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            opacity
+        );
+        return this._internals.transformImage(request);
+    }
+
+    /**
+     * Flips the image horizontally, vertically, or both.
+     * @param direction The flip direction (HORIZONTAL, VERTICAL, or BOTH)
+     * @returns CommandResult indicating success or failure
+     */
+    async flip(direction: FlipDirection): Promise<CommandResult> {
+        if (!direction) {
+            throw new ValidationException("Flip direction cannot be null");
+        }
+        const request = new ImageTransformRequest(
+            this.ref(),
+            ImageTransformType.FLIP,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            direction
+        );
+        return this._internals.transformImage(request);
     }
 }
 
