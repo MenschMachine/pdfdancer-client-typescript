@@ -11,9 +11,9 @@ describe('Env Token E2E Tests', () => {
 
     const restoreEnv = () => {
         if (originalToken !== undefined) {
-            process.env.PDFDANCER_TOKEN = originalToken;
+            process.env.PDFDANCER_API_TOKEN = originalToken;
         } else {
-            delete process.env.PDFDANCER_TOKEN;
+            delete process.env.PDFDANCER_API_TOKEN;
         }
 
         if (originalBaseUrl !== undefined) {
@@ -24,7 +24,7 @@ describe('Env Token E2E Tests', () => {
     };
 
     beforeAll(async () => {
-        originalToken = process.env.PDFDANCER_TOKEN;
+        originalToken = process.env.PDFDANCER_API_TOKEN;
         originalBaseUrl = process.env.PDFDANCER_BASE_URL;
 
         [baseUrl, validToken, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
@@ -43,13 +43,13 @@ describe('Env Token E2E Tests', () => {
     });
 
     test('opens with token from env', async () => {
-        process.env.PDFDANCER_TOKEN = validToken;
+        process.env.PDFDANCER_API_TOKEN = validToken;
         const client = await PDFDancer.open(pdfData, undefined, baseUrl);
         expect(client).toBeInstanceOf(PDFDancer);
     });
 
     test('fails with unreachable base url', async () => {
-        process.env.PDFDANCER_TOKEN = validToken;
+        process.env.PDFDANCER_API_TOKEN = validToken;
         process.env.PDFDANCER_BASE_URL = "http://www.google.com";
 
         await expect(async () => {
@@ -63,7 +63,7 @@ describe('Env Token E2E Tests', () => {
     });
 
     test('fails with invalid token', async () => {
-        process.env.PDFDANCER_TOKEN = "invalid-token";
+        process.env.PDFDANCER_API_TOKEN = "invalid-token";
         process.env.PDFDANCER_BASE_URL = "https://api.pdfdancer.com";
 
         await expect(async () => {

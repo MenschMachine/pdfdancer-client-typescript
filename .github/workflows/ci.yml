@@ -39,7 +39,7 @@ jobs:
       - name: Run tests
         run: |
           PDFDANCER_BASE_URL=https://api-staging.pdfdancer.com \
-          PDFDANCER_TOKEN=42 \
+          PDFDANCER_API_TOKEN=42 \
           npm run test
 
       - name: Upload test results
@@ -84,7 +84,7 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           PDFDANCER_BASE_URL=https://api-staging.pdfdancer.com \
-          PDFDANCER_TOKEN=42 \
+          PDFDANCER_API_TOKEN=42 \
           npm run test
 
       - name: Run tests (Windows)
@@ -92,7 +92,7 @@ jobs:
         shell: cmd
         run: |
           set PDFDANCER_BASE_URL=https://api-staging.pdfdancer.com
-          set PDFDANCER_TOKEN=42
+          set PDFDANCER_API_TOKEN=42
           npm run test
 
       - name: Upload test results

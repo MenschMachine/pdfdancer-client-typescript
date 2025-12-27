@@ -12,7 +12,7 @@ For the e2e tests to run, you need to place the following files here:
 
 The e2e tests will be skipped if these files are not present or if the required environment variables are not set:
 
-- `PDFDANCER_TOKEN` - Authentication token for the PDFDancer API
+- `PDFDANCER_API_TOKEN` (or `PDFDANCER_TOKEN`) - Authentication token for the PDFDancer API
 - `PDFDANCER_BASE_URL` - Optional: URL of the PDFDancer server (defaults to http://localhost:8080)
 
 ## Running E2E Tests
