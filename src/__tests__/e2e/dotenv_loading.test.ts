@@ -13,9 +13,9 @@ describe('.env file loading E2E Tests', () => {
 
     const restoreEnv = () => {
         if (originalToken !== undefined) {
-            process.env.PDFDANCER_TOKEN = originalToken;
+            process.env.PDFDANCER_API_TOKEN = originalToken;
         } else {
-            delete process.env.PDFDANCER_TOKEN;
+            delete process.env.PDFDANCER_API_TOKEN;
         }
 
         if (originalBaseUrl !== undefined) {
@@ -30,7 +30,7 @@ describe('.env file loading E2E Tests', () => {
     };
 
     beforeAll(async () => {
-        originalToken = process.env.PDFDANCER_TOKEN;
+        originalToken = process.env.PDFDANCER_API_TOKEN;
         originalBaseUrl = process.env.PDFDANCER_BASE_URL;
         tempEnvPath = path.resolve(process.cwd(), '.env');
 
@@ -38,7 +38,7 @@ describe('.env file loading E2E Tests', () => {
     });
 
     beforeEach(() => {
-        delete process.env.PDFDANCER_TOKEN;
+        delete process.env.PDFDANCER_API_TOKEN;
         delete process.env.PDFDANCER_BASE_URL;
         if (fs.existsSync(tempEnvPath)) {
             fs.unlinkSync(tempEnvPath);
@@ -54,14 +54,14 @@ describe('.env file loading E2E Tests', () => {
     });
 
     test('loads token from .env file', async () => {
-        fs.writeFileSync(tempEnvPath, `PDFDANCER_TOKEN=${validToken}\nPDFDANCER_BASE_URL=${baseUrl}\n`);
+        fs.writeFileSync(tempEnvPath, `PDFDANCER_API_TOKEN=${validToken}\nPDFDANCER_BASE_URL=${baseUrl}\n`);
 
         const client = await PDFDancer.open(pdfData);
         expect(client).toBeInstanceOf(PDFDancer);
     });
 
     test('direct parameter overrides .env file', async () => {
-        fs.writeFileSync(tempEnvPath, `PDFDANCER_TOKEN=wrong-token\nPDFDANCER_BASE_URL=wrong-url\n`);
+        fs.writeFileSync(tempEnvPath, `PDFDANCER_API_TOKEN=wrong-token\nPDFDANCER_BASE_URL=wrong-url\n`);
 
         const client = await PDFDancer.open(pdfData, validToken, baseUrl);
         expect(client).toBeInstanceOf(PDFDancer);

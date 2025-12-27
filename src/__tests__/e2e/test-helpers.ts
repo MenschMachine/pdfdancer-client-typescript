@@ -17,7 +17,8 @@ export function getBaseUrl(): string {
  * Read authentication token from environment or token files
  */
 export function readToken(): string | null {
-    const token = process.env.PDFDANCER_TOKEN;
+    // Check PDFDANCER_API_TOKEN first (preferred), then PDFDANCER_TOKEN (legacy)
+    const token = process.env.PDFDANCER_API_TOKEN || process.env.PDFDANCER_TOKEN;
     if (token) {
         return token.trim();
     }
@@ -84,7 +85,7 @@ export async function requireEnvAndFixture(pdfFilename: string): Promise<[string
     }
 
     if (!token) {
-        throw new Error('PDFDANCER_TOKEN not set and no token file found; set env or place jwt-token-*.txt in repo');
+        throw new Error('PDFDANCER_API_TOKEN not set and no token file found; set env or place jwt-token-*.txt in repo');
     }
 
     // Look for PDF fixture file

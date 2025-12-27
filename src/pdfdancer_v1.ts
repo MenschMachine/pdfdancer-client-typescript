@@ -633,7 +633,7 @@ export class PDFDancer {
      * Opens a PDF document for manipulation.
      *
      * @param pdfData PDF data as Uint8Array (raw bytes) or string (filepath)
-     * @param token Authentication token (optional, can use PDFDANCER_TOKEN env var)
+     * @param token Authentication token (optional, falls back to PDFDANCER_API_TOKEN or PDFDANCER_TOKEN env var)
      * @param baseUrl Base URL for the PDFDancer API (optional)
      * @param timeout Request timeout in milliseconds (default: 60000)
      * @param retryConfig Retry configuration (optional, uses defaults if not specified)
@@ -654,7 +654,7 @@ export class PDFDancer {
             "https://api.pdfdancer.com";
         const resolvedTimeout = timeout ?? 60000;
 
-        let resolvedToken = token?.trim() ?? process.env.PDFDANCER_TOKEN?.trim() ?? null;
+        let resolvedToken = token?.trim() ?? process.env.PDFDANCER_API_TOKEN?.trim() ?? process.env.PDFDANCER_TOKEN?.trim() ?? null;
         if (!resolvedToken) {
             resolvedToken = await PDFDancer._obtainAnonymousToken(resolvedBaseUrl, resolvedTimeout);
         }
@@ -670,7 +670,7 @@ export class PDFDancer {
      * @param options.pageSize Page size (default: "A4")
      * @param options.orientation Page orientation (default: "PORTRAIT")
      * @param options.initialPageCount Number of initial pages (default: 1)
-     * @param token Authentication token (optional, can use PDFDANCER_TOKEN env var)
+     * @param token Authentication token (optional, falls back to PDFDANCER_API_TOKEN or PDFDANCER_TOKEN env var)
      * @param baseUrl Base URL for the PDFDancer API (optional)
      * @param timeout Request timeout in milliseconds (default: 60000)
      * @param retryConfig Retry configuration (optional, uses defaults if not specified)
@@ -694,7 +694,7 @@ export class PDFDancer {
             "https://api.pdfdancer.com";
         const resolvedTimeout = timeout ?? 60000;
 
-        let resolvedToken = token?.trim() ?? process.env.PDFDANCER_TOKEN?.trim() ?? null;
+        let resolvedToken = token?.trim() ?? process.env.PDFDANCER_API_TOKEN?.trim() ?? process.env.PDFDANCER_TOKEN?.trim() ?? null;
         if (!resolvedToken) {
             resolvedToken = await PDFDancer._obtainAnonymousToken(resolvedBaseUrl, resolvedTimeout);
         }

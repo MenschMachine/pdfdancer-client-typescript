@@ -49,10 +49,10 @@ import { promises as fs } from 'node:fs';
 async function run() {
   const pdfBytes = await fs.readFile('input.pdf');
 
-  // Token defaults to PDFDANCER_TOKEN environment variable when omitted
+  // Token defaults to PDFDANCER_API_TOKEN (or PDFDANCER_TOKEN) environment variable when omitted
   const pdf = await PDFDancer.open(
     pdfBytes,
-    'your-api-token',              // optional when PDFDANCER_TOKEN is set
+    'your-api-token',              // optional when PDFDANCER_API_TOKEN/PDFDANCER_TOKEN is set
     'https://api.pdfdancer.com'    // optional base URL
   );
 
@@ -145,14 +145,14 @@ Selectors return typed objects (`ParagraphObject`, `TextLineObject`, `ImageObjec
 ```typescript
 const pdf = await PDFDancer.open(
   pdfData,     // Uint8Array, File, or ArrayBuffer
-  token,       // Optional: defaults to process.env.PDFDANCER_TOKEN
+  token,       // Optional: defaults to process.env.PDFDANCER_API_TOKEN or PDFDANCER_TOKEN
   baseUrl,     // Optional: defaults to process.env.PDFDANCER_BASE_URL or https://api.pdfdancer.com
   timeout,     // Optional request timeout in ms (default: 60000)
   retryConfig  // Optional retry configuration
 );
 ```
 
-- Set `PDFDANCER_TOKEN` for authentication (preferred for local development and CI).
+- Set `PDFDANCER_API_TOKEN` (or `PDFDANCER_TOKEN`) for authentication (preferred for local development and CI).
 - Override the API host with `PDFDANCER_BASE_URL` (e.g., sandbox environments).
 - Tune HTTP read timeouts via the `timeout` argument on `PDFDancer.open()` and `PDFDancer.new()`.
 - Page numbers start at `1` throughout the API.
@@ -460,7 +460,7 @@ npm run lint
 The project includes comprehensive end-to-end tests. To run them:
 
 1. **Start the PDFDancer server** at `http://localhost:8080` or set `PDFDANCER_BASE_URL`.
-2. **Provide an authentication token** via `export PDFDANCER_TOKEN=your-token` or a `jwt-token-*.txt` file in the project root.
+2. **Provide an authentication token** via `export PDFDANCER_API_TOKEN=your-token` (or `PDFDANCER_TOKEN`) or a `jwt-token-*.txt` file in the project root.
 3. **Populate fixtures** in the `fixtures/` directory:
    - `ObviouslyAwesome.pdf`
    - `mixed-form-types.pdf`

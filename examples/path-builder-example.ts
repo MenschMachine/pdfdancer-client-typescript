@@ -10,7 +10,7 @@ import * as fs from 'fs';
 async function pathBuilderExample() {
     // Load an existing PDF or create a new one
     const pdfData = fs.readFileSync('blank.pdf');
-    const token = process.env.PDFDANCER_TOKEN || 'your-api-token';
+    const token = process.env.PDFDANCER_API_TOKEN || process.env.PDFDANCER_TOKEN || 'your-api-token';
     const baseUrl = process.env.PDFDANCER_BASE_URL || 'https://api.pdfdancer.com';
 
     const pdf = await PDFDancer.open(pdfData, token, baseUrl);

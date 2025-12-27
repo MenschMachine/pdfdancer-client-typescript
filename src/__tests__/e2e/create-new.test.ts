@@ -20,7 +20,7 @@ describe('Create New PDF E2E Tests', () => {
         }
 
         if (!tokenValue) {
-            throw new Error('PDFDANCER_TOKEN not set and no token file found; set env or place jwt-token-*.txt in repo');
+            throw new Error('PDFDANCER_API_TOKEN not set and no token file found; set env or place jwt-token-*.txt in repo');
         }
 
         token = tokenValue;
