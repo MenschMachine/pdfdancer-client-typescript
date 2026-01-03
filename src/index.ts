@@ -53,7 +53,11 @@ export {
   RedactResponse,
   ImageTransformType,
   FlipDirection,
-  Size
+  Size,
+  Word,
+  ReflowPreset,
+  TemplateReplacement,
+  TemplateReplaceRequest
 } from './models';
 
 export { DocumentFontInfo as FontRecommendation } from './models';

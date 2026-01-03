@@ -7,7 +7,31 @@ paths:
     get:
       operationId: listTenants
       parameters:
-      - name: include
+      - name: status
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: string
+      - name: plan
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: string
+      - name: anonymous
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: string
+      - name: sortBy
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: string
+      - name: order
         in: query
         required: true
         explode: false
@@ -1415,43 +1439,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AnalyticsService.UserStats"
-  /payment/checkout-session:
-    post:
-      operationId: checkoutSession
-      parameters:
-      - name: v
-        in: query
-        description: API version
-        schema:
-          type: string
-      - name: api-version
-        in: query
-        description: API version
-        schema:
-          type: string
-      - name: X-API-VERSION
-        in: header
-        description: API version
-        schema:
-          type: string
-      - name: Accept-Version
-        in: header
-        description: API version
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PaymentController.CheckoutSessionRequest"
-        required: true
-      responses:
-        "200":
-          description: checkoutSession 200 response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PaymentController.CheckoutSessionResponse"
   /pdf/add:
     post:
       operationId: addObject
@@ -1494,6 +1481,57 @@ paths:
             application/json:
               schema:
                 type: boolean
+  /pdf/analyze:
+    post:
+      operationId: analyzePdf
+      parameters:
+      - name: types
+        in: query
+        explode: false
+        schema:
+          type: string
+          nullable: true
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                pdf:
+                  type: string
+                  format: binary
+            encoding:
+              pdf:
+                contentType: application/octet-stream
+                explode: false
+        required: true
+      responses:
+        "200":
+          description: analyzePdf 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentSnapshot"
   /pdf/delete:
     delete:
       operationId: deleteObject
@@ -2547,70 +2585,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Subscription"
-  /subscription/activate-early-access-plan:
-    post:
-      operationId: activateEarlyAccessPlan
-      parameters:
-      - name: v
-        in: query
-        description: API version
-        schema:
-          type: string
-      - name: api-version
-        in: query
-        description: API version
-        schema:
-          type: string
-      - name: X-API-VERSION
-        in: header
-        description: API version
-        schema:
-          type: string
-      - name: Accept-Version
-        in: header
-        description: API version
-        schema:
-          type: string
-      responses:
-        "200":
-          description: activateEarlyAccessPlan 200 response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Subscription"
-      deprecated: true
-  /subscription/activate-free-plan:
-    post:
-      operationId: activateFreePlan
-      parameters:
-      - name: v
-        in: query
-        description: API version
-        schema:
-          type: string
-      - name: api-version
-        in: query
-        description: API version
-        schema:
-          type: string
-      - name: X-API-VERSION
-        in: header
-        description: API version
-        schema:
-          type: string
-      - name: Accept-Version
-        in: header
-        description: API version
-        schema:
-          type: string
-      responses:
-        "200":
-          description: activateFreePlan 200 response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Subscription"
-      deprecated: true
   /subscription/create-checkout-session:
     post:
       operationId: createCheckoutSession
@@ -2635,13 +2609,19 @@ paths:
         description: API version
         schema:
           type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscriptionController.CheckoutRequest"
+        required: true
       responses:
         "200":
           description: createCheckoutSession 200 response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SubscriptionController.SessionResponse"
+                type: object
   /subscription/create-portal-session:
     post:
       operationId: createPortalSession
@@ -2672,14 +2652,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SubscriptionController.SessionResponse"
-  /template/replace:
-    post:
-      operationId: replaceTemplates
+                type: object
+  /subscription/session-status:
+    get:
+      operationId: getSessionStatus
       parameters:
-      - name: X-Session-Id
-        in: header
+      - name: session_id
+        in: query
         required: true
+        explode: false
         schema:
           type: string
       - name: v
@@ -2702,19 +2683,44 @@ paths:
         description: API version
         schema:
           type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/TemplateReplaceRequest"
-        required: true
       responses:
         "200":
-          description: replaceTemplates 200 response
+          description: getSessionStatus 200 response
           content:
             application/json:
               schema:
-                type: boolean
+                type: object
+  /subscription/status:
+    get:
+      operationId: getSubscriptionStatus
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getSubscriptionStatus 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionController.SubscriptionStatus"
   /test:
     get:
       operationId: test
@@ -4396,7 +4402,9 @@ components:
         mapping:
           CHECKBOX: "#/components/schemas/FormFieldRef"
           FORM_FIELD: "#/components/schemas/FormFieldRef"
+          DROPDOWN: "#/components/schemas/FormFieldRef"
           RADIO_BUTTON: "#/components/schemas/FormFieldRef"
+          BUTTON: "#/components/schemas/FormFieldRef"
           PARAGRAPH: "#/components/schemas/TextTypeObjectRef"
           TEXT_LINE: "#/components/schemas/TextTypeObjectRef"
           PAGE: "#/components/schemas/PageRef"
@@ -4621,21 +4629,6 @@ components:
       oneOf:
       - $ref: "#/components/schemas/Line"
       - $ref: "#/components/schemas/Bezier"
-    PaymentController.CheckoutSessionRequest:
-      required:
-      - plan
-      type: object
-      properties:
-        plan:
-          type: string
-    PaymentController.CheckoutSessionResponse:
-      required:
-      - url
-      type: object
-      properties:
-        url:
-          type: string
-          format: url
     Point:
       required:
       - x
@@ -4678,6 +4671,8 @@ components:
         effectivePageIndex:
           type: integer
           format: int32
+        center:
+          $ref: "#/components/schemas/Point"
     Position.PositionMode:
       type: string
       enum:
@@ -4895,9 +4890,11 @@ components:
           format: double
     Subscription:
       required:
+      - cancelAt
       - end
       - product
       - start
+      - status
       type: object
       properties:
         start:
@@ -4908,44 +4905,28 @@ components:
           format: date-time
         product:
           $ref: "#/components/schemas/Product"
-    SubscriptionController.SessionResponse:
+        status:
+          type: string
+        cancelAt:
+          type: string
+          format: date-time
+    SubscriptionController.CheckoutRequest:
       required:
-      - url
+      - plan
       type: object
       properties:
-        url:
+        plan:
           type: string
-    TemplateReplaceRequest:
+    SubscriptionController.SubscriptionStatus:
       required:
-      - replacements
+      - planCode
+      - status
       type: object
       properties:
-        pageIndex:
-          type: integer
-          format: int32
-          nullable: true
-        replacements:
-          type: array
-          items:
-            $ref: "#/components/schemas/TemplateReplacement"
-    TemplateReplacement:
-      required:
-      - placeholder
-      - text
-      type: object
-      properties:
-        placeholder:
+        planCode:
           type: string
-        text:
+        status:
           type: string
-        font:
-          nullable: true
-          allOf:
-          - $ref: "#/components/schemas/Font"
-        color:
-          nullable: true
-          allOf:
-          - $ref: "#/components/schemas/Color"
     TextElement:
       type: object
       allOf:
@@ -4983,6 +4964,10 @@ components:
             $ref: "#/components/schemas/Color"
           text:
             type: string
+          words:
+            type: array
+            items:
+              $ref: "#/components/schemas/Word"
     TextStatus:
       required:
       - fontType
@@ -5141,3 +5126,13 @@ components:
           type: string
         color:
           type: string
+    Word:
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/PDFObject"
+      - type: object
+        properties:
+          objectType:
+            $ref: "#/components/schemas/ObjectType"
+          text:
+            type: string

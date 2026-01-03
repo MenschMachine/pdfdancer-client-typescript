@@ -46,7 +46,10 @@ import {
     RedactOptions,
     RedactResponse,
     RedactTarget,
+    ReflowPreset,
     ShapeType,
+    TemplateReplacement,
+    TemplateReplaceRequest,
     TextObjectRef,
     TextStatus
 } from './models';
@@ -1193,12 +1196,14 @@ export class PDFDancer {
             elements = docSnapshot.getAllElements();
         }
 
-        // Filter by form field types (FORM_FIELD, TEXT_FIELD, CHECKBOX, RADIO_BUTTON)
+        // Filter by form field types (FORM_FIELD, TEXT_FIELD, CHECKBOX, RADIO_BUTTON, DROPDOWN, BUTTON)
         const formFieldTypes = [
             ObjectType.FORM_FIELD,
             ObjectType.TEXT_FIELD,
             ObjectType.CHECKBOX,
-            ObjectType.RADIO_BUTTON
+            ObjectType.RADIO_BUTTON,
+            ObjectType.DROPDOWN,
+            ObjectType.BUTTON
         ];
         const formFields = elements.filter(el => formFieldTypes.includes(el.type)) as FormFieldRef[];
 
@@ -1598,6 +1603,27 @@ export class PDFDancer {
     }
 
     /**
+     * Performs batch template placeholder replacements in the PDF document.
+     * Finds exact text matches for placeholders and replaces them with specified content.
+     * All placeholders must be found or the operation fails atomically.
+     * @param request The template replacement request containing placeholders and new text
+     * @returns true if successful, false otherwise
+     */
+    async replaceTemplates(request: TemplateReplaceRequest): Promise<boolean> {
+        if (!request.replacements || request.replacements.length === 0) {
+            return true;
+        }
+
+        const response = await this._makeRequest('POST', '/template/replace', request.toDict());
+        const result = await response.json() as boolean;
+
+        // Invalidate cache after mutation
+        this._invalidateCache();
+
+        return result;
+    }
+
+    /**
      * Transforms an image in the PDF document.
      * Supports replace, scale, rotate, crop, opacity, and flip operations.
      * @param request The transformation request containing the image reference and transformation parameters
@@ -1944,7 +1970,9 @@ export class PDFDancer {
             ObjectType.FORM_FIELD,
             ObjectType.TEXT_FIELD,
             ObjectType.CHECKBOX,
-            ObjectType.RADIO_BUTTON
+            ObjectType.RADIO_BUTTON,
+            ObjectType.DROPDOWN,
+            ObjectType.BUTTON
         ];
         if (formFieldTypes.includes(objectType)) {
             return this._parseFormFieldRef(objData);

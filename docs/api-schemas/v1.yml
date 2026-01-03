@@ -3,6 +3,492 @@ info:
   title: PDFDancer API
   version: 0.1.3
 paths:
+  /admin/tenants:
+    get:
+      operationId: listTenants
+      parameters:
+      - name: status
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: string
+      - name: plan
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: string
+      - name: anonymous
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: string
+      - name: sortBy
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: string
+      - name: order
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          default: 50
+      - name: offset
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: listTenants 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminTenantListResponse"
+  /admin/tenants/{tenantId}:
+    get:
+      operationId: getTenant
+      parameters:
+      - name: tenantId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getTenant 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminTenantDetailResponse"
+    put:
+      operationId: updateTenant
+      parameters:
+      - name: tenantId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminTenantUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: updateTenant 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminTenantDetailResponse"
+    delete:
+      operationId: deleteTenant
+      parameters:
+      - name: tenantId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: deleteTenant 200 response
+  /admin/tenants/{tenantId}/purge:
+    delete:
+      operationId: hardDeleteTenant
+      parameters:
+      - name: tenantId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: hardDeleteTenant 200 response
+  /admin/tenants/{tenantId}/tokens:
+    get:
+      operationId: listTenantTokens
+      parameters:
+      - name: tenantId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: listTenantTokens 200 response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminTenantTokenResponse"
+  /admin/tenants/{tenantId}/tokens/{tokenId}:
+    delete:
+      operationId: revokeTenantToken
+      parameters:
+      - name: tenantId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: tokenId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: revokeTenantToken 200 response
+  /admin/tenants/{tenantId}/users:
+    get:
+      operationId: listTenantUsers
+      parameters:
+      - name: tenantId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: listTenantUsers 200 response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminTenantUserResponse"
+  /admin/tenants/{tenantId}/users/{userId}:
+    get:
+      operationId: getTenantUser
+      parameters:
+      - name: tenantId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getTenantUser 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminTenantUserResponse"
+    put:
+      operationId: updateTenantUser
+      parameters:
+      - name: tenantId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminTenantUserUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: updateTenantUser 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminTenantUserResponse"
+    delete:
+      operationId: removeTenantUser
+      parameters:
+      - name: tenantId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: removeTenantUser 200 response
+  /config:
+    get:
+      operationId: findFont
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: findFont 200 response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
   /font/find:
     get:
       operationId: findFontV1
@@ -211,6 +697,209 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiTokenCreateResponse"
+  /me/tenant:
+    get:
+      operationId: getTenant_1
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getTenant_1 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserTenantResponse"
+  /me/tokens:
+    get:
+      operationId: listTokens
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: listTokens 200 response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiTokenListResponse"
+    post:
+      operationId: createToken
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiTokenCreateRequest"
+        required: true
+      responses:
+        "200":
+          description: createToken 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiTokenCreateResponse"
+  /me/tokens/{tokenId}:
+    get:
+      operationId: getToken
+      parameters:
+      - name: tokenId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getToken 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiTokenListResponse"
+    delete:
+      operationId: revokeToken
+      parameters:
+      - name: tokenId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: revokeToken 200 response
+  /me/tokens/{tokenId}/reveal:
+    get:
+      operationId: revealToken
+      parameters:
+      - name: tokenId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: revealToken 200 response
+          content:
+            application/json:
+              schema:
+                type: string
   /metrics/buffer-stats:
     get:
       operationId: getBufferStats
@@ -752,8 +1441,6 @@ paths:
                 $ref: "#/components/schemas/AnalyticsService.UserStats"
   /pdf/add:
     post:
-      summary: Adds new objects to the PDF document.
-      description: Adds new objects to the PDF document.
       operationId: addObject
       parameters:
       - name: X-Session-Id
@@ -794,10 +1481,59 @@ paths:
             application/json:
               schema:
                 type: boolean
+  /pdf/analyze:
+    post:
+      operationId: analyzePdf
+      parameters:
+      - name: types
+        in: query
+        explode: false
+        schema:
+          type: string
+          nullable: true
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                pdf:
+                  type: string
+                  format: binary
+            encoding:
+              pdf:
+                contentType: application/octet-stream
+                explode: false
+        required: true
+      responses:
+        "200":
+          description: analyzePdf 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentSnapshot"
   /pdf/delete:
     delete:
-      summary: Removes specified objects from the PDF document.
-      description: Removes specified objects from the PDF document.
       operationId: deleteObject
       parameters:
       - name: X-Session-Id
@@ -840,9 +1576,6 @@ paths:
                 type: boolean
   /pdf/document/snapshot:
     get:
-      summary: Retrieves a complete snapshot of the entire PDF document.
-      description: Retrieves a complete snapshot of the entire PDF document. Response
-        uses 1-based page numbers in all position data.
       operationId: getDocumentSnapshot
       parameters:
       - name: X-Session-Id
@@ -885,8 +1618,6 @@ paths:
                 $ref: "#/components/schemas/DocumentSnapshotV1"
   /pdf/find:
     post:
-      summary: Searches for PDF objects within the document.
-      description: Searches for PDF objects within the document.
       operationId: findObject
       parameters:
       - name: X-Session-Id
@@ -931,14 +1662,10 @@ paths:
                   $ref: "#/components/schemas/ObjectRefV1"
   /pdf/image/transform:
     put:
-      summary: Transforms an image in the PDF document.
-      description: "Transforms an image in the PDF document. Supports replace, scale,\
-        \ and rotate operations on images."
       operationId: transformImage
       parameters:
       - name: X-Session-Id
         in: header
-        description: unique identifier for the user session containing the PDF
         required: true
         schema:
           type: string
@@ -963,7 +1690,6 @@ paths:
         schema:
           type: string
       requestBody:
-        description: image transformation request specifying the operation and parameters
         content:
           application/json:
             schema:
@@ -971,15 +1697,13 @@ paths:
         required: true
       responses:
         "200":
-          description: HTTP response containing the command result
+          description: transformImage 200 response
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CommandResult"
   /pdf/modify:
     put:
-      summary: Modifies existing objects in the PDF document.
-      description: Modifies existing objects in the PDF document.
       operationId: modifyObject
       parameters:
       - name: X-Session-Id
@@ -1022,8 +1746,6 @@ paths:
                 $ref: "#/components/schemas/CommandResult"
   /pdf/modify/formField:
     put:
-      summary: Modifies form field values.
-      description: Modifies form field values.
       operationId: changeFormField
       parameters:
       - name: X-Session-Id
@@ -1066,8 +1788,6 @@ paths:
                 type: boolean
   /pdf/move:
     put:
-      summary: Moves PDF objects to new positions within the document.
-      description: Moves PDF objects to new positions within the document.
       operationId: moveObject
       parameters:
       - name: X-Session-Id
@@ -1110,9 +1830,6 @@ paths:
                 type: boolean
   /pdf/page/add:
     post:
-      summary: Adds a new blank page to the PDF document.
-      description: "Adds a new blank page to the PDF document. If pageNumber is specified,\
-        \ inserts at that position (1-based). If null, appends to the end."
       operationId: addPage
       parameters:
       - name: X-Session-Id
@@ -1155,8 +1872,6 @@ paths:
                 $ref: "#/components/schemas/PageRefV1"
   /pdf/page/delete:
     delete:
-      summary: Removes a page from the PDF document.
-      description: Removes a page from the PDF document.
       operationId: deletePage
       parameters:
       - name: X-Session-Id
@@ -1199,9 +1914,6 @@ paths:
                 type: boolean
   /pdf/page/find:
     post:
-      summary: Searches for pages within the PDF document.
-      description: Searches for pages within the PDF document. Uses 1-based pageNumber
-        parameter.
       operationId: findPage
       parameters:
       - name: X-Session-Id
@@ -1247,8 +1959,6 @@ paths:
                   $ref: "#/components/schemas/PageRefV1"
   /pdf/page/modify:
     put:
-      summary: Modifies page-level properties (placeholder).
-      description: Modifies page-level properties (placeholder).
       operationId: modifyPage
       parameters:
       - name: X-Session-Id
@@ -1291,9 +2001,6 @@ paths:
                 type: boolean
   /pdf/page/move:
     put:
-      summary: Moves a page to a different position within the PDF document.
-      description: Moves a page to a different position within the PDF document. Both
-        fromPage and toPage use 1-based numbering.
       operationId: movePage
       parameters:
       - name: X-Session-Id
@@ -1336,9 +2043,6 @@ paths:
                 type: boolean
   /pdf/page/{pageNumber}/snapshot:
     get:
-      summary: Retrieves a snapshot of a single PDF page.
-      description: Retrieves a snapshot of a single PDF page. Uses 1-based pageNumber
-        in URL path. Response uses 1-based page numbers in all position data.
       operationId: getPageSnapshot
       parameters:
       - name: X-Session-Id
@@ -1387,17 +2091,10 @@ paths:
                 $ref: "#/components/schemas/PageSnapshotV1"
   /pdf/redact:
     post:
-      summary: Redacts content from the PDF document based on the provided targets.
-      description: "Redacts content from the PDF document based on the provided targets.\
-        \ This operation finds and redacts matching objects in a single batch operation.\
-        \ Text content is replaced with a replacement string, while images and paths\
-        \ are replaced with solid color placeholder rectangles. Position pageNumber\
-        \ values are automatically converted to 0-based pageIndex."
       operationId: redact
       parameters:
       - name: X-Session-Id
         in: header
-        description: unique identifier for the user session containing the PDF
         required: true
         schema:
           type: string
@@ -1422,7 +2119,6 @@ paths:
         schema:
           type: string
       requestBody:
-        description: redaction specifications including targets and options
         content:
           application/json:
             schema:
@@ -1430,18 +2126,13 @@ paths:
         required: true
       responses:
         "200":
-          description: HTTP response containing the redaction result with count and
-            any warnings
+          description: redact 200 response
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/RedactResponse"
   /pdf/replace-text:
     post:
-      summary: Replaces occurrences of text across the document or selected pages
-        (0-based page indexes).
-      description: Replaces occurrences of text across the document or selected pages
-        (0-based page indexes).
       operationId: replaceText
       parameters:
       - name: X-Session-Id
@@ -1484,8 +2175,6 @@ paths:
                 $ref: "#/components/schemas/ReplaceTextResult"
   /pdf/text/line:
     put:
-      summary: Modifies text line content.
-      description: Modifies text line content.
       operationId: modifyTextLine
       parameters:
       - name: X-Session-Id
@@ -1528,8 +2217,6 @@ paths:
                 $ref: "#/components/schemas/CommandResult"
   /pdf/text/paragraph:
     put:
-      summary: Modifies paragraph content.
-      description: Modifies paragraph content.
       operationId: modifyParagraph
       parameters:
       - name: X-Session-Id
@@ -1570,6 +2257,106 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CommandResult"
+  /ping:
+    get:
+      operationId: index
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: index 200 response
+          content:
+            text/plain:
+              schema:
+                type: string
+  /product:
+    get:
+      operationId: getProducts
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getProducts 200 response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+  /product/{productId}:
+    get:
+      operationId: getProduct
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getProduct 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
   /session/create:
     post:
       operationId: createSessionV1
@@ -1725,6 +2512,326 @@ paths:
               schema:
                 type: string
                 format: binary
+  /stripe/webhook:
+    post:
+      operationId: handleStripeEvents
+      parameters:
+      - name: Stripe-Signature
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: string
+        required: true
+      responses:
+        "200":
+          description: handleStripeEvents 200 response
+          content:
+            application/json:
+              schema:
+                type: string
+  /subscription:
+    get:
+      operationId: getSubscription
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getSubscription 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+  /subscription/create-checkout-session:
+    post:
+      operationId: createCheckoutSession
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscriptionController.CheckoutRequest"
+        required: true
+      responses:
+        "200":
+          description: createCheckoutSession 200 response
+          content:
+            application/json:
+              schema:
+                type: object
+  /subscription/create-portal-session:
+    post:
+      operationId: createPortalSession
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: createPortalSession 200 response
+          content:
+            application/json:
+              schema:
+                type: object
+  /subscription/session-status:
+    get:
+      operationId: getSessionStatus
+      parameters:
+      - name: session_id
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getSessionStatus 200 response
+          content:
+            application/json:
+              schema:
+                type: object
+  /subscription/status:
+    get:
+      operationId: getSubscriptionStatus
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getSubscriptionStatus 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionController.SubscriptionStatus"
+  /template/replace:
+    post:
+      summary: Performs batch template placeholder replacements in a PDF document.
+      description: "Performs batch template placeholder replacements in a PDF document.\
+        \ This operation finds exact text matches for placeholders and replaces them\
+        \ with specified content, optionally with formatting overrides. All placeholders\
+        \ must be found or the operation fails atomically."
+      operationId: replaceTemplates
+      parameters:
+      - name: X-Session-Id
+        in: header
+        description: unique identifier for the user session containing the PDF
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        description: replacement specifications including placeholders and new text
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TemplateReplaceRequest"
+        required: true
+      responses:
+        "200":
+          description: HTTP response indicating success or failure with error details
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /user:
+    get:
+      operationId: info
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: info 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Authentication"
+  /version:
+    get:
+      operationId: getVersion
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getVersion 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VersionResponse"
 components:
   schemas:
     AddPageRequestV1:
@@ -1748,6 +2855,237 @@ components:
       properties:
         object:
           $ref: "#/components/schemas/PDFObject"
+    AdminAnonTokenResponse:
+      required:
+      - createdAt
+      - fingerprintHash
+      - lastSeenAt
+      - tenantId
+      - tokenId
+      type: object
+      properties:
+        fingerprintHash:
+          type: string
+        tenantId:
+          type: string
+        tokenId:
+          type: string
+        createdAt:
+          type: string
+        lastSeenAt:
+          type: string
+    AdminTenantDetailResponse:
+      required:
+      - anonTokens
+      - createdAt
+      - id
+      - name
+      - planCode
+      - slug
+      - status
+      - tokens
+      - updatedAt
+      - users
+      type: object
+      properties:
+        id:
+          type: string
+        externalRef:
+          type: string
+          nullable: true
+        name:
+          type: string
+        slug:
+          type: string
+        planCode:
+          type: string
+        planMetadata:
+          type: string
+          nullable: true
+        status:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminTenantUserResponse"
+        tokens:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminTenantTokenResponse"
+        anonTokens:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminAnonTokenResponse"
+    AdminTenantListResponse:
+      required:
+      - limit
+      - offset
+      - tenants
+      - total
+      type: object
+      properties:
+        tenants:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminTenantResponse"
+        total:
+          type: integer
+          format: int64
+        limit:
+          type: integer
+          format: int32
+        offset:
+          type: integer
+          format: int32
+    AdminTenantResponse:
+      required:
+      - createdAt
+      - externalRef
+      - id
+      - name
+      - planCode
+      - planMetadata
+      - slug
+      - status
+      - updatedAt
+      type: object
+      properties:
+        id:
+          type: string
+        externalRef:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        planCode:
+          type: string
+        planMetadata:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+    AdminTenantTokenResponse:
+      required:
+      - createdAt
+      - id
+      - name
+      - prefix
+      - scopes
+      - tenantId
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        name:
+          type: string
+        prefix:
+          type: string
+        plan:
+          type: string
+          nullable: true
+        scopes:
+          type: array
+          items:
+            type: string
+        createdByUserId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+        expiresAt:
+          type: string
+          nullable: true
+        lastUsedAt:
+          type: string
+          nullable: true
+    AdminTenantUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+        slug:
+          type: string
+          nullable: true
+        planCode:
+          type: string
+          nullable: true
+        planMetadata:
+          type: string
+          nullable: true
+        status:
+          type: string
+          nullable: true
+    AdminTenantUserResponse:
+      required:
+      - id
+      - joinedAt
+      - role
+      - state
+      - tenantId
+      - userId
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        userId:
+          type: string
+        role:
+          type: string
+        state:
+          type: string
+        joinedAt:
+          type: string
+        lastLoginAt:
+          type: string
+          nullable: true
+        authMapping:
+          nullable: true
+          allOf:
+          - $ref: "#/components/schemas/AdminUserAuthMappingResponse"
+    AdminTenantUserUpdateRequest:
+      type: object
+      properties:
+        role:
+          type: string
+          nullable: true
+        state:
+          type: string
+          nullable: true
+    AdminUserAuthMappingResponse:
+      required:
+      - authProvider
+      - createdAt
+      - externalAuthId
+      - id
+      - internalUserId
+      - lastUsedAt
+      type: object
+      properties:
+        id:
+          type: string
+        internalUserId:
+          type: string
+        authProvider:
+          type: string
+        externalAuthId:
+          type: string
+        createdAt:
+          type: string
+        lastUsedAt:
+          type: string
     AnalyticsService.DailyOperationCount:
       required:
       - avgDuration
@@ -2306,6 +3644,16 @@ components:
         active30d:
           type: integer
           format: int64
+    ApiTokenCreateRequest:
+      required:
+      - expiresAt
+      - name
+      type: object
+      properties:
+        name:
+          type: string
+        expiresAt:
+          type: string
     ApiTokenCreateResponse:
       required:
       - metadata
@@ -2335,6 +3683,45 @@ components:
           type: string
         expiresAt:
           type: string
+    ApiTokenListResponse:
+      required:
+      - createdAt
+      - expiresAt
+      - id
+      - lastUsedAt
+      - name
+      - prefix
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        prefix:
+          type: string
+        createdAt:
+          type: string
+        lastUsedAt:
+          type: string
+        expiresAt:
+          type: string
+    Authentication:
+      required:
+      - attributes
+      - roles
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/Principal"
+      - type: object
+        properties:
+          attributes:
+            type: object
+            additionalProperties:
+              type: object
+          roles:
+            type: array
+            items:
+              type: string
     Bezier:
       required:
       - p0
@@ -2454,6 +3841,24 @@ components:
           type: string
         systemFontName:
           type: string
+    DocumentSnapshot:
+      required:
+      - fonts
+      - pageCount
+      - pages
+      type: object
+      properties:
+        pageCount:
+          type: integer
+          format: int32
+        fonts:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentFontInfoDto"
+        pages:
+          type: array
+          items:
+            $ref: "#/components/schemas/PageSnapshot"
     DocumentSnapshotV1:
       required:
       - fonts
@@ -3033,7 +4438,9 @@ components:
         mapping:
           CHECKBOX: "#/components/schemas/FormFieldRef"
           FORM_FIELD: "#/components/schemas/FormFieldRef"
+          DROPDOWN: "#/components/schemas/FormFieldRef"
           RADIO_BUTTON: "#/components/schemas/FormFieldRef"
+          BUTTON: "#/components/schemas/FormFieldRef"
           PARAGRAPH: "#/components/schemas/TextTypeObjectRef"
           TEXT_LINE: "#/components/schemas/TextTypeObjectRef"
           PAGE: "#/components/schemas/PageRef"
@@ -3176,6 +4583,23 @@ components:
         height:
           type: number
           format: double
+    PageSnapshot:
+      required:
+      - elements
+      - fonts
+      - pageRef
+      type: object
+      properties:
+        pageRef:
+          $ref: "#/components/schemas/PageRef"
+        elements:
+          type: array
+          items:
+            $ref: "#/components/schemas/ObjectRef"
+        fonts:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentFontInfoDto"
     PageSnapshotV1:
       required:
       - elements
@@ -3300,6 +4724,8 @@ components:
         effectivePageIndex:
           type: integer
           format: int32
+        center:
+          $ref: "#/components/schemas/Point"
     Position.PositionMode:
       type: string
       enum:
@@ -3336,6 +4762,58 @@ components:
         "y":
           type: number
           format: double
+    Principal:
+      type: object
+      properties:
+        name:
+          type: string
+    Product:
+      required:
+      - description
+      - id
+      - isHidden
+      - name
+      - price
+      - requiresContact
+      - type
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          $ref: "#/components/schemas/RecurringPrice"
+        type:
+          $ref: "#/components/schemas/ProductType"
+        requiresContact:
+          type: boolean
+        isHidden:
+          type: boolean
+    ProductType:
+      type: string
+      enum:
+      - SAAS
+    RecurringPrice:
+      required:
+      - currencyCode
+      - discount
+      - price
+      - timeInterval
+      type: object
+      properties:
+        currencyCode:
+          type: string
+        discount:
+          type: number
+          format: float
+        price:
+          type: integer
+          format: int32
+        timeInterval:
+          $ref: "#/components/schemas/TimeInterval"
     RedactRequestV1:
       required:
       - defaultReplacement
@@ -3377,6 +4855,12 @@ components:
           type: string
         replacement:
           type: string
+    ReflowPreset:
+      type: string
+      enum:
+      - BEST_EFFORT
+      - FIT_OR_FAIL
+      - NONE
     ReplaceTextOptions:
       type: object
       properties:
@@ -3463,6 +4947,80 @@ components:
         area:
           type: number
           format: double
+    Subscription:
+      required:
+      - cancelAt
+      - end
+      - product
+      - start
+      - status
+      type: object
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        product:
+          $ref: "#/components/schemas/Product"
+        status:
+          type: string
+        cancelAt:
+          type: string
+          format: date-time
+    SubscriptionController.CheckoutRequest:
+      required:
+      - plan
+      type: object
+      properties:
+        plan:
+          type: string
+    SubscriptionController.SubscriptionStatus:
+      required:
+      - planCode
+      - status
+      type: object
+      properties:
+        planCode:
+          type: string
+        status:
+          type: string
+    TemplateReplaceRequest:
+      required:
+      - replacements
+      type: object
+      properties:
+        pageIndex:
+          type: integer
+          format: int32
+          nullable: true
+        replacements:
+          type: array
+          items:
+            $ref: "#/components/schemas/TemplateReplacement"
+        reflowPreset:
+          nullable: true
+          allOf:
+          - $ref: "#/components/schemas/ReflowPreset"
+    TemplateReplacement:
+      required:
+      - placeholder
+      - text
+      type: object
+      properties:
+        placeholder:
+          type: string
+        text:
+          type: string
+        font:
+          nullable: true
+          allOf:
+          - $ref: "#/components/schemas/Font"
+        color:
+          nullable: true
+          allOf:
+          - $ref: "#/components/schemas/Color"
     TextElement:
       type: object
       allOf:
@@ -3500,6 +5058,10 @@ components:
             $ref: "#/components/schemas/Color"
           text:
             type: string
+          words:
+            type: array
+            items:
+              $ref: "#/components/schemas/Word"
     TextStatus:
       required:
       - fontType
@@ -3583,6 +5145,13 @@ components:
             $ref: "#/components/schemas/Color"
           status:
             $ref: "#/components/schemas/TextStatus"
+    TimeInterval:
+      type: string
+      enum:
+      - DAY
+      - WEEK
+      - MONTH
+      - YEAR
     UserEventDto:
       required:
       - clientInfo
@@ -3619,3 +5188,45 @@ components:
           type: string
         clientInfo:
           type: string
+    UserTenantResponse:
+      required:
+      - planCode
+      - role
+      - status
+      - tenantId
+      - tenantName
+      - tenantSlug
+      type: object
+      properties:
+        tenantId:
+          type: string
+        tenantName:
+          type: string
+        tenantSlug:
+          type: string
+        role:
+          type: string
+        planCode:
+          type: string
+        status:
+          type: string
+    VersionResponse:
+      required:
+      - color
+      - gitCommit
+      type: object
+      properties:
+        gitCommit:
+          type: string
+        color:
+          type: string
+    Word:
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/PDFObject"
+      - type: object
+        properties:
+          objectType:
+            $ref: "#/components/schemas/ObjectType"
+          text:
+            type: string
