@@ -18,7 +18,7 @@ describe('Template Replace E2E Tests', () => {
         const replacement = new TemplateReplacement(para!.getText()!, 'REPLACED TEXT');
         const request = new TemplateReplaceRequest([replacement]);
 
-        const result = await pdf.replaceTemplates(request);
+        const result = await pdf.applyReplacements(request);
         expect(result).toBe(true);
     });
 
@@ -35,7 +35,7 @@ describe('Template Replace E2E Tests', () => {
         );
 
         const request = new TemplateReplaceRequest(replacements);
-        const result = await pdf.replaceTemplates(request);
+        const result = await pdf.applyReplacements(request);
 
         expect(result).toBe(true);
     });
@@ -57,7 +57,7 @@ describe('Template Replace E2E Tests', () => {
             ReflowPreset.BEST_EFFORT
         );
 
-        const result = await pdf.replaceTemplates(request);
+        const result = await pdf.applyReplacements(request);
 
         expect(result).toBe(true);
     });
@@ -76,7 +76,7 @@ describe('Template Replace E2E Tests', () => {
             ReflowPreset.FIT_OR_FAIL
         );
 
-        const result = await pdf.replaceTemplates(request);
+        const result = await pdf.applyReplacements(request);
 
         expect(result).toBe(true);
     });
@@ -95,7 +95,7 @@ describe('Template Replace E2E Tests', () => {
             ReflowPreset.NONE
         );
 
-        const result = await pdf.replaceTemplates(request);
+        const result = await pdf.applyReplacements(request);
 
         expect(result).toBe(true);
     });
@@ -114,7 +114,7 @@ describe('Template Replace E2E Tests', () => {
             0  // pageIndex 0 = page 1
         );
 
-        const result = await pdf.replaceTemplates(request);
+        const result = await pdf.applyReplacements(request);
 
         expect(result).toBe(true);
     });
@@ -124,7 +124,7 @@ describe('Template Replace E2E Tests', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const request = new TemplateReplaceRequest([]);
-        const result = await pdf.replaceTemplates(request);
+        const result = await pdf.applyReplacements(request);
 
         expect(result).toBe(true);
     });
