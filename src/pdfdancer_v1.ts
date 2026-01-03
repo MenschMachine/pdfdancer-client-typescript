@@ -1609,7 +1609,7 @@ export class PDFDancer {
      * @param request The template replacement request containing placeholders and new text
      * @returns true if successful, false otherwise
      */
-    async replaceTemplates(request: TemplateReplaceRequest): Promise<boolean> {
+    async applyReplacements(request: TemplateReplaceRequest): Promise<boolean> {
         if (!request.replacements || request.replacements.length === 0) {
             return true;
         }
