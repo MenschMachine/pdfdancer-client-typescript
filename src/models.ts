@@ -13,7 +13,9 @@ export enum ObjectType {
     FORM_FIELD = "FORM_FIELD",
     TEXT_FIELD = "TEXT_FIELD",
     CHECKBOX = "CHECKBOX",
-    RADIO_BUTTON = "RADIO_BUTTON"
+    RADIO_BUTTON = "RADIO_BUTTON",
+    DROPDOWN = "DROPDOWN",
+    BUTTON = "BUTTON"
 }
 
 const DEFAULT_LINE_SPACING = 1.2;
@@ -86,6 +88,7 @@ class PositioningError extends Error {
 export class Position {
     public name?: string;
     public tolerance?: number;
+    public center?: Point;
 
     constructor(
         public pageNumber?: number,
@@ -275,6 +278,18 @@ export class DocumentFontInfo {
 export { DocumentFontInfo as FontRecommendation };
 
 /**
+ * Represents a word within a text line.
+ */
+export class Word {
+    constructor(
+        public internalId?: string,
+        public position?: Position,
+        public objectType?: ObjectType,
+        public text?: string
+    ) {}
+}
+
+/**
  * Status information for text objects.
  */
 export class TextStatus {
@@ -282,7 +297,8 @@ export class TextStatus {
         public modified: boolean,
         public encodable: boolean,
         public fontType: FontType,
-        public fontInfo?: DocumentFontInfo
+        public fontInfo?: DocumentFontInfo,
+        public words?: Word[]
     ) {}
 
     isModified(): boolean {
@@ -306,6 +322,10 @@ export class TextStatus {
      */
     getFontRecommendation(): DocumentFontInfo | undefined {
         return this.getFontInfo();
+    }
+
+    getWords(): Word[] | undefined {
+        return this.words;
     }
 }
 
@@ -1309,6 +1329,74 @@ export class ImageTransformRequest {
         return result;
     }
 }
+
+/**
+ * Preset for text reflow behavior during template replacement.
+ */
+export enum ReflowPreset {
+    /** Best effort to fit text, may overflow if necessary */
+    BEST_EFFORT = "BEST_EFFORT",
+    /** Fail if text doesn't fit in the available space */
+    FIT_OR_FAIL = "FIT_OR_FAIL",
+    /** No reflow, keep original text layout */
+    NONE = "NONE"
+}
+
+/**
+ * Represents a single template placeholder replacement.
+ */
+export class TemplateReplacement {
+    constructor(
+        public placeholder: string,
+        public text: string,
+        public font?: Font,
+        public color?: Color
+    ) {}
+
+    toDict(): Record<string, any> {
+        const result: Record<string, any> = {
+            placeholder: this.placeholder,
+            text: this.text
+        };
+
+        if (this.font) {
+            result.font = { name: this.font.name, size: this.font.size };
+        }
+        if (this.color) {
+            result.color = { red: this.color.r, green: this.color.g, blue: this.color.b, alpha: this.color.a };
+        }
+
+        return result;
+    }
+}
+
+/**
+ * Request for batch template placeholder replacements.
+ * Supports both document-level (all pages) and page-level replacements.
+ */
+export class TemplateReplaceRequest {
+    constructor(
+        public replacements: TemplateReplacement[],
+        public pageIndex?: number,
+        public reflowPreset?: ReflowPreset
+    ) {}
+
+    toDict(): Record<string, any> {
+        const result: Record<string, any> = {
+            replacements: this.replacements.map(r => r.toDict())
+        };
+
+        if (this.pageIndex !== undefined) {
+            result.pageIndex = this.pageIndex;
+        }
+        if (this.reflowPreset !== undefined) {
+            result.reflowPreset = this.reflowPreset;
+        }
+
+        return result;
+    }
+}
+
 
 // Helper function to convert Position to dictionary for JSON serialization
 function positionToDict(position: Position): Record<string, any> {
