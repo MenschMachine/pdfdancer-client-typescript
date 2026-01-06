@@ -46,9 +46,7 @@ import {
     RedactOptions,
     RedactResponse,
     RedactTarget,
-    ReflowPreset,
     ShapeType,
-    TemplateReplacement,
     TemplateReplaceRequest,
     TextObjectRef,
     TextStatus
@@ -56,11 +54,19 @@ import {
 import {ParagraphBuilder} from './paragraph-builder';
 import {PageBuilder} from './page-builder';
 import {loadEnv} from './env-loader';
-import {BaseObject, FormFieldObject, FormXObject, ImageObject, ParagraphObject, PathObject, TextLineObject} from "./types";
+import {
+    BaseObject,
+    FormFieldObject,
+    FormXObject,
+    ImageObject,
+    ParagraphObject,
+    PathObject,
+    TextLineObject
+} from "./types";
 import {ImageBuilder} from "./image-builder";
 import {PathBuilder} from "./path-builder";
 import {generateFingerprint} from "./fingerprint";
-import { VERSION } from "./version";
+import {VERSION} from "./version";
 import fs from "fs";
 import path from "node:path";
 
@@ -1563,7 +1569,7 @@ export class PDFDancer {
      */
     async redact(objects: BaseObject[], options?: RedactOptions): Promise<RedactResponse> {
         if (!objects || objects.length === 0) {
-            return { count: 0, success: true, warnings: [] };
+            return {count: 0, success: true, warnings: []};
         }
 
         const targets: RedactTarget[] = objects.map(obj => ({
@@ -1579,7 +1585,7 @@ export class PDFDancer {
      */
     private async _redactTargets(targets: RedactTarget[], options?: RedactOptions): Promise<RedactResponse> {
         if (!targets || targets.length === 0) {
-            return { count: 0, success: true, warnings: [] };
+            return {count: 0, success: true, warnings: []};
         }
 
         const request = {
@@ -1589,8 +1595,13 @@ export class PDFDancer {
             })),
             defaultReplacement: options?.defaultReplacement ?? '[REDACTED]',
             placeholderColor: options?.placeholderColor
-                ? { red: options.placeholderColor.r, green: options.placeholderColor.g, blue: options.placeholderColor.b, alpha: options.placeholderColor.a }
-                : { red: 0, green: 0, blue: 0, alpha: 255 }
+                ? {
+                    red: options.placeholderColor.r,
+                    green: options.placeholderColor.g,
+                    blue: options.placeholderColor.b,
+                    alpha: options.placeholderColor.a
+                }
+                : {red: 0, green: 0, blue: 0, alpha: 255}
         };
 
         const response = await this._makeRequest('POST', '/pdf/redact', request);
