@@ -52,6 +52,7 @@ import {
     TextStatus
 } from './models';
 import {ParagraphBuilder} from './paragraph-builder';
+import {ReplacementBuilder} from './replacement-builder';
 import {PageBuilder} from './page-builder';
 import {loadEnv} from './env-loader';
 import {
@@ -2275,6 +2276,17 @@ export class PDFDancer {
 
     newPage() {
         return new PageBuilder(this);
+    }
+
+    /**
+     * Starts a fluent template replacement chain.
+     *
+     * @example
+     * await pdf.replace('{{name}}', 'John Doe').apply();
+     * await pdf.replace('{{name}}', 'John').and('{{date}}', '2024').apply();
+     */
+    replace(placeholder: string, text: string): ReplacementBuilder {
+        return new ReplacementBuilder(this).replace(placeholder, text);
     }
 
     /**
