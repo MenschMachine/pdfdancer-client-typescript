@@ -77,6 +77,10 @@ function main() {
     run('git push', 'Pushing changes to git');
     run('git push --tags', 'Pushing tags to git');
 
+    // Commit any modified files (e.g., src/version.ts) before bumping
+    run('git add -A && git commit -m "' + currentVersion + '" || true', 'Committing release changes');
+    run('git push', 'Pushing release commit');
+
     // Bump version and open git tag
     const newVersion = bumpVersion();
 
