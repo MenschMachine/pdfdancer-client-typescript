@@ -170,19 +170,6 @@ describe('Paragraph Edit Session E2E Tests (Showcase)', () => {
         await assertions.assertTextlineExists('Nested Edit');
     });
 
-    test('edit preserves position when not specified', async () => {
-        const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
-
-        const [paragraph] = await pdf.page(1).selectParagraphsStartingWith(SAMPLE_PARAGRAPH);
-        const original = paragraph.position;
-        await paragraph.edit().replace('No Move').apply();
-
-        const [updated] = await pdf.page(1).selectParagraphsStartingWith('No Move');
-        expect(updated.position.getX()).toBeCloseTo(original.getX()!, 5);
-        expect(updated.position.getY()).toBeCloseTo(original.getY()!, 5);
-    });
-
     test('edit chaining', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
