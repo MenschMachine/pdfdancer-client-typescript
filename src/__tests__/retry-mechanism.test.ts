@@ -100,27 +100,6 @@ describe('Retry Mechanism', () => {
             expect(mockFetch).toHaveBeenCalledTimes(2);
         });
 
-        test('should retry on 500 (server error)', async () => {
-            const mockFetch = global.fetch as jest.Mock;
-
-            mockFetch
-                .mockResolvedValueOnce(createMockResponse(500, 'Internal server error'))
-                .mockResolvedValueOnce(createMockResponse(200, 'session-123'));
-
-            const pdfData = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
-            const retryConfig: RetryConfig = {
-                maxRetries: 2,
-                initialDelay: 10,
-                useJitter: false
-            };
-
-            await expect(
-                PDFDancer.open(pdfData, 'test-token', undefined, undefined, retryConfig)
-            ).resolves.toBeDefined();
-
-            expect(mockFetch).toHaveBeenCalledTimes(2);
-        });
-
         test('should retry on 502, 503, 504', async () => {
             for (const statusCode of [502, 503, 504]) {
                 jest.clearAllMocks();

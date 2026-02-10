@@ -1837,6 +1837,63 @@ export class PDFDancer {
         return result;
     }
 
+    /**
+     * Modifies a text line object with full property support (font, color, position).
+     */
+    private async modifyTextLineObject(
+        objectRef: TextObjectRef,
+        options: { text?: string; fontName?: string; fontSize?: number; color?: Color; position?: Position }
+    ): Promise<CommandResult> {
+        const text = options.text ?? objectRef.text ?? '';
+        const fontName = options.fontName ?? objectRef.fontName;
+        const fontSize = options.fontSize ?? objectRef.fontSize;
+        const color = options.color ?? objectRef.color;
+        const pos = options.position ?? objectRef.position;
+
+        const fontDict = fontName && fontSize ? {name: fontName, size: fontSize} : null;
+        const colorDict = color ? {red: color.r, green: color.g, blue: color.b, alpha: color.a} : null;
+        const posDict = pos ? this._positionToDict(pos) : null;
+
+        const newObject: Record<string, any> = {
+            type: "TEXT_LINE",
+            position: posDict,
+            textElements: [{text, font: fontDict, color: colorDict, position: posDict}]
+        };
+        if (fontName) newObject.fontName = fontName;
+        if (fontSize) newObject.fontSize = fontSize;
+        if (colorDict) newObject.color = colorDict;
+
+        const requestData = {
+            ref: {internalId: objectRef.internalId, position: this._positionToDict(objectRef.position), type: objectRef.type},
+            newObject
+        };
+
+        const response = await this._makeRequest('PUT', '/pdf/modify', requestData);
+        const result = CommandResult.fromDict(await response.json());
+        this._invalidateCache();
+        return result;
+    }
+
+    private _positionToDict(position: Position): Record<string, any> {
+        const result: Record<string, any> = {
+            pageNumber: position.pageNumber,
+            textStartsWith: position.textStartsWith,
+            textPattern: position.textPattern,
+            name: position.name
+        };
+        if (position.shape) result.shape = position.shape;
+        if (position.mode) result.mode = position.mode;
+        if (position.boundingRect) {
+            result.boundingRect = {
+                x: position.boundingRect.x,
+                y: position.boundingRect.y,
+                width: position.boundingRect.width,
+                height: position.boundingRect.height
+            };
+        }
+        return result;
+    }
+
     // Font Operations
 
     /**

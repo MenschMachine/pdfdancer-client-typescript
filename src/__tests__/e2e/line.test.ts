@@ -3,8 +3,8 @@
  */
 
 import * as fs from 'fs';
-import {FontType, PDFDancer} from '../../index';
-import {createTempPath, requireEnvAndFixture} from './test-helpers';
+import {Color, CommandResult, FontType, PDFDancer, StandardFonts} from '../../index';
+import {createTempPath, readFontFixture, requireEnvAndFixture} from './test-helpers';
 import {expectWithin} from '../assertions';
 import {PDFAssertions} from './pdf-assertions';
 
@@ -99,7 +99,7 @@ describe('Text Line E2E Tests (v2 API)', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const [line] = await pdf.page(1).selectTextLinesStartingWith('The Complete');
-        const result = await line.edit().text(' replaced ').apply();
+        const result = await line.edit().text(' replaced ').apply() as CommandResult;
         expect(result.success).toBe(true);
         // TODO expect(line.getText()).toBe(' replaced ');
 
@@ -174,5 +174,105 @@ describe('Text Line E2E Tests (v2 API)', () => {
         // Test with no match
         const noMatch = await pdf.page(1).selectTextLineAt(1000, 1000, 1);
         expect(noMatch).toBeNull();
+    });
+
+    test('modify line with font change', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const [line] = await pdf.page(1).selectTextLinesStartingWith('The Complete');
+        await line.edit().font('Helvetica', 28).apply();
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertTextlineHasFont('The Complete', 'Helvetica', 28);
+    });
+
+    test('modify line with color change', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const red = new Color(255, 0, 0);
+        const [line] = await pdf.page(1).selectTextLinesStartingWith('The Complete');
+        await line.edit().color(red).apply();
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertTextlineHasColor('The Complete', red);
+    });
+
+    test('modify line with font + color + text', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const blue = new Color(0, 0, 255);
+        const [line] = await pdf.page(1).selectTextLinesStartingWith('The Complete');
+        await line.edit()
+            .text('Line Changed')
+            .font('Helvetica', 20)
+            .color(blue)
+            .apply();
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertTextlineExists('Line Changed');
+        await assertions.assertTextlineHasFont('Line Changed', 'Helvetica', 20);
+        await assertions.assertTextlineHasColor('Line Changed', blue);
+    });
+
+    test('modify line with moveTo via edit', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const [line] = await pdf.page(1).selectTextLinesStartingWith('The Complete');
+        await line.edit().moveTo(40, 40).apply();
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertTextlineIsAt('The Complete', 40, 40, 1, 0.25);
+    });
+
+    test('modify line with fontFile', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const ttf = readFontFixture('DancingScript-Regular.ttf');
+        const [line] = await pdf.page(1).selectTextLinesStartingWith('The Complete');
+        await line.edit().text('Custom Font Line').fontFile(ttf, 24).apply();
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertTextlineExists('Custom Font Line');
+    });
+
+    test('modify line text with color shorthand', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const green = new Color(0, 255, 0);
+        const [line] = await pdf.page(1).selectTextLinesStartingWith('The Complete');
+        await line.edit().text('Colored Line', green).apply();
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertTextlineExists('Colored Line');
+        await assertions.assertTextlineHasColor('Colored Line', green);
+    });
+
+    test('modify line with replace alias', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const [line] = await pdf.page(1).selectTextLinesStartingWith('The Complete');
+        await line.edit().replace('Replaced Line').apply();
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertTextlineExists('Replaced Line');
+    });
+
+    test('getText returns stored text', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const [line] = await pdf.page(1).selectTextLinesStartingWith('The Complete');
+        const editor = line.edit();
+
+        expect(editor.getText()).toBeUndefined();
+        editor.text('New Text');
+        expect(editor.getText()).toBe('New Text');
     });
 });

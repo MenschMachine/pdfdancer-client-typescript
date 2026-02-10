@@ -30,6 +30,8 @@ interface PDFDancerInternals {
 
     modifyTextLine(objectRef: ObjectRef, newText: string): Promise<CommandResult>;
 
+    modifyTextLineObject(objectRef: TextObjectRef, options: { text?: string; fontName?: string; fontSize?: number; color?: Color; position?: Position }): Promise<CommandResult>;
+
     modifyParagraph(objectRef: ObjectRef, update: Paragraph | string | null): Promise<CommandResult>;
 
     _redactTargets(targets: RedactTarget[], options?: RedactOptions): Promise<RedactResponse>;
@@ -583,26 +585,181 @@ export class TextLineObject extends BaseObject<TextObjectRef> {
 class TextLineBuilder {
 
     private _text: string | undefined;
-    private _objectRef: ObjectRef;
-    private _client: PDFDancer
+    private _fontName: string | undefined;
+    private _fontSize: number | undefined;
+    private _color: Color | undefined;
+    private _newPosition: { x: number; y: number } | undefined;
+    private _hasChanges = false;
+    private _ttfSource: Uint8Array | File | string | undefined;
+    private _pending: Promise<unknown>[] = [];
+    private _registeringFont = false;
+    private _fontExplicitlyChanged = false;
+    private _objectRef: TextObjectRef;
+    private _client: PDFDancer;
     private _internals: PDFDancerInternals;
 
-    constructor(client: PDFDancer, objectRef: ObjectRef) {
+    constructor(client: PDFDancer, objectRef: TextObjectRef) {
         this._objectRef = objectRef;
         this._client = client;
         this._internals = this._client as unknown as PDFDancerInternals;
     }
 
-    text(newText: string) {
+    replace(text: string, color?: Color) {
+        return this.text(text, color);
+    }
+
+    text(newText: string, color?: Color) {
+        if (newText === null || newText === undefined) {
+            throw new ValidationException("Text cannot be null");
+        }
         this._text = newText;
+        this._hasChanges = true;
+        if (color) {
+            this.color(color);
+        }
         return this;
     }
 
-    async apply() {
-        const result = await this._internals.modifyTextLine(this._objectRef, this._text!);
+    font(font: Font): this;
+    font(fontName: string, fontSize: number): this;
+    font(fontOrName: Font | string, fontSize?: number): this {
+        if (fontOrName instanceof Font) {
+            this._fontName = fontOrName.name;
+            this._fontSize = fontOrName.size;
+        } else {
+            if (!fontOrName) {
+                throw new ValidationException("Font name cannot be null");
+            }
+            if (fontSize == null) {
+                throw new ValidationException("Font size cannot be null");
+            }
+            this._fontName = fontOrName;
+            this._fontSize = fontSize;
+        }
+        this._fontExplicitlyChanged = true;
+        this._hasChanges = true;
+        return this;
+    }
+
+    fontFile(ttfFile: Uint8Array | File | string, fontSize: number): this {
+        if (!ttfFile) {
+            throw new ValidationException("TTF file cannot be null");
+        }
+        if (fontSize <= 0) {
+            throw new ValidationException(`Font size must be positive, got ${fontSize}`);
+        }
+        this._ttfSource = ttfFile;
+        this._registeringFont = true;
+        const job = this._registerTtf(ttfFile, fontSize)
+            .then(font => {
+                this._fontName = font.name;
+                this._fontSize = font.size;
+                this._fontExplicitlyChanged = true;
+            })
+            .finally(() => {
+                this._registeringFont = false;
+            });
+        this._pending.push(job);
+        this._hasChanges = true;
+        return this;
+    }
+
+    color(color: Color): this {
+        if (!color) {
+            throw new ValidationException("Color cannot be null");
+        }
+        this._color = color;
+        this._hasChanges = true;
+        return this;
+    }
+
+    moveTo(x: number, y: number): this {
+        if (x === null || x === undefined || y === null || y === undefined) {
+            throw new ValidationException("Coordinates cannot be null or undefined");
+        }
+        this._newPosition = {x, y};
+        this._hasChanges = true;
+        return this;
+    }
+
+    getText() {
+        return this._text;
+    }
+
+    async apply(): Promise<CommandResult | boolean> {
+        if (this._pending.length) {
+            await Promise.all(this._pending);
+            this._pending = [];
+        }
+        if (this._registeringFont) {
+            throw new ValidationException("Font registration is not complete");
+        }
+
+        if (!this._hasChanges) {
+            return this._internals.modifyTextLine(this._objectRef, this._text ?? '');
+        }
+
+        const onlyTextChanged = (
+            this._text !== undefined &&
+            this._fontName === undefined &&
+            this._fontSize === undefined &&
+            this._color === undefined &&
+            this._newPosition === undefined
+        );
+
+        if (onlyTextChanged) {
+            const result = await this._internals.modifyTextLine(this._objectRef, this._text!);
+            if (result.warning) {
+                process.stderr.write(`WARNING: ${result.warning}\n`);
+            }
+            return result;
+        }
+
+        const onlyMove = (
+            this._newPosition !== undefined &&
+            this._text === undefined &&
+            this._fontName === undefined &&
+            this._fontSize === undefined &&
+            this._color === undefined
+        );
+
+        if (onlyMove) {
+            const pageNumber = this._objectRef.position.pageNumber;
+            if (pageNumber === undefined) {
+                throw new ValidationException("Line position must include a page number to move");
+            }
+            const position = Position.atPageCoordinates(pageNumber, this._newPosition!.x, this._newPosition!.y);
+            return this._internals.move(this._objectRef, position);
+        }
+
+        let pos: Position | undefined;
+        if (this._newPosition !== undefined) {
+            const pageNumber = this._objectRef.position.pageNumber;
+            if (pageNumber === undefined) {
+                throw new ValidationException("Line position must include a page number to move");
+            }
+            pos = Position.atPageCoordinates(pageNumber, this._newPosition.x, this._newPosition.y);
+        }
+
+        const result = await this._internals.modifyTextLineObject(this._objectRef, {
+            text: this._text,
+            fontName: this._fontName,
+            fontSize: this._fontSize,
+            color: this._color,
+            position: pos
+        });
         if (result.warning) {
             process.stderr.write(`WARNING: ${result.warning}\n`);
         }
         return result;
+    }
+
+    private async _registerTtf(ttfFile: Uint8Array | File | string, fontSize: number): Promise<Font> {
+        try {
+            const fontName = await this._client.registerFont(ttfFile);
+            return new Font(fontName, fontSize);
+        } catch (error: any) {
+            throw new ValidationException(`Failed to register font file: ${error}`);
+        }
     }
 }
