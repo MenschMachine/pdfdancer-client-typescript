@@ -696,7 +696,7 @@ class TextLineBuilder {
         }
 
         if (!this._hasChanges) {
-            return this._internals.modifyTextLine(this._objectRef, this._text ?? '');
+            return CommandResult.empty("ModifyTextLine", this._objectRef.internalId);
         }
 
         const onlyTextChanged = (

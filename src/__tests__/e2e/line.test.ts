@@ -264,6 +264,18 @@ describe('Text Line E2E Tests (v2 API)', () => {
         await assertions.assertTextlineExists('Replaced Line');
     });
 
+    test('apply with no edits is a no-op', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const [line] = await pdf.page(1).selectTextLinesStartingWith('The Complete');
+        const result = await line.edit().apply() as CommandResult;
+        expect(result.success).toBe(true);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertTextlineExists('The Complete');
+    });
+
     test('getText returns stored text', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
