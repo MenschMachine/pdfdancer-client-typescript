@@ -128,7 +128,7 @@ const DEFAULT_RETRY_CONFIG: Required<RetryConfig> = {
     maxRetries: 3,
     initialDelay: 1000,
     maxDelay: 10000,
-    retryableStatusCodes: [429, 500, 502, 503, 504],
+    retryableStatusCodes: [429, 502, 503, 504],
     retryOnNetworkError: true,
     backoffMultiplier: 2,
     useJitter: true,
