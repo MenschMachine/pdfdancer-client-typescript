@@ -3,7 +3,7 @@
  */
 
 import * as fs from 'fs';
-import {Color, CommandResult, FontType, PDFDancer, StandardFonts} from '../../index';
+import {Color, CommandResult, FontType, PDFDancer} from '../../index';
 import {createTempPath, readFontFixture, requireEnvAndFixture} from './test-helpers';
 import {expectWithin} from '../assertions';
 import {PDFAssertions} from './pdf-assertions';
