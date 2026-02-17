@@ -6,10 +6,6 @@
 
 </div>
 
-**Stop fighting PDFs. Start editing them.**
-
-**Edit text in any real-world PDF. Pixel-perfect. No corruption.**
-
 ## PDF used to be read-only. We fixed that.
 
 PDFDancer gives you pixel-perfect programmatic control over real-world PDF documents from TypeScript. Locate existing elements by coordinates or text, adjust them precisely, add brand-new content, and ship the modified PDF in memory or on disk. This package is the official TypeScript SDK for the PDFDancer API, and the same object model is also available for Python and Java.
@@ -475,9 +471,11 @@ The e2e suite covers paragraphs, pages, text lines, images, form fields, and pat
 
 ## Helpful links
 
-- Docs: https://docs.pdfdancer.com?utm_source=github&utm_medium=readme&utm_campaign=pdfdancer-typescript
-- Product overview: https://www.pdfdancer.com?utm_source=github&utm_medium=readme&utm_campaign=pdfdancer-typescript
-- npm: https://www.npmjs.com/package/pdfdancer-client-typescript
+- [API documentation](https://docs.pdfdancer.com?utm_source=github&utm_medium=readme&utm_campaign=pdfdancer-typescript)
+- [Product overview](https://www.pdfdancer.com?utm_source=github&utm_medium=readme&utm_campaign=pdfdancer-typescript)
+- [npm](https://www.npmjs.com/package/pdfdancer-client-typescript)
+- [Changelog](https://www.pdfdancer.com/changelog/?utm_source=github&utm_medium=readme&utm_campaign=pdfdancer-typescript)
+- [Status](https://status.pdfdancer.com?utm_source=github&utm_medium=readme&utm_campaign=pdfdancer-typescript)
 
 ## Related SDKs
 
