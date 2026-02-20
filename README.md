@@ -476,6 +476,7 @@ The e2e suite covers paragraphs, pages, text lines, images, form fields, and pat
 - [npm](https://www.npmjs.com/package/pdfdancer-client-typescript)
 - [Changelog](https://www.pdfdancer.com/changelog/?utm_source=github&utm_medium=readme&utm_campaign=pdfdancer-typescript)
 - [Status](https://status.pdfdancer.com?utm_source=github&utm_medium=readme&utm_campaign=pdfdancer-typescript)
+- [Issue tracker](https://github.com/MenschMachine/pdfdancer)
 
 ## Related SDKs
 
