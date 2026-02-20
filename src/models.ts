@@ -1230,7 +1230,9 @@ export enum ImageTransformType {
     /** Set the opacity/transparency of the image */
     OPACITY = "OPACITY",
     /** Flip the image horizontally or vertically */
-    FLIP = "FLIP"
+    FLIP = "FLIP",
+    /** Fill a rectangular region with a solid color */
+    FILL_REGION = "FILL_REGION"
 }
 
 /**
@@ -1271,7 +1273,12 @@ export class ImageTransformRequest {
         public cropRight?: number,
         public cropBottom?: number,
         public opacity?: number,
-        public flipDirection?: FlipDirection
+        public flipDirection?: FlipDirection,
+        public fillRegionX?: number,
+        public fillRegionY?: number,
+        public fillRegionWidth?: number,
+        public fillRegionHeight?: number,
+        public fillColor?: number
     ) {}
 
     toDict(): Record<string, any> {
@@ -1324,6 +1331,21 @@ export class ImageTransformRequest {
         }
         if (this.flipDirection !== undefined) {
             result.flipDirection = this.flipDirection;
+        }
+        if (this.fillRegionX !== undefined) {
+            result.fillRegionX = this.fillRegionX;
+        }
+        if (this.fillRegionY !== undefined) {
+            result.fillRegionY = this.fillRegionY;
+        }
+        if (this.fillRegionWidth !== undefined) {
+            result.fillRegionWidth = this.fillRegionWidth;
+        }
+        if (this.fillRegionHeight !== undefined) {
+            result.fillRegionHeight = this.fillRegionHeight;
+        }
+        if (this.fillColor !== undefined) {
+            result.fillColor = this.fillColor;
         }
 
         return result;
