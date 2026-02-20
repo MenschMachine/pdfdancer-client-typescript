@@ -261,6 +261,50 @@ export class ImageObject extends BaseObject {
         );
         return this._internals.transformImage(request);
     }
+
+    /**
+     * Fills a rectangular pixel region of the image with a solid color.
+     *
+     * @param x The x coordinate of the top-left corner of the region
+     * @param y The y coordinate of the top-left corner of the region
+     * @param width The width of the region in pixels
+     * @param height The height of the region in pixels
+     * @param color The fill color
+     * @returns CommandResult indicating success or failure
+     */
+    async fillRegion(x: number, y: number, width: number, height: number, color: Color): Promise<CommandResult> {
+        if (!(color instanceof Color)) {
+            throw new ValidationException("Color must be an instance of Color");
+        }
+        if (width <= 0) {
+            throw new ValidationException(`Width must be positive, got ${width}`);
+        }
+        if (height <= 0) {
+            throw new ValidationException(`Height must be positive, got ${height}`);
+        }
+        const fillColor = (color.r << 16) | (color.g << 8) | color.b;
+        const request = new ImageTransformRequest(
+            this.ref(),
+            ImageTransformType.FILL_REGION,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            x,
+            y,
+            width,
+            height,
+            fillColor
+        );
+        return this._internals.transformImage(request);
+    }
 }
 
 export class FormXObject extends BaseObject {

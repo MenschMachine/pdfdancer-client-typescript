@@ -3,7 +3,7 @@
  */
 
 import * as fs from 'fs';
-import {FlipDirection, Image, PDFDancer} from '../../index';
+import {Color, FlipDirection, Image, PDFDancer, ValidationException} from '../../index';
 import {createTempPath, getImagePath, requireEnvAndFixture} from './test-helpers';
 import {expectWithin} from '../assertions';
 import {PDFAssertions} from './pdf-assertions';
@@ -455,5 +455,77 @@ describe('Image Transform E2E Tests', () => {
 
         await expect(image.scaleTo(0, 100)).rejects.toThrow('Target size must be positive');
         await expect(image.scaleTo(100, -50)).rejects.toThrow('Target size must be positive');
+    });
+});
+
+describe('Image Fill Region E2E Tests', () => {
+
+    test('fill region basic', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-image-test.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const images = await pdf.page(1).selectImages();
+        expect(images).toHaveLength(3);
+
+        const image = images[0];
+        const result = await image.fillRegion(10, 10, 50, 30, new Color(0, 0, 0));
+        expect(result.success).toBe(true);
+    });
+
+    test('fill region with red', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-image-test.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const images = await pdf.page(1).selectImages();
+        const image = images[0];
+
+        const result = await image.fillRegion(0, 0, 5, 5, new Color(255, 0, 0));
+        expect(result.success).toBe(true);
+    });
+
+    test('fill region with different colors', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-image-test.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const images = await pdf.page(1).selectImages();
+        const image1 = images[0];
+        const result1 = await image1.fillRegion(0, 0, 10, 10, new Color(255, 255, 255));
+        expect(result1.success).toBe(true);
+
+        // Re-select to get fresh reference
+        const images2 = await pdf.page(1).selectImages();
+        const image2 = images2[0];
+        const result2 = await image2.fillRegion(20, 20, 10, 10, new Color(0, 0, 255));
+        expect(result2.success).toBe(true);
+    });
+
+    test('fill region invalid width', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-image-test.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const images = await pdf.page(1).selectImages();
+        const image = images[0];
+
+        await expect(image.fillRegion(10, 10, 0, 30, new Color(0, 0, 0))).rejects.toThrow(ValidationException);
+    });
+
+    test('fill region invalid height', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-image-test.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const images = await pdf.page(1).selectImages();
+        const image = images[0];
+
+        await expect(image.fillRegion(10, 10, 50, -5, new Color(0, 0, 0))).rejects.toThrow(ValidationException);
+    });
+
+    test('fill region invalid color type', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-image-test.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const images = await pdf.page(1).selectImages();
+        const image = images[0];
+
+        await expect(image.fillRegion(10, 10, 50, 30, 0xFF0000 as any)).rejects.toThrow(ValidationException);
     });
 });
