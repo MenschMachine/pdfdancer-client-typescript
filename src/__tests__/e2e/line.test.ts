@@ -15,7 +15,7 @@ describe('Text Line E2E Tests (v2 API)', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const lines = await pdf.selectLines();
-        expect(lines).toHaveLength(338);
+        expect(lines).toHaveLength(340);
 
         const first = lines[0];
         expect(first.position).toBeDefined();

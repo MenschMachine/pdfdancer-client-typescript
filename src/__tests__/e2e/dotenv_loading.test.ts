@@ -10,6 +10,7 @@ describe('.env file loading E2E Tests', () => {
     let pdfData: Uint8Array;
     let validToken: string;
     let tempEnvPath: string;
+    let originalEnvContent: string | null;
 
     const restoreEnv = () => {
         if (originalToken !== undefined) {
@@ -24,7 +25,9 @@ describe('.env file loading E2E Tests', () => {
             delete process.env.PDFDANCER_BASE_URL;
         }
 
-        if (fs.existsSync(tempEnvPath)) {
+        if (originalEnvContent !== null) {
+            fs.writeFileSync(tempEnvPath, originalEnvContent);
+        } else if (fs.existsSync(tempEnvPath)) {
             fs.unlinkSync(tempEnvPath);
         }
     };
@@ -33,6 +36,7 @@ describe('.env file loading E2E Tests', () => {
         originalToken = process.env.PDFDANCER_API_TOKEN;
         originalBaseUrl = process.env.PDFDANCER_BASE_URL;
         tempEnvPath = path.resolve(process.cwd(), '.env');
+        originalEnvContent = fs.existsSync(tempEnvPath) ? fs.readFileSync(tempEnvPath, 'utf-8') : null;
 
         [baseUrl, validToken, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
     });
