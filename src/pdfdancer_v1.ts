@@ -2341,9 +2341,16 @@ export class PDFDancer {
      * @example
      * await pdf.replace('{{name}}', 'John Doe').apply();
      * await pdf.replace('{{name}}', 'John').and('{{date}}', '2024').apply();
+     * await pdf.replace().replaceWithImage('{{logo}}', 'logo.png').apply();
      */
-    replace(placeholder: string, text: string): ReplacementBuilder {
-        return new ReplacementBuilder(this).replace(placeholder, text);
+    replace(): ReplacementBuilder;
+    replace(placeholder: string, text: string): ReplacementBuilder;
+    replace(placeholder?: string, text?: string): ReplacementBuilder {
+        const builder = new ReplacementBuilder(this);
+        if (placeholder !== undefined && text !== undefined) {
+            return builder.replace(placeholder, text);
+        }
+        return builder;
     }
 
     /**

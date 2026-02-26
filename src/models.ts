@@ -1370,22 +1370,35 @@ export enum ReflowPreset {
 export class TemplateReplacement {
     constructor(
         public placeholder: string,
-        public text: string,
+        public text?: string,
         public font?: Font,
-        public color?: Color
+        public color?: Color,
+        public image?: Image
     ) {}
 
     toDict(): Record<string, any> {
         const result: Record<string, any> = {
             placeholder: this.placeholder,
-            text: this.text
         };
 
+        if (this.text !== undefined) {
+            result.text = this.text;
+        }
         if (this.font) {
             result.font = { name: this.font.name, size: this.font.size };
         }
         if (this.color) {
             result.color = { red: this.color.r, green: this.color.g, blue: this.color.b, alpha: this.color.a };
+        }
+        if (this.image) {
+            const size = this.image.width != null && this.image.height != null
+                ? { width: this.image.width, height: this.image.height }
+                : null;
+            result.image = {
+                format: this.image.format || null,
+                size,
+                data: this.image.data ? btoa(String.fromCharCode(...this.image.data)) : null
+            };
         }
 
         return result;
