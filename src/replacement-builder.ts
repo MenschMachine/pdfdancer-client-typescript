@@ -2,7 +2,9 @@
  * ReplacementBuilder for fluent template replacement API.
  */
 
-import { Color, Font, ReflowPreset, TemplateReplacement, TemplateReplaceRequest } from './models';
+import * as fs from 'fs';
+import * as path from 'path';
+import { Color, Font, Image, ReflowPreset, TemplateReplacement, TemplateReplaceRequest } from './models';
 import { PDFDancer } from './pdfdancer_v1';
 
 interface PDFDancerInternals {
@@ -26,6 +28,11 @@ interface PDFDancerInternals {
  * await pdf.replace('{{name}}', 'John')
  *     .and('{{date}}', '2024-01-15')
  *     .apply();
+ *
+ * // Replace with image
+ * await pdf.replace()
+ *     .replaceWithImage('{{logo}}', 'logo.png')
+ *     .apply();
  */
 export class ReplacementBuilder {
     private _replacements: TemplateReplacement[] = [];
@@ -36,6 +43,7 @@ export class ReplacementBuilder {
     private _currentText?: string;
     private _currentFont?: Font;
     private _currentColor?: Color;
+    private _currentImage?: Image;
 
     private readonly _internals: PDFDancerInternals;
 
@@ -50,6 +58,30 @@ export class ReplacementBuilder {
         this._flushCurrent();
         this._currentPlaceholder = placeholder;
         this._currentText = text;
+        return this;
+    }
+
+    /**
+     * Replace a placeholder with an image.
+     * Accepts a file path (string) or raw image data (Uint8Array).
+     * Optionally specify width and height.
+     */
+    replaceWithImage(placeholder: string, imagePathOrData: string | Uint8Array, width?: number, height?: number): this {
+        this._flushCurrent();
+        this._currentPlaceholder = placeholder;
+
+        let imageData: Uint8Array;
+        let format: string | undefined;
+
+        if (typeof imagePathOrData === 'string') {
+            imageData = new Uint8Array(fs.readFileSync(imagePathOrData));
+            const ext = path.extname(imagePathOrData).toLowerCase().replace('.', '');
+            format = ext === 'jpg' ? 'jpeg' : ext;
+        } else {
+            imageData = imagePathOrData;
+        }
+
+        this._currentImage = new Image(undefined, format, width, height, imageData);
         return this;
     }
 
@@ -76,10 +108,17 @@ export class ReplacementBuilder {
     }
 
     /**
-     * Add another replacement.
+     * Add another text replacement.
      */
     and(placeholder: string, text: string): this {
         return this.replace(placeholder, text);
+    }
+
+    /**
+     * Add another image replacement.
+     */
+    andImage(placeholder: string, imagePathOrData: string | Uint8Array, width?: number, height?: number): this {
+        return this.replaceWithImage(placeholder, imagePathOrData, width, height);
     }
 
     /**
@@ -139,17 +178,19 @@ export class ReplacementBuilder {
     }
 
     private _flushCurrent(): void {
-        if (this._currentPlaceholder !== undefined && this._currentText !== undefined) {
+        if (this._currentPlaceholder !== undefined && (this._currentText !== undefined || this._currentImage !== undefined)) {
             this._replacements.push(new TemplateReplacement(
                 this._currentPlaceholder,
                 this._currentText,
                 this._currentFont,
-                this._currentColor
+                this._currentColor,
+                this._currentImage
             ));
             this._currentPlaceholder = undefined;
             this._currentText = undefined;
             this._currentFont = undefined;
             this._currentColor = undefined;
+            this._currentImage = undefined;
         }
     }
 }

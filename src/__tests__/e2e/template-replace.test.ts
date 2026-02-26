@@ -2,8 +2,8 @@
  * E2E tests for template replacement operations
  */
 
-import {Color, PDFDancer, ReflowPreset, TemplateReplacement, TemplateReplaceRequest} from '../../index';
-import {requireEnvAndFixture} from './test-helpers';
+import {Color, Image, PDFDancer, ReflowPreset, TemplateReplacement, TemplateReplaceRequest} from '../../index';
+import {requireEnvAndFixture, readImageFixture} from './test-helpers';
 import {PDFAssertions} from './pdf-assertions';
 
 describe('Template Replace E2E Tests', () => {
@@ -317,4 +317,110 @@ describe('Fluent Replace API Tests', () => {
         await assertions.assertParagraphExists('FLUENT_FULL_OPTIONS', 1);
     });
 
+});
+
+describe('Template Replace With Image E2E Tests', () => {
+
+    test('replace placeholder with image using builder', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const para = await pdf.page(1).selectParagraphStartingWith('The Complete');
+        expect(para).not.toBeNull();
+        const placeholderText = para!.getText()!;
+
+        const result = await pdf.replace()
+            .replaceWithImage(placeholderText, 'fixtures/logo-80.png')
+            .noReflow()
+            .apply();
+
+        expect(result).toBe(true);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertParagraphDoesNotExist('The Complete', 1);
+    });
+
+    test('replace placeholder with image using Uint8Array', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const para = await pdf.page(1).selectParagraphStartingWith('The Complete');
+        expect(para).not.toBeNull();
+        const placeholderText = para!.getText()!;
+
+        const imageData = readImageFixture('logo-80.png');
+        const result = await pdf.replace()
+            .replaceWithImage(placeholderText, imageData)
+            .noReflow()
+            .apply();
+
+        expect(result).toBe(true);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertParagraphDoesNotExist('The Complete', 1);
+    });
+
+    test('replace placeholder with image with explicit size', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const para = await pdf.page(1).selectParagraphStartingWith('The Complete');
+        expect(para).not.toBeNull();
+        const placeholderText = para!.getText()!;
+
+        const result = await pdf.replace()
+            .replaceWithImage(placeholderText, 'fixtures/logo-80.png', 100, 50)
+            .noReflow()
+            .apply();
+
+        expect(result).toBe(true);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertParagraphDoesNotExist('The Complete', 1);
+    });
+
+    test('mixed text and image replacements in one batch', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('ObviouslyAwesome.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const paragraphs = await pdf.page(1).selectParagraphs();
+        expect(paragraphs.length).toBeGreaterThan(1);
+
+        const firstText = paragraphs[0].getText()!;
+        const secondText = paragraphs[1].getText()!;
+
+        const result = await pdf.replace()
+            .replaceWithImage(firstText, 'fixtures/logo-80.png')
+            .and(secondText, 'TEXT_REPLACEMENT_IN_BATCH')
+            .noReflow()
+            .apply();
+
+        expect(result).toBe(true);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertParagraphExists('TEXT_REPLACEMENT_IN_BATCH', 1);
+    });
+
+    test('TemplateReplacement toDict serializes image correctly', () => {
+        const imageData = new Uint8Array([0x89, 0x50, 0x4E, 0x47]);
+        const image = new Image(undefined, 'png', 100, 50, imageData);
+        const replacement = new TemplateReplacement('{{logo}}', undefined, undefined, undefined, image);
+        const dict = replacement.toDict();
+
+        expect(dict.placeholder).toBe('{{logo}}');
+        expect(dict.text).toBeUndefined();
+        expect(dict.image).toBeDefined();
+        expect(dict.image.format).toBe('png');
+        expect(dict.image.size).toEqual({ width: 100, height: 50 });
+        expect(dict.image.data).toBe(btoa(String.fromCharCode(0x89, 0x50, 0x4E, 0x47)));
+    });
+
+    test('TemplateReplacement toDict omits image when not set', () => {
+        const replacement = new TemplateReplacement('{{name}}', 'John');
+        const dict = replacement.toDict();
+
+        expect(dict.placeholder).toBe('{{name}}');
+        expect(dict.text).toBe('John');
+        expect(dict.image).toBeUndefined();
+    });
 });
