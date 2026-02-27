@@ -21,3 +21,7 @@ export function loadEnv(): void {
 
     envLoaded = true;
 }
+
+export function resetEnvLoader(): void {
+    envLoaded = false;
+}

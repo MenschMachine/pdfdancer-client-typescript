@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {PDFDancer} from "../../pdfdancer_v1";
 import {requireEnvAndFixture} from "./test-helpers";
+import {resetEnvLoader} from "../../env-loader";
 
 describe('.env file loading E2E Tests', () => {
     let originalToken: string | undefined;
@@ -55,6 +56,7 @@ describe('.env file loading E2E Tests', () => {
 
     afterAll(() => {
         restoreEnv();
+        resetEnvLoader();
     });
 
     test('loads token from .env file', async () => {

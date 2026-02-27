@@ -1,6 +1,7 @@
 import {requireEnvAndFixture} from "./test-helpers";
 import {PDFDancer} from "../../pdfdancer_v1";
 import {HttpClientException, ValidationException} from "../../exceptions";
+import {resetEnvLoader} from "../../env-loader";
 
 describe('Env Token E2E Tests', () => {
     let originalToken: string | undefined;
@@ -40,6 +41,7 @@ describe('Env Token E2E Tests', () => {
 
     afterAll(() => {
         restoreEnv();
+        resetEnvLoader();
     });
 
     test('opens with token from env', async () => {

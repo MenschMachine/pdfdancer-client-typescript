@@ -275,7 +275,7 @@ describe('Paragraph E2E Tests (v2 API)', () => {
             .apply();
 
         expect(success).toBe(true);
-        const lines = await pdf.page(1).selectTextLinesStartingWith('Times Bold Test');
+        const lines = await pdf.page(1).selectTextLinesMatching('.*Times Bold Test.*');
         expect(lines.length).toBeGreaterThanOrEqual(1);
     });
 

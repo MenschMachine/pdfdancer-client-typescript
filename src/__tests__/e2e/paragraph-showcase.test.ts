@@ -86,17 +86,17 @@ describe('Paragraph E2E Tests (Showcase)', () => {
 
         await pdf.newParagraph().text('Chapter 1: Introduction').font(StandardFonts.HELVETICA, 14).at(1, 100, 100).add();
         await pdf.newParagraph().text('Section 1.1').font(StandardFonts.HELVETICA, 12).at(1, 100, 200).add();
-        await pdf.newParagraph().text('Chapter 2: Methods').font(StandardFonts.HELVETICA, 14).at(1, 100, 100).add();
-        await pdf.newParagraph().text('Section 2.1').font(StandardFonts.HELVETICA, 12).at(1, 100, 200).add();
-        await pdf.newParagraph().text('Chapter 3: Results').font(StandardFonts.HELVETICA, 14).at(2, 100, 100).add();
-        await pdf.newParagraph().text('Section 3.1').font(StandardFonts.HELVETICA, 12).at(2, 100, 200).add();
+        await pdf.newParagraph().text('Chapter 2: Methods').font(StandardFonts.HELVETICA, 14).at(2, 100, 100).add();
+        await pdf.newParagraph().text('Section 2.1').font(StandardFonts.HELVETICA, 12).at(2, 100, 200).add();
+        await pdf.newParagraph().text('Chapter 3: Results').font(StandardFonts.HELVETICA, 14).at(3, 100, 100).add();
+        await pdf.newParagraph().text('Section 3.1').font(StandardFonts.HELVETICA, 12).at(3, 100, 200).add();
 
         expect((await pdf.selectParagraphsMatching('^Chapter [0-9]+:')).length).toBe(3);
         expect((await pdf.selectParagraphsMatching('^Section [0-9]+\\.[0-9]+')).length).toBe(3);
 
         const chaptersPage1 = await pdf.page(1).selectParagraphsMatching('^Chapter [0-9]+:');
-        expect(chaptersPage1.length).toBe(2);
-        expect(chaptersPage1[1].getText()).toContain('Chapter 2');
+        expect(chaptersPage1.length).toBe(1);
+        expect(chaptersPage1[0].getText()).toContain('Chapter 1');
     });
 
     test('select paragraphs matching empty results', async () => {
