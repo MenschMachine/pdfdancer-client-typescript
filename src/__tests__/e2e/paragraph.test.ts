@@ -85,8 +85,8 @@ describe('Paragraph E2E Tests (v2 API)', () => {
     });
 
     async function assertNewParagraphExists(pdf: PDFDancer) {
-        const lines = await pdf.page(1).selectTextLinesStartingWith('Awesomely');
-        expect(lines.length).toBeGreaterThanOrEqual(1);
+        const paragraphs = await pdf.page(1).selectParagraphsMatching('.*Awesomely.*');
+        expect(paragraphs.length).toBeGreaterThanOrEqual(1);
     }
 
     test('modify paragraph', async () => {
