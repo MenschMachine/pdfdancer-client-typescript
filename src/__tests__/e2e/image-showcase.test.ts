@@ -68,7 +68,7 @@ describe('Image E2E Tests (Showcase)', () => {
 
         const found = await pdf.page(6).selectImagesAt(57, 55, 1);
         expect(found.length).toBe(1);
-        expect(found[0].internalId).toBe('IMAGE_000011');
+        expect(found[0].internalId).toBe('IMAGE_5_000001');
     });
 
     test('add image via document builder', async () => {
@@ -92,7 +92,7 @@ describe('Image E2E Tests (Showcase)', () => {
 
         const added = pageImages[1];
         expect(added.position.pageNumber).toBe(6);
-        expect(added.internalId).toBe('IMAGE_000013');
+        expect(added.internalId).toBe('IMAGE_5_000002');
         expect(Math.abs(added.position.getX()! - 50.1)).toBeLessThanOrEqual(0.05);
         expect(Math.abs(added.position.getY()! - 98.0)).toBeLessThanOrEqual(0.05);
 
@@ -122,7 +122,7 @@ describe('Image E2E Tests (Showcase)', () => {
 
         const added = pageImages[1];
         expect(added.position.pageNumber).toBe(6);
-        expect(added.internalId).toBe('IMAGE_000013');
+        expect(added.internalId).toBe('IMAGE_5_000002');
         expect(Math.abs(added.position.getX()! - 50.1)).toBeLessThanOrEqual(0.05);
         expect(Math.abs(added.position.getY()! - 98.0)).toBeLessThanOrEqual(0.05);
 

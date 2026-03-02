@@ -18,7 +18,7 @@ describe('Path E2E Tests (New API)', () => {
 
         const p1 = paths[0];
         expect(p1).toBeDefined();
-        expect(p1.internalId).toBe('PATH_000001');
+        expect(p1.internalId).toBe('PATH_0_000001');
         expect(p1.position.getX()).toBeCloseTo(80, 1);
         expect(p1.position.getY()).toBeCloseTo(720, 1);
     });
@@ -29,7 +29,7 @@ describe('Path E2E Tests (New API)', () => {
 
         const paths = await pdf.page(1).selectPathsAt(80, 720);
         expect(paths).toHaveLength(1);
-        expect(paths[0].internalId).toBe('PATH_000001');
+        expect(paths[0].internalId).toBe('PATH_0_000001');
     });
 
     test('delete path', async () => {
@@ -38,7 +38,7 @@ describe('Path E2E Tests (New API)', () => {
 
         let paths = await pdf.page(1).selectPathsAt(80, 720);
         expect(paths).toHaveLength(1);
-        expect(paths[0].internalId).toBe('PATH_000001');
+        expect(paths[0].internalId).toBe('PATH_0_000001');
 
         const path = paths[0];
         await path.delete();
@@ -74,7 +74,7 @@ describe('Path E2E Tests (New API)', () => {
         expect(movedPos.getY()).toBeCloseTo(100, 1);
 
         const assertions = await PDFAssertions.create(pdf);
-        await assertions.assertPathIsAt('PATH_000001', 50.1, 100);
+        await assertions.assertPathIsAt('PATH_0_000001', 50.1, 100);
     });
 
     // Tests for singular select methods
@@ -85,12 +85,12 @@ describe('Path E2E Tests (New API)', () => {
         // Test with PDFDancer class (document-level)
         const pathFromPdf = await pdf.selectPath();
         expect(pathFromPdf).not.toBeNull();
-        expect(pathFromPdf!.internalId).toBe('PATH_000001');
+        expect(pathFromPdf!.internalId).toBe('PATH_0_000001');
 
         // Test with page-level using position since paths may require coordinates
         const pathOnPage = await pdf.page(1).selectPathAt(80, 720);
         expect(pathOnPage).not.toBeNull();
-        expect(pathOnPage!.internalId).toBe('PATH_000001');
+        expect(pathOnPage!.internalId).toBe('PATH_0_000001');
     });
 
     test('selectPathAt returns first path at position or null', async () => {
@@ -99,7 +99,7 @@ describe('Path E2E Tests (New API)', () => {
 
         const path = await pdf.page(1).selectPathAt(80, 720);
         expect(path).not.toBeNull();
-        expect(path!.internalId).toBe('PATH_000001');
+        expect(path!.internalId).toBe('PATH_0_000001');
 
         // Test with no match
         const noMatch = await pdf.page(1).selectPathAt(1000, 1000);

@@ -50,7 +50,7 @@ describe('Form E2E Tests (v2 API)', () => {
         // Page 1, position (321,601) — expect a form
         forms = await pdf.page(1).selectFormsAt(321, 601, 1);
         expect(forms).toHaveLength(1);
-        expect(forms[0].internalId).toBe('FORM_000005');
+        expect(forms[0].internalId).toBe('FORM_0_000005');
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertNumberOfFormXObjects(17);
@@ -64,12 +64,12 @@ describe('Form E2E Tests (v2 API)', () => {
         // Test with results
         const form = await pdf.page(1).selectForm();
         expect(form).not.toBeNull();
-        expect(form!.internalId).toBe('FORM_000001');
+        expect(form!.internalId).toBe('FORM_0_000001');
 
         // Test with PDFDancer class
         const formFromPdf = await pdf.selectForm();
         expect(formFromPdf).not.toBeNull();
-        expect(formFromPdf!.internalId).toBe('FORM_000001');
+        expect(formFromPdf!.internalId).toBe('FORM_0_000001');
     });
 
     test('selectFormAt returns first form at position or null', async () => {
@@ -78,7 +78,7 @@ describe('Form E2E Tests (v2 API)', () => {
 
         const form = await pdf.page(1).selectFormAt(321, 601, 1);
         expect(form).not.toBeNull();
-        expect(form!.internalId).toBe('FORM_000005');
+        expect(form!.internalId).toBe('FORM_0_000005');
 
         // Test with no match
         const noMatch = await pdf.page(1).selectFormAt(0, 0);

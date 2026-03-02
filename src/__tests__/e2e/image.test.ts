@@ -86,7 +86,7 @@ describe('Image E2E Tests (v2 API)', () => {
 
         const found = await pdf.page(12).selectImagesAt(54, 300, 1);
         expect(found).toHaveLength(1);
-        expect(found[0].internalId).toBe('IMAGE_000003');
+        expect(found[0].internalId).toBe('IMAGE_11_000001');
     });
 
     test('add image', async () => {
@@ -119,17 +119,17 @@ describe('Image E2E Tests (v2 API)', () => {
         // Test with results - page 11 has images
         const image = await pdf.page(12).selectImage();
         expect(image).not.toBeNull();
-        expect(image!.internalId).toBe('IMAGE_000003');
+        expect(image!.internalId).toBe('IMAGE_11_000001');
 
         // Test with PDFDancer class
         const imageFromPdf = await pdf.selectImage();
         expect(imageFromPdf).not.toBeNull();
-        expect(imageFromPdf!.internalId).toBe('IMAGE_000001');
+        expect(imageFromPdf!.internalId).toBe('IMAGE_0_000001');
 
         // Test page 1 also has images (2 images)
         const imageOnPage1 = await pdf.page(1).selectImage();
         expect(imageOnPage1).not.toBeNull();
-        expect(imageOnPage1!.internalId).toBe('IMAGE_000001');
+        expect(imageOnPage1!.internalId).toBe('IMAGE_0_000001');
     });
 
     test('selectImageAt returns first image at position or null', async () => {
@@ -138,7 +138,7 @@ describe('Image E2E Tests (v2 API)', () => {
 
         const image = await pdf.page(12).selectImageAt(54, 300, 1);
         expect(image).not.toBeNull();
-        expect(image!.internalId).toBe('IMAGE_000003');
+        expect(image!.internalId).toBe('IMAGE_11_000001');
 
         // Test with no match
         const noMatch = await pdf.page(12).selectImageAt(0, 0);

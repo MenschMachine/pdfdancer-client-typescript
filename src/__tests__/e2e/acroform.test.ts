@@ -33,7 +33,7 @@ describe('AcroForm Fields E2E Tests (v2 API)', () => {
         const firstForm = await pdf.page(1).selectFormFieldsAt(280, 455, 1);
         expect(firstForm).toHaveLength(1);
         expect(firstForm[0].type).toBe('RADIO_BUTTON');
-        expect(firstForm[0].internalId).toBe('FORM_FIELD_000008');
+        expect(firstForm[0].internalId).toBe('FORM_FIELD_0_000008');
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertNumberOfFormFields(10);
@@ -93,7 +93,7 @@ describe('AcroForm Fields E2E Tests (v2 API)', () => {
         expect(field.name).toBe('firstName');
         expect(field.value).toBeNull();
         expect(field.type).toBe('TEXT_FIELD');
-        expect(field.internalId).toBe('FORM_FIELD_000001');
+        expect(field.internalId).toBe('FORM_FIELD_0_000001');
 
         await field.fill('Donald Duck');
 
@@ -114,12 +114,12 @@ describe('AcroForm Fields E2E Tests (v2 API)', () => {
         // Test with results
         const field = await pdf.page(1).selectFormField();
         expect(field).not.toBeNull();
-        expect(field!.internalId).toBe('FORM_FIELD_000001');
+        expect(field!.internalId).toBe('FORM_FIELD_0_000001');
 
         // Test with PDFDancer class
         const fieldFromPdf = await pdf.selectFormField();
         expect(fieldFromPdf).not.toBeNull();
-        expect(fieldFromPdf!.internalId).toBe('FORM_FIELD_000001');
+        expect(fieldFromPdf!.internalId).toBe('FORM_FIELD_0_000001');
     });
 
     test('selectFormFieldByName returns first field by name or null', async () => {
@@ -129,7 +129,7 @@ describe('AcroForm Fields E2E Tests (v2 API)', () => {
         const field = await pdf.page(1).selectFormFieldByName('firstName');
         expect(field).not.toBeNull();
         expect(field!.name).toBe('firstName');
-        expect(field!.internalId).toBe('FORM_FIELD_000001');
+        expect(field!.internalId).toBe('FORM_FIELD_0_000001');
 
         // Test with no match
         const noMatch = await pdf.page(1).selectFormFieldByName('nonExistent');
@@ -143,7 +143,7 @@ describe('AcroForm Fields E2E Tests (v2 API)', () => {
         const field = await pdf.selectFieldByName('firstName');
         expect(field).not.toBeNull();
         expect(field!.name).toBe('firstName');
-        expect(field!.internalId).toBe('FORM_FIELD_000001');
+        expect(field!.internalId).toBe('FORM_FIELD_0_000001');
 
         // Test with no match
         const noMatch = await pdf.selectFieldByName('nonExistent');
@@ -157,7 +157,7 @@ describe('AcroForm Fields E2E Tests (v2 API)', () => {
         const field = await pdf.page(1).selectFormFieldAt(280, 455, 1);
         expect(field).not.toBeNull();
         expect(field!.type).toBe('RADIO_BUTTON');
-        expect(field!.internalId).toBe('FORM_FIELD_000008');
+        expect(field!.internalId).toBe('FORM_FIELD_0_000008');
 
         // Test with no match
         const noMatch = await pdf.page(1).selectFormFieldAt(1000, 1000, 1);
