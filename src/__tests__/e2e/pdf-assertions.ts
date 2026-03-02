@@ -34,14 +34,12 @@ export class PDFAssertions {
     }
 
     private async aggregateCounts(pageNumber?: number) {
-        const [paragraphs, textLines, images, paths, forms, fields] = await Promise.all([
-            this.pdf.selectParagraphs(),
-            this.pdf.selectLines(),
-            this.pdf.selectImages(),
-            this.pdf.selectPaths(),
-            this.pdf.selectForms(),
-            this.pdf.selectFormFields()
-        ]);
+        const paragraphs = await this.pdf.selectParagraphs();
+        const textLines = await this.pdf.selectLines();
+        const images = await this.pdf.selectImages();
+        const paths = await this.pdf.selectPaths();
+        const forms = await this.pdf.selectForms();
+        const fields = await this.pdf.selectFormFields();
 
         const filter = <T extends { position: { pageNumber?: number } }>(items: T[]): T[] => {
             if (pageNumber === undefined) {
