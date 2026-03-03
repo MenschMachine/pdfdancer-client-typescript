@@ -16,10 +16,10 @@ describe('Path Group E2E Tests', () => {
         pdf = await PDFDancer.open(pdfData, token, baseUrl);
     });
 
-    async function groupFirstTwo(groupId: string): Promise<PathGroupObject> {
+    async function groupFirstTwo(): Promise<PathGroupObject> {
         const paths = await pdf.page(1).selectPaths();
         const pathIds = [paths[0].internalId, paths[1].internalId];
-        return pdf.page(1).groupPaths(groupId, pathIds);
+        return pdf.page(1).groupPaths(pathIds);
     }
 
     test('create group by path IDs', async () => {
@@ -27,9 +27,8 @@ describe('Path Group E2E Tests', () => {
         expect(paths.length).toBeGreaterThanOrEqual(2);
 
         const pathIds = [paths[0].internalId, paths[1].internalId];
-        const group = await pdf.page(1).groupPaths('by-ids', pathIds);
+        const group = await pdf.page(1).groupPaths(pathIds);
 
-        expect(group.groupId).toBe('by-ids');
         expect(group.pathCount).toBe(2);
         expect(group.boundingBox).not.toBeNull();
 
@@ -38,25 +37,11 @@ describe('Path Group E2E Tests', () => {
         await assertions.assertPathIsAt('PATH_0_000001', 80, 720);
     });
 
-    test('group paths auto id', async () => {
-        const paths = await pdf.page(1).selectPaths();
-        const pathIds = [paths[0].internalId];
-        const group = await pdf.page(1).groupPaths(null as any, pathIds);
-
-        expect(group.groupId.startsWith('pathgroup-')).toBe(true);
-        expect(group.pathCount).toBe(1);
-
-        const assertions = await PDFAssertions.create(pdf);
-        await assertions.assertNumberOfPaths(9, 1);
-        await assertions.assertPathIsAt('PATH_0_000001', 80, 720);
-    });
-
     test('create group by region', async () => {
         const region = new BoundingRect(70, 710, 100, 100);
-        const group = await pdf.page(1).groupPathsInRegion('region-test', region);
+        const group = await pdf.page(1).groupPathsInRegion(region);
 
         expect(group).toBeDefined();
-        expect(group.groupId).toBe('region-test');
         expect(group.pathCount).toBeGreaterThan(0);
 
         // Region grouping merges matched paths into a single compound path
@@ -76,7 +61,7 @@ describe('Path Group E2E Tests', () => {
     });
 
     test('group and move', async () => {
-        const group = await groupFirstTwo('move-test');
+        const group = await groupFirstTwo();
         await group.moveTo(200.0, 300.0);
 
         const groups = await pdf.page(1).getPathGroups();
@@ -92,7 +77,7 @@ describe('Path Group E2E Tests', () => {
     test('group and remove', async () => {
         const paths = await pdf.page(1).selectPaths();
         const pathIds = [paths[0].internalId];
-        const group = await pdf.page(1).groupPaths('remove-test', pathIds);
+        const group = await pdf.page(1).groupPaths(pathIds);
 
         let groups = await pdf.page(1).getPathGroups();
         expect(groups.length).toBe(1);
@@ -115,7 +100,7 @@ describe('Path Group E2E Tests', () => {
         const origH = origBounds.height;
 
         const pathIds = [pathId, paths[1].internalId];
-        const group = await pdf.page(1).groupPaths('scale-test', pathIds);
+        const group = await pdf.page(1).groupPaths(pathIds);
         await group.scale(2.0);
 
         const assertions = await PDFAssertions.create(pdf);
@@ -124,7 +109,7 @@ describe('Path Group E2E Tests', () => {
     });
 
     test('rotate path group', async () => {
-        const group = await groupFirstTwo('rotate-test');
+        const group = await groupFirstTwo();
         await group.rotate(90.0);
 
         const assertions = await PDFAssertions.create(pdf);
@@ -141,7 +126,7 @@ describe('Path Group E2E Tests', () => {
         const pathId = path.internalId;
         const pathIds = [pathId, paths[0].internalId];
 
-        const group = await pdf.page(1).groupPaths('resize-test', pathIds);
+        const group = await pdf.page(1).groupPaths(pathIds);
         await group.resize(50.0, 50.0);
 
         const assertions = await PDFAssertions.create(pdf);
@@ -161,7 +146,7 @@ describe('Path Group E2E Tests', () => {
         const origH = origBounds.height;
 
         const pathIds = [pathId, paths[1].internalId];
-        const group = await pdf.page(1).groupPaths('scale-ref-test', pathIds);
+        const group = await pdf.page(1).groupPaths(pathIds);
         await group.scale(0.5);
 
         const assertions = await PDFAssertions.create(pdf);
@@ -170,7 +155,7 @@ describe('Path Group E2E Tests', () => {
     });
 
     test('rotate via reference', async () => {
-        const group = await groupFirstTwo('rotate-ref-test');
+        const group = await groupFirstTwo();
         await group.rotate(45);
 
         const assertions = await PDFAssertions.create(pdf);
@@ -179,7 +164,7 @@ describe('Path Group E2E Tests', () => {
     });
 
     test('move and remove via reference', async () => {
-        const group = await groupFirstTwo('ref-test');
+        const group = await groupFirstTwo();
         await group.moveTo(150.0, 250.0);
 
         let groups = await pdf.page(1).getPathGroups();

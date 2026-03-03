@@ -114,30 +114,29 @@ export class PathGroupObject {
         this._internals = this._client as unknown as PathGroupInternals;
     }
 
-    get groupId(): string { return this._info.groupId; }
     get pathCount(): number { return this._info.pathCount; }
     get boundingBox(): Record<string, any> | null { return this._info.boundingBox; }
     get x(): number { return this._info.x; }
     get y(): number { return this._info.y; }
 
     async moveTo(x: number, y: number): Promise<boolean> {
-        return this._internals.movePathGroup(this._pageIndex, this.groupId, x, y);
+        return this._internals.movePathGroup(this._pageIndex, this._info.groupId, x, y);
     }
 
     async scale(factor: number): Promise<boolean> {
-        return this._internals.scalePathGroup(this._pageIndex, this.groupId, factor);
+        return this._internals.scalePathGroup(this._pageIndex, this._info.groupId, factor);
     }
 
     async rotate(degrees: number): Promise<boolean> {
-        return this._internals.rotatePathGroup(this._pageIndex, this.groupId, degrees);
+        return this._internals.rotatePathGroup(this._pageIndex, this._info.groupId, degrees);
     }
 
     async resize(width: number, height: number): Promise<boolean> {
-        return this._internals.resizePathGroup(this._pageIndex, this.groupId, width, height);
+        return this._internals.resizePathGroup(this._pageIndex, this._info.groupId, width, height);
     }
 
     async remove(): Promise<boolean> {
-        return this._internals.removePathGroup(this._pageIndex, this.groupId);
+        return this._internals.removePathGroup(this._pageIndex, this._info.groupId);
     }
 }
 

@@ -319,8 +319,8 @@ interface PDFDancerInternals {
 
     _findImages(position?: Position): Promise<ObjectRef[]>;
 
-    createPathGroup(pageIndex: number, groupId: string, pathIds: string[]): Promise<PathGroupObject>;
-    createPathGroupInRegion(pageIndex: number, groupId: string, region: BoundingRect): Promise<PathGroupObject>;
+    createPathGroup(pageIndex: number, pathIds: string[]): Promise<PathGroupObject>;
+    createPathGroupInRegion(pageIndex: number, region: BoundingRect): Promise<PathGroupObject>;
     listPathGroups(pageIndex: number): Promise<PathGroupObject[]>;
 }
 
@@ -354,14 +354,14 @@ class PageClient {
         return this._internals.toPathObjects(await this._internals.findPaths(Position.atPage(this._pageNumber)));
     }
 
-    async groupPaths(groupId: string, pathIds: string[]): Promise<PathGroupObject> {
+    async groupPaths(pathIds: string[]): Promise<PathGroupObject> {
         const pageIndex = this._pageNumber - 1;
-        return this._internals.createPathGroup(pageIndex, groupId, pathIds);
+        return this._internals.createPathGroup(pageIndex, pathIds);
     }
 
-    async groupPathsInRegion(groupId: string, region: BoundingRect): Promise<PathGroupObject> {
+    async groupPathsInRegion(region: BoundingRect): Promise<PathGroupObject> {
         const pageIndex = this._pageNumber - 1;
-        return this._internals.createPathGroupInRegion(pageIndex, groupId, region);
+        return this._internals.createPathGroupInRegion(pageIndex, region);
     }
 
     async getPathGroups(): Promise<PathGroupObject[]> {
@@ -1683,17 +1683,17 @@ export class PDFDancer {
 
     // Path Group Operations
 
-    private async createPathGroup(pageIndex: number, groupId: string, pathIds: string[]): Promise<PathGroupObject> {
-        const data: Record<string, any> = { pageIndex, groupId, pathIds };
+    private async createPathGroup(pageIndex: number, pathIds: string[]): Promise<PathGroupObject> {
+        const data: Record<string, any> = { pageIndex, groupId: null, pathIds };
         const response = await this._makeRequest('POST', '/pdf/path-group/create', data);
         this._invalidateCache();
         const info = PathGroupInfo.fromDict(await response.json());
         return new PathGroupObject(this, pageIndex, info);
     }
 
-    private async createPathGroupInRegion(pageIndex: number, groupId: string, region: BoundingRect): Promise<PathGroupObject> {
+    private async createPathGroupInRegion(pageIndex: number, region: BoundingRect): Promise<PathGroupObject> {
         const data: Record<string, any> = {
-            pageIndex, groupId,
+            pageIndex, groupId: null,
             region: { x: region.x, y: region.y, width: region.width, height: region.height }
         };
         const response = await this._makeRequest('POST', '/pdf/path-group/create', data);
