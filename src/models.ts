@@ -1477,11 +1477,11 @@ export class PathGroupInfo {
 
     static fromDict(data: Record<string, any>): PathGroupInfo {
         return new PathGroupInfo(
-            data.groupId || '',
-            data.pathCount || 0,
-            data.boundingBox || null,
-            data.x || 0,
-            data.y || 0
+            data.groupId ?? '',
+            data.pathCount ?? 0,
+            data.boundingBox ?? null,
+            data.x ?? 0,
+            data.y ?? 0
         );
     }
 }

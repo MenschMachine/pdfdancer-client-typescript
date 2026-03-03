@@ -51,7 +51,8 @@ import {
     TemplateReplaceRequest,
     TextObjectRef,
     TextStatus,
-    PathGroupInfo
+    PathGroupInfo,
+    PathGroupTransformType
 } from './models';
 import {ParagraphBuilder} from './paragraph-builder';
 import {ReplacementBuilder} from './replacement-builder';
@@ -317,6 +318,10 @@ interface PDFDancerInternals {
     findTextLines(pos?: Position): Promise<ObjectRef[]>;
 
     _findImages(position?: Position): Promise<ObjectRef[]>;
+
+    createPathGroup(pageIndex: number, groupId: string, pathIds: string[]): Promise<PathGroupObject>;
+    createPathGroupInRegion(pageIndex: number, groupId: string, region: BoundingRect): Promise<PathGroupObject>;
+    listPathGroups(pageIndex: number): Promise<PathGroupObject[]>;
 }
 
 class PageClient {
@@ -351,17 +356,17 @@ class PageClient {
 
     async groupPaths(groupId: string, pathIds: string[]): Promise<PathGroupObject> {
         const pageIndex = this._pageNumber - 1;
-        return (this._client as any).createPathGroup(pageIndex, groupId, pathIds);
+        return this._internals.createPathGroup(pageIndex, groupId, pathIds);
     }
 
     async groupPathsInRegion(groupId: string, region: BoundingRect): Promise<PathGroupObject> {
         const pageIndex = this._pageNumber - 1;
-        return (this._client as any).createPathGroupInRegion(pageIndex, groupId, region);
+        return this._internals.createPathGroupInRegion(pageIndex, groupId, region);
     }
 
     async getPathGroups(): Promise<PathGroupObject[]> {
         const pageIndex = this._pageNumber - 1;
-        return (this._client as any).listPathGroups(pageIndex);
+        return this._internals.listPathGroups(pageIndex);
     }
 
     async selectImages() {
@@ -1697,35 +1702,35 @@ export class PDFDancer {
         return new PathGroupObject(this, pageIndex, info);
     }
 
-    async movePathGroup(pageIndex: number, groupId: string, x: number, y: number): Promise<boolean> {
+    private async movePathGroup(pageIndex: number, groupId: string, x: number, y: number): Promise<boolean> {
         const data = { pageIndex, groupId, x, y };
         const response = await this._makeRequest('PUT', '/pdf/path-group/move', data);
         this._invalidateCache();
         return await response.json() as boolean;
     }
 
-    async scalePathGroup(pageIndex: number, groupId: string, factor: number): Promise<boolean> {
-        const data = { pageIndex, groupId, transformType: 'SCALE', scaleFactor: factor };
+    private async scalePathGroup(pageIndex: number, groupId: string, factor: number): Promise<boolean> {
+        const data = { pageIndex, groupId, transformType: PathGroupTransformType.SCALE, scaleFactor: factor };
         const response = await this._makeRequest('PUT', '/pdf/path-group/transform', data);
         this._invalidateCache();
         return await response.json() as boolean;
     }
 
-    async rotatePathGroup(pageIndex: number, groupId: string, degrees: number): Promise<boolean> {
-        const data = { pageIndex, groupId, transformType: 'ROTATE', rotationAngle: degrees };
+    private async rotatePathGroup(pageIndex: number, groupId: string, degrees: number): Promise<boolean> {
+        const data = { pageIndex, groupId, transformType: PathGroupTransformType.ROTATE, rotationAngle: degrees };
         const response = await this._makeRequest('PUT', '/pdf/path-group/transform', data);
         this._invalidateCache();
         return await response.json() as boolean;
     }
 
-    async resizePathGroup(pageIndex: number, groupId: string, width: number, height: number): Promise<boolean> {
-        const data = { pageIndex, groupId, transformType: 'RESIZE', targetWidth: width, targetHeight: height };
+    private async resizePathGroup(pageIndex: number, groupId: string, width: number, height: number): Promise<boolean> {
+        const data = { pageIndex, groupId, transformType: PathGroupTransformType.RESIZE, targetWidth: width, targetHeight: height };
         const response = await this._makeRequest('PUT', '/pdf/path-group/transform', data);
         this._invalidateCache();
         return await response.json() as boolean;
     }
 
-    async removePathGroup(pageIndex: number, groupId: string): Promise<boolean> {
+    private async removePathGroup(pageIndex: number, groupId: string): Promise<boolean> {
         const data = { pageIndex, groupId };
         const response = await this._makeRequest('DELETE', '/pdf/path-group/remove', data);
         this._invalidateCache();
