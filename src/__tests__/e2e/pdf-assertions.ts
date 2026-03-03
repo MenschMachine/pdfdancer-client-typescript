@@ -177,6 +177,22 @@ export class PDFAssertions {
         return this;
     }
 
+    getPdf(): PDFDancer {
+        return this.pdf;
+    }
+
+    async assertPathHasBounds(internalId: string, expectedWidth: number, expectedHeight: number, page = 1, epsilon = 1.0): Promise<this> {
+        const paths = await this.pdf.page(page).selectPaths();
+        const ref = paths.find(p => p.internalId === internalId);
+        expect(ref).toBeDefined();
+
+        const bounds = ref!.position.boundingRect;
+        expect(bounds).toBeDefined();
+        expectWithin(bounds!.width, expectedWidth, epsilon);
+        expectWithin(bounds!.height, expectedHeight, epsilon);
+        return this;
+    }
+
     async assertNumberOfPaths(expected: number, page?: number): Promise<this> {
         const paths = page === undefined ? await this.pdf.selectPaths() : await this.pdf.page(page).selectPaths();
         expect(paths.length).toBe(expected);
