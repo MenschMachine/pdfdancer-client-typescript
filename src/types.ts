@@ -10,6 +10,7 @@ import {
     ObjectRef,
     ObjectType,
     Paragraph,
+    PathGroupInfo,
     Position,
     RedactOptions,
     RedactResponse,
@@ -98,6 +99,55 @@ export class PathObject extends BaseObject {
     static fromRef(_client: PDFDancer, objectRef: ObjectRef) {
         return new PathObject(_client, objectRef.internalId, objectRef.type, objectRef.position);
     }
+}
+
+export class PathGroupObject {
+    private _client: PDFDancer;
+    private _pageIndex: number;
+    private _info: PathGroupInfo;
+    private _internals: PathGroupInternals;
+
+    constructor(client: PDFDancer, pageIndex: number, info: PathGroupInfo) {
+        this._client = client;
+        this._pageIndex = pageIndex;
+        this._info = info;
+        this._internals = this._client as unknown as PathGroupInternals;
+    }
+
+    get groupId(): string { return this._info.groupId; }
+    get pathCount(): number { return this._info.pathCount; }
+    get boundingBox(): Record<string, any> | null { return this._info.boundingBox; }
+    get x(): number { return this._info.x; }
+    get y(): number { return this._info.y; }
+
+    async moveTo(x: number, y: number): Promise<boolean> {
+        return this._internals.movePathGroup(this._pageIndex, this.groupId, x, y);
+    }
+
+    async scale(factor: number): Promise<boolean> {
+        return this._internals.scalePathGroup(this._pageIndex, this.groupId, factor);
+    }
+
+    async rotate(degrees: number): Promise<boolean> {
+        return this._internals.rotatePathGroup(this._pageIndex, this.groupId, degrees);
+    }
+
+    async resize(width: number, height: number): Promise<boolean> {
+        return this._internals.resizePathGroup(this._pageIndex, this.groupId, width, height);
+    }
+
+    async remove(): Promise<boolean> {
+        return this._internals.removePathGroup(this._pageIndex, this.groupId);
+    }
+}
+
+// Internal interface for path group operations
+interface PathGroupInternals {
+    movePathGroup(pageIndex: number, groupId: string, x: number, y: number): Promise<boolean>;
+    scalePathGroup(pageIndex: number, groupId: string, factor: number): Promise<boolean>;
+    rotatePathGroup(pageIndex: number, groupId: string, degrees: number): Promise<boolean>;
+    resizePathGroup(pageIndex: number, groupId: string, width: number, height: number): Promise<boolean>;
+    removePathGroup(pageIndex: number, groupId: string): Promise<boolean>;
 }
 
 export class ImageObject extends BaseObject {

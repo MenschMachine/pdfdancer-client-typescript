@@ -9,6 +9,7 @@ import {
     HttpClientException,
     PdfDancerException,
     SessionException,
+    SessionNotFoundException,
     ValidationException
 } from './exceptions';
 import {
@@ -49,7 +50,8 @@ import {
     ShapeType,
     TemplateReplaceRequest,
     TextObjectRef,
-    TextStatus
+    TextStatus,
+    PathGroupInfo
 } from './models';
 import {ParagraphBuilder} from './paragraph-builder';
 import {ReplacementBuilder} from './replacement-builder';
@@ -62,6 +64,7 @@ import {
     ImageObject,
     ParagraphObject,
     PathObject,
+    PathGroupObject,
     TextLineObject
 } from "./types";
 import {ImageBuilder} from "./image-builder";
@@ -344,6 +347,21 @@ class PageClient {
 
     async selectPaths() {
         return this._internals.toPathObjects(await this._internals.findPaths(Position.atPage(this._pageNumber)));
+    }
+
+    async groupPaths(groupId: string, pathIds: string[]): Promise<PathGroupObject> {
+        const pageIndex = this._pageNumber - 1;
+        return (this._client as any).createPathGroup(pageIndex, groupId, pathIds);
+    }
+
+    async groupPathsInRegion(groupId: string, region: BoundingRect): Promise<PathGroupObject> {
+        const pageIndex = this._pageNumber - 1;
+        return (this._client as any).createPathGroupInRegion(pageIndex, groupId, region);
+    }
+
+    async getPathGroups(): Promise<PathGroupObject[]> {
+        const pageIndex = this._pageNumber - 1;
+        return (this._client as any).listPathGroups(pageIndex);
     }
 
     async selectImages() {
@@ -1052,15 +1070,18 @@ export class PDFDancer {
                 }
             );
 
-            // Handle FontNotFoundException
+            // Handle 404 errors
             if (response.status === 404) {
                 try {
                     const errorData = await response.json() as any;
                     if (errorData.error === 'FontNotFoundException') {
                         throw new FontNotFoundException(errorData.message || 'Font not found');
                     }
+                    if (errorData.error === 'SessionNotFoundException') {
+                        throw new SessionNotFoundException(errorData.message || 'Session not found');
+                    }
                 } catch (e) {
-                    if (e instanceof FontNotFoundException) {
+                    if (e instanceof FontNotFoundException || e instanceof SessionNotFoundException) {
                         throw e;
                     }
                     // Continue with normal error handling if JSON parsing fails
@@ -1074,7 +1095,7 @@ export class PDFDancer {
 
             return response;
         } catch (error) {
-            if (error instanceof FontNotFoundException || error instanceof HttpClientException) {
+            if (error instanceof FontNotFoundException || error instanceof SessionNotFoundException || error instanceof HttpClientException) {
                 throw error;
             }
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -1653,6 +1674,68 @@ export class PDFDancer {
         this._invalidateCache();
 
         return result;
+    }
+
+    // Path Group Operations
+
+    private async createPathGroup(pageIndex: number, groupId: string, pathIds: string[]): Promise<PathGroupObject> {
+        const data: Record<string, any> = { pageIndex, groupId, pathIds };
+        const response = await this._makeRequest('POST', '/pdf/path-group/create', data);
+        this._invalidateCache();
+        const info = PathGroupInfo.fromDict(await response.json());
+        return new PathGroupObject(this, pageIndex, info);
+    }
+
+    private async createPathGroupInRegion(pageIndex: number, groupId: string, region: BoundingRect): Promise<PathGroupObject> {
+        const data: Record<string, any> = {
+            pageIndex, groupId,
+            region: { x: region.x, y: region.y, width: region.width, height: region.height }
+        };
+        const response = await this._makeRequest('POST', '/pdf/path-group/create', data);
+        this._invalidateCache();
+        const info = PathGroupInfo.fromDict(await response.json());
+        return new PathGroupObject(this, pageIndex, info);
+    }
+
+    async movePathGroup(pageIndex: number, groupId: string, x: number, y: number): Promise<boolean> {
+        const data = { pageIndex, groupId, x, y };
+        const response = await this._makeRequest('PUT', '/pdf/path-group/move', data);
+        this._invalidateCache();
+        return await response.json() as boolean;
+    }
+
+    async scalePathGroup(pageIndex: number, groupId: string, factor: number): Promise<boolean> {
+        const data = { pageIndex, groupId, transformType: 'SCALE', scaleFactor: factor };
+        const response = await this._makeRequest('PUT', '/pdf/path-group/transform', data);
+        this._invalidateCache();
+        return await response.json() as boolean;
+    }
+
+    async rotatePathGroup(pageIndex: number, groupId: string, degrees: number): Promise<boolean> {
+        const data = { pageIndex, groupId, transformType: 'ROTATE', rotationAngle: degrees };
+        const response = await this._makeRequest('PUT', '/pdf/path-group/transform', data);
+        this._invalidateCache();
+        return await response.json() as boolean;
+    }
+
+    async resizePathGroup(pageIndex: number, groupId: string, width: number, height: number): Promise<boolean> {
+        const data = { pageIndex, groupId, transformType: 'RESIZE', targetWidth: width, targetHeight: height };
+        const response = await this._makeRequest('PUT', '/pdf/path-group/transform', data);
+        this._invalidateCache();
+        return await response.json() as boolean;
+    }
+
+    async removePathGroup(pageIndex: number, groupId: string): Promise<boolean> {
+        const data = { pageIndex, groupId };
+        const response = await this._makeRequest('DELETE', '/pdf/path-group/remove', data);
+        this._invalidateCache();
+        return await response.json() as boolean;
+    }
+
+    private async listPathGroups(pageIndex: number): Promise<PathGroupObject[]> {
+        const response = await this._makeRequest('GET', `/pdf/page/${pageIndex}/path-groups`);
+        const infos = (await response.json() as any[]).map((d: any) => PathGroupInfo.fromDict(d));
+        return infos.map(info => new PathGroupObject(this, pageIndex, info));
     }
 
     /**

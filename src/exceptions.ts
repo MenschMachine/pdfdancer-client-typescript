@@ -53,6 +53,16 @@ export class SessionException extends PdfDancerException {
 }
 
 /**
+ * Exception raised when a session is not found (expired or invalid).
+ */
+export class SessionNotFoundException extends SessionException {
+    constructor(message: string) {
+        super(message);
+        this.name = 'SessionNotFoundException';
+    }
+}
+
+/**
  * Exception raised for input validation errors.
  */
 export class ValidationException extends PdfDancerException {

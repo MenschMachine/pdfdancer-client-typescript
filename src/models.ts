@@ -1459,3 +1459,29 @@ function positionToDict(position: Position): Record<string, any> {
 
     return result;
 }
+
+export enum PathGroupTransformType {
+    SCALE = 'SCALE',
+    ROTATE = 'ROTATE',
+    RESIZE = 'RESIZE'
+}
+
+export class PathGroupInfo {
+    constructor(
+        public groupId: string,
+        public pathCount: number,
+        public boundingBox: Record<string, any> | null,
+        public x: number,
+        public y: number
+    ) {}
+
+    static fromDict(data: Record<string, any>): PathGroupInfo {
+        return new PathGroupInfo(
+            data.groupId || '',
+            data.pathCount || 0,
+            data.boundingBox || null,
+            data.x || 0,
+            data.y || 0
+        );
+    }
+}

@@ -15,7 +15,8 @@ export {
   FontNotFoundException,
   ValidationException,
   HttpClientException,
-  SessionException
+  SessionException,
+  SessionNotFoundException
 } from './exceptions';
 
 export {
