@@ -17,9 +17,7 @@
     "test:watch": "jest --watch",
     "lint": "eslint src/",
     "prepublishOnly": "npm run build",
-    "release": "node scripts/release.js",
-    "release:skip-tests": "node scripts/release.js --skip-tests",
-    "release:test": "node scripts/test-release.js"
+    "release": "echo 'Use git tag v<version> && git push origin v<version> instead'"
   },
   "keywords": [
     "pdf",
