@@ -71,4 +71,5 @@ Test timeout is 120s per test. E2E helpers are in `src/__tests__/e2e/test-helper
 - `src/version.ts` is auto-generated from `package.json` version during `npm run build`
 - Release via tag push: `git tag v1.2.3 && git push origin v1.2.3`
 - GitHub Actions handles lint, test, build, and npm publish automatically
-- Requires `NPM_TOKEN`, `PDFDANCER_BASE_URL`, and `PDFDANCER_API_TOKEN` secrets in repo settings
+- Uses npm Trusted Publishing (OIDC) — no NPM_TOKEN needed, configure trusted publisher on npmjs.com
+- Requires `PDFDANCER_BASE_URL` and `PDFDANCER_API_TOKEN` secrets in repo settings for E2E tests
