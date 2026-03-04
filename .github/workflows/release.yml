@@ -39,9 +39,6 @@ jobs:
 
       - name: E2E tests
         run: npm run test:e2e
-        env:
-          PDFDANCER_BASE_URL: ${{ secrets.PDFDANCER_BASE_URL }}
-          PDFDANCER_API_TOKEN: ${{ secrets.PDFDANCER_API_TOKEN }}
 
       - name: Publish to npm
         run: npm publish --provenance --access public
