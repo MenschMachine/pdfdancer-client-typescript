@@ -1,0 +1,30 @@
+Implemented `clearClipping()` support in the SDK and added e2e coverage, then stopped at a backend bug per your instructions.
+
+**What I changed**
+- Added request models for clipping-clear APIs in [src/models.ts](/private/var/folders/cr/4kbt5vt168zbpw3tt9h9lpvc0000gn/T/propagate-pdfdancer-client-typescript-7LoPk9/src/models.ts:736):
+  - `ClearClippingRequest`
+  - `ClearPathGroupClippingRequest`
+- Added client API calls in [src/pdfdancer_v1.ts](/private/var/folders/cr/4kbt5vt168zbpw3tt9h9lpvc0000gn/T/propagate-pdfdancer-client-typescript-7LoPk9/src/pdfdancer_v1.ts:1686):
+  - `private clearClipping(objectRef)`
+  - `private clearPathGroupClipping(pageIndex, groupId)`
+- Exposed fluent methods in [src/types.ts](/private/var/folders/cr/4kbt5vt168zbpw3tt9h9lpvc0000gn/T/propagate-pdfdancer-client-typescript-7LoPk9/src/types.ts:25):
+  - `BaseObject.clearClipping()`
+  - `PathGroupObject.clearClipping()`
+- Added e2e tests in [clear-clipping.test.ts](/private/var/folders/cr/4kbt5vt168zbpw3tt9h9lpvc0000gn/T/propagate-pdfdancer-client-typescript-7LoPk9/src/__tests__/e2e/clear-clipping.test.ts:1):
+  - text line clear + move + deep assertions
+  - paragraph clear idempotency + move + assertions
+  - path clear + move + assertions
+  - path-group clear + transform (currently failing due server bug)
+
+**Server bug found (and documented)**
+- `PUT /pdf/path-group/clipping/clear` fails for page-1 groups when sent with `pageIndex: 0`:
+  - error: `Page number must be >= 1 (1-based indexing)`
+- Detailed report: [BUG_REPORT_path_group_clear_clipping_page_index.md](/private/var/folders/cr/4kbt5vt168zbpw3tt9h9lpvc0000gn/T/propagate-pdfdancer-client-typescript-7LoPk9/BUG_REPORT_path_group_clear_clipping_page_index.md:1)
+
+**Validation run**
+- `npm run test:unit -- --runInBand` ✅ (all unit tests passed)
+- `npm run build` ✅
+- `npm run test:e2e -- --runInBand src/__tests__/e2e/clear-clipping.test.ts`
+  - 3 passed
+  - 1 failed (path-group clear clipping bug above)
+

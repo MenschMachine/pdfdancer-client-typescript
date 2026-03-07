@@ -17,6 +17,8 @@ import {
     AddRequest,
     BoundingRect,
     ChangeFormFieldRequest,
+    ClearClippingRequest,
+    ClearPathGroupClippingRequest,
     Color,
     CommandResult,
     CreatePdfRequest,
@@ -1681,6 +1683,23 @@ export class PDFDancer {
         return result;
     }
 
+    /**
+     * Clears clipping from a specific object so it can render without inherited clipping constraints.
+     */
+    private async clearClipping(objectRef: ObjectRef): Promise<boolean> {
+        if (!objectRef) {
+            throw new ValidationException("Object reference cannot be null");
+        }
+
+        const requestData = new ClearClippingRequest(objectRef).toDict();
+        const response = await this._makeRequest('PUT', '/pdf/clipping/clear', requestData);
+        const result = await response.json() as boolean;
+
+        this._invalidateCache();
+
+        return result;
+    }
+
     // Path Group Operations
 
     private async createPathGroup(pageIndex: number, pathIds: string[]): Promise<PathGroupObject> {
@@ -1733,6 +1752,17 @@ export class PDFDancer {
     private async removePathGroup(pageIndex: number, groupId: string): Promise<boolean> {
         const data = { pageIndex, groupId };
         const response = await this._makeRequest('DELETE', '/pdf/path-group/remove', data);
+        this._invalidateCache();
+        return await response.json() as boolean;
+    }
+
+    private async clearPathGroupClipping(pageIndex: number, groupId: string): Promise<boolean> {
+        if (!groupId || !groupId.trim()) {
+            throw new ValidationException("Path group ID cannot be null or empty");
+        }
+
+        const data = new ClearPathGroupClippingRequest(pageIndex, groupId).toDict();
+        const response = await this._makeRequest('PUT', '/pdf/path-group/clipping/clear', data);
         this._invalidateCache();
         return await response.json() as boolean;
     }
