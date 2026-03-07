@@ -734,6 +734,42 @@ export class MoveRequest {
 }
 
 /**
+ * Request object for clear clipping operations on individual objects.
+ */
+export class ClearClippingRequest {
+    constructor(public objectRef: ObjectRef) {
+    }
+
+    toDict(): Record<string, any> {
+        return {
+            objectRef: {
+                internalId: this.objectRef.internalId,
+                position: positionToDict(this.objectRef.position),
+                type: this.objectRef.type
+            }
+        };
+    }
+}
+
+/**
+ * Request object for clear clipping operations on path groups.
+ */
+export class ClearPathGroupClippingRequest {
+    constructor(
+        public pageIndex: number,
+        public groupId: string
+    ) {
+    }
+
+    toDict(): Record<string, any> {
+        return {
+            pageIndex: this.pageIndex,
+            groupId: this.groupId
+        };
+    }
+}
+
+/**
  * Request object for add operations.
  */
 export class AddRequest {

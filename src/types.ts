@@ -27,6 +27,8 @@ interface PDFDancerInternals {
 
     move(objectRef: ObjectRef, position: Position): Promise<boolean>;
 
+    clearClipping(objectRef: ObjectRef): Promise<boolean>;
+
     changeFormField(formFieldRef: FormFieldRef, value: string): Promise<boolean>;
 
     modifyTextLine(objectRef: ObjectRef, newText: string): Promise<CommandResult>;
@@ -67,6 +69,10 @@ export class BaseObject<TRef extends ObjectRef = ObjectRef> {
 
     async moveTo(x: number, y: number) {
         return this._internals.move(this.ref(), Position.atPageCoordinates(this.position.pageNumber!, x, y));
+    }
+
+    async clearClipping(): Promise<boolean> {
+        return this._internals.clearClipping(this.ref());
     }
 
     /**
@@ -138,6 +144,10 @@ export class PathGroupObject {
     async remove(): Promise<boolean> {
         return this._internals.removePathGroup(this._pageIndex, this._info.groupId);
     }
+
+    async clearClipping(): Promise<boolean> {
+        return this._internals.clearPathGroupClipping(this._pageIndex, this._info.groupId);
+    }
 }
 
 // Internal interface for path group operations
@@ -147,6 +157,7 @@ interface PathGroupInternals {
     rotatePathGroup(pageIndex: number, groupId: string, degrees: number): Promise<boolean>;
     resizePathGroup(pageIndex: number, groupId: string, width: number, height: number): Promise<boolean>;
     removePathGroup(pageIndex: number, groupId: string): Promise<boolean>;
+    clearPathGroupClipping(pageIndex: number, groupId: string): Promise<boolean>;
 }
 
 export class ImageObject extends BaseObject {
