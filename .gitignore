@@ -30,5 +30,5 @@ jwt-token*.txt
 .aider*
 /.run/
 .clinic
-.propagate.*md
+.propagate*md
 /.last-message.txt
