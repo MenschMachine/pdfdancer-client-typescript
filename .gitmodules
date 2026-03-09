@@ -1,0 +1,3 @@
+[submodule "fixtures/examples"]
+	path = fixtures/examples
+	url = git@github.com:MenschMachine/pdfdancer-examples.git
