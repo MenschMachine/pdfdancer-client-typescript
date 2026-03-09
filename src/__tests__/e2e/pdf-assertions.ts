@@ -22,6 +22,7 @@ interface DrawEvent {
 interface DrawEvents {
     paths: DrawEvent[];
     images: DrawEvent[];
+    texts: DrawEvent[];
 }
 
 interface ParsedObject {
@@ -247,36 +248,91 @@ export class PDFAssertions {
         return (right - left) * (top - bottom);
     }
 
+    private static bboxCenterDistance(bbox: BBox, x: number, y: number): number {
+        const centerX = (bbox[0] + bbox[2]) / 2;
+        const centerY = (bbox[1] + bbox[3]) / 2;
+        return Math.hypot(centerX - x, centerY - y);
+    }
+
+    private static isWordChar(char: string | undefined): boolean {
+        return char !== undefined && /[A-Za-z0-9_]/.test(char);
+    }
+
+    private static isTokenBoundary(text: string, index: number, tokenLength: number): boolean {
+        const before = index > 0 ? text[index - 1] : undefined;
+        const after = index + tokenLength < text.length ? text[index + tokenLength] : undefined;
+        return !PDFAssertions.isWordChar(before) && !PDFAssertions.isWordChar(after);
+    }
+
+    private static indexOfToken(text: string, token: string, fromIndex = 0): number {
+        let index = text.indexOf(token, fromIndex);
+        while (index !== -1) {
+            if (PDFAssertions.isTokenBoundary(text, index, token.length)) {
+                return index;
+            }
+            index = text.indexOf(token, index + 1);
+        }
+        return -1;
+    }
+
+    private static skipLineBreak(text: string, index: number): number {
+        if (text.startsWith('\r\n', index)) {
+            return index + 2;
+        }
+        if (text[index] === '\r' || text[index] === '\n') {
+            return index + 1;
+        }
+        return index;
+    }
+
+    private static findEndObjIndex(text: string, bodyStart: number): number {
+        let cursor = bodyStart;
+        while (cursor < text.length) {
+            const streamIndex = PDFAssertions.indexOfToken(text, 'stream', cursor);
+            const endObjIndex = PDFAssertions.indexOfToken(text, 'endobj', cursor);
+            if (endObjIndex === -1) {
+                return -1;
+            }
+            if (streamIndex === -1 || endObjIndex < streamIndex) {
+                return endObjIndex;
+            }
+
+            const streamContentStart = PDFAssertions.skipLineBreak(text, streamIndex + 'stream'.length);
+            const endStreamIndex = PDFAssertions.indexOfToken(text, 'endstream', streamContentStart);
+            if (endStreamIndex === -1) {
+                return endObjIndex;
+            }
+            cursor = endStreamIndex + 'endstream'.length;
+        }
+        return -1;
+    }
+
     private static parsePdfObjects(pdfBytes: Buffer): Map<number, ParsedObject> {
         const rawPdf = pdfBytes.toString('latin1');
         const objects = new Map<number, ParsedObject>();
-        const objectRegex = /(\d+)\s+(\d+)\s+obj\b/g;
+        const objectRegex = /(^|[\r\n])(\d+)\s+(\d+)\s+obj\b/gm;
         let match: RegExpExecArray | null;
 
         while ((match = objectRegex.exec(rawPdf)) !== null) {
-            const objectId = parseInt(match[1], 10);
+            const objectId = parseInt(match[2], 10);
             const bodyStart = objectRegex.lastIndex;
-            const endObjIndex = rawPdf.indexOf('endobj', bodyStart);
+            const endObjIndex = PDFAssertions.findEndObjIndex(rawPdf, bodyStart);
             if (endObjIndex === -1) {
                 break;
             }
 
             const body = rawPdf.slice(bodyStart, endObjIndex);
-            const streamIndex = body.indexOf('stream');
+            const streamIndex = PDFAssertions.indexOfToken(body, 'stream');
             const parsed: ParsedObject = {
                 objectId,
                 dictionary: streamIndex >= 0 ? body.slice(0, streamIndex).trim() : body.trim()
             };
 
             if (streamIndex >= 0) {
-                const endStreamRel = body.indexOf('endstream', streamIndex);
+                const streamStartRel = PDFAssertions.skipLineBreak(body, streamIndex + 'stream'.length);
+                const endStreamRel = PDFAssertions.indexOfToken(body, 'endstream', streamStartRel);
                 if (endStreamRel >= 0) {
-                    let streamStart = bodyStart + streamIndex + 'stream'.length;
-                    if (rawPdf.startsWith('\r\n', streamStart)) {
-                        streamStart += 2;
-                    } else if (rawPdf[streamStart] === '\n' || rawPdf[streamStart] === '\r') {
-                        streamStart += 1;
-                    }
+                    const streamStart = bodyStart + streamStartRel;
 
                     let streamEnd = bodyStart + endStreamRel;
                     while (
@@ -380,24 +436,81 @@ export class PDFAssertions {
         return stream.toString('latin1');
     }
 
+    private extractPageObjectIdsInOrder(objects: Map<number, ParsedObject>): number[] {
+        const catalog = Array.from(objects.values()).find(obj => /\/Type\s*\/Catalog\b/.test(obj.dictionary));
+        const rootPagesRefMatch = catalog?.dictionary.match(/\/Pages\s+(\d+)\s+\d+\s+R/);
+
+        let rootPagesObjectId = rootPagesRefMatch ? parseInt(rootPagesRefMatch[1], 10) : null;
+        if (rootPagesObjectId === null) {
+            const rootPagesObject = Array.from(objects.values()).find(obj =>
+                /\/Type\s*\/Pages\b/.test(obj.dictionary) &&
+                !/\/Parent\s+\d+\s+\d+\s+R/.test(obj.dictionary)
+            );
+            rootPagesObjectId = rootPagesObject?.objectId ?? null;
+        }
+
+        if (rootPagesObjectId === null) {
+            return [];
+        }
+
+        const ordered: number[] = [];
+        const visited = new Set<number>();
+
+        const walk = (objectId: number): void => {
+            if (visited.has(objectId)) {
+                return;
+            }
+            visited.add(objectId);
+            const object = objects.get(objectId);
+            if (!object) {
+                return;
+            }
+
+            if (/\/Type\s*\/Page\b/.test(object.dictionary) && !/\/Type\s*\/Pages\b/.test(object.dictionary)) {
+                ordered.push(objectId);
+                return;
+            }
+
+            const kidsMatch = object.dictionary.match(/\/Kids\s*\[([\s\S]*?)]/);
+            if (!kidsMatch) {
+                return;
+            }
+
+            const childRefs = PDFAssertions.extractReferencedObjectIds(kidsMatch[1]);
+            for (const childRef of childRefs) {
+                walk(childRef);
+            }
+        };
+
+        walk(rootPagesObjectId);
+        return ordered;
+    }
+
     private extractPageContentObjectIds(objects: Map<number, ParsedObject>, page: number): number[] {
-        const pageObjects = Array.from(objects.values())
+        const orderedPageObjectIds = this.extractPageObjectIdsInOrder(objects);
+        const fallbackPageObjects = Array.from(objects.values())
             .filter(obj => /\/Type\s*\/Page\b/.test(obj.dictionary) && !/\/Type\s*\/Pages\b/.test(obj.dictionary))
-            .sort((a, b) => a.objectId - b.objectId);
+            .sort((a, b) => a.objectId - b.objectId)
+            .map(obj => obj.objectId);
+        const pageObjectIds = orderedPageObjectIds.length > 0 ? orderedPageObjectIds : fallbackPageObjects;
 
         const streamObjectIds = Array.from(objects.values())
             .filter(obj => obj.stream)
             .map(obj => obj.objectId);
 
-        if (pageObjects.length === 0) {
+        if (pageObjectIds.length === 0) {
             return streamObjectIds;
         }
 
-        if (page < 1 || page > pageObjects.length) {
+        if (page < 1 || page > pageObjectIds.length) {
             return streamObjectIds;
         }
 
-        const pageObject = pageObjects[page - 1];
+        const pageObject = objects.get(pageObjectIds[page - 1]);
+        if (!pageObject) {
+            return streamObjectIds;
+        }
+
         const contentsMatch = pageObject.dictionary.match(/\/Contents\s+(\[[\s\S]*?]|\d+\s+\d+\s+R)/);
         if (!contentsMatch) {
             return streamObjectIds;
@@ -418,6 +531,7 @@ export class PDFAssertions {
         const contentObjectIds = this.extractPageContentObjectIds(objects, page);
         const pathEvents: DrawEvent[] = [];
         const imageEvents: DrawEvent[] = [];
+        const textEvents: DrawEvent[] = [];
         const paintOps = new Set(['S', 's', 'f', 'F', 'f*', 'B', 'B*', 'b', 'b*']);
         const pathOps = new Set(['m', 'l', 'c', 'v', 'y', 'h', 're']);
 
@@ -441,20 +555,51 @@ export class PDFAssertions {
                 token === 'W*' ||
                 token === 'q' ||
                 token === 'Q' ||
-                token === 'cm'
+                token === 'cm' ||
+                token === 'BT' ||
+                token === 'ET' ||
+                token === 'Tj' ||
+                token === 'TJ' ||
+                token === 'Tf' ||
+                token === 'Tm' ||
+                token === 'Td' ||
+                token === 'TD' ||
+                token === 'T*' ||
+                token === '\'' ||
+                token === '"'
             );
             if (!hasRelevantOps) {
                 continue;
             }
-            const stateStack: Array<{hasClip: boolean; pendingClip: boolean; ctm: Matrix}> = [];
+            const stateStack: Array<{
+                hasClip: boolean;
+                pendingClip: boolean;
+                ctm: Matrix;
+                inText: boolean;
+                textMatrix: Matrix;
+                textLineMatrix: Matrix;
+                textLeading: number;
+                fontSize: number;
+            }> = [];
             let hasClip = false;
             let pendingClip = false;
             let ctm: Matrix = [1, 0, 0, 1, 0, 0];
+            let inText = false;
+            let textMatrix: Matrix = [1, 0, 0, 1, 0, 0];
+            let textLineMatrix: Matrix = [1, 0, 0, 1, 0, 0];
+            let textLeading = 0;
+            let fontSize = 12;
             let currentPathPoints: Array<[number, number]> = [];
             let operands: string[] = [];
 
             const addPathPoint = (rawX: number, rawY: number): void => {
                 currentPathPoints.push(PDFAssertions.applyMatrix(ctm, rawX, rawY));
+            };
+
+            const moveTextToNextLine = (): void => {
+                const translation: Matrix = [1, 0, 0, 1, 0, -textLeading];
+                textLineMatrix = PDFAssertions.matrixMultiply(translation, textLineMatrix);
+                textMatrix = [...textLineMatrix] as Matrix;
             };
 
             for (const token of tokens) {
@@ -465,7 +610,16 @@ export class PDFAssertions {
                 }
 
                 if (token === 'q') {
-                    stateStack.push({hasClip, pendingClip, ctm: [...ctm] as Matrix});
+                    stateStack.push({
+                        hasClip,
+                        pendingClip,
+                        ctm: [...ctm] as Matrix,
+                        inText,
+                        textMatrix: [...textMatrix] as Matrix,
+                        textLineMatrix: [...textLineMatrix] as Matrix,
+                        textLeading,
+                        fontSize
+                    });
                     operands = [];
                     continue;
                 }
@@ -475,6 +629,11 @@ export class PDFAssertions {
                         hasClip = previous.hasClip;
                         pendingClip = previous.pendingClip;
                         ctm = previous.ctm;
+                        inText = previous.inText;
+                        textMatrix = previous.textMatrix;
+                        textLineMatrix = previous.textLineMatrix;
+                        textLeading = previous.textLeading;
+                        fontSize = previous.fontSize;
                     }
                     currentPathPoints = [];
                     operands = [];
@@ -499,6 +658,69 @@ export class PDFAssertions {
                         pendingClip = false;
                     }
                     currentPathPoints = [];
+                    operands = [];
+                    continue;
+                }
+
+                if (token === 'BT') {
+                    inText = true;
+                    textMatrix = [1, 0, 0, 1, 0, 0];
+                    textLineMatrix = [1, 0, 0, 1, 0, 0];
+                    operands = [];
+                    continue;
+                }
+                if (token === 'ET') {
+                    inText = false;
+                    operands = [];
+                    continue;
+                }
+                if (token === 'Tf') {
+                    const values = PDFAssertions.parseNumberOperands(operands, 1);
+                    if (values) {
+                        fontSize = Math.abs(values[0]);
+                    }
+                    operands = [];
+                    continue;
+                }
+                if (token === 'Tm') {
+                    const values = PDFAssertions.parseNumberOperands(operands, 6);
+                    if (values) {
+                        textMatrix = values as Matrix;
+                        textLineMatrix = [...textMatrix] as Matrix;
+                    }
+                    operands = [];
+                    continue;
+                }
+                if (token === 'Td' || token === 'TD') {
+                    const values = PDFAssertions.parseNumberOperands(operands, 2);
+                    if (values) {
+                        const translation: Matrix = [1, 0, 0, 1, values[0], values[1]];
+                        textLineMatrix = PDFAssertions.matrixMultiply(translation, textLineMatrix);
+                        textMatrix = [...textLineMatrix] as Matrix;
+                        if (token === 'TD') {
+                            textLeading = -values[1];
+                        }
+                    }
+                    operands = [];
+                    continue;
+                }
+                if (token === 'T*') {
+                    moveTextToNextLine();
+                    operands = [];
+                    continue;
+                }
+                if (inText && (token === 'Tj' || token === 'TJ' || token === '\'' || token === '"')) {
+                    if (token === '\'' || token === '"') {
+                        moveTextToNextLine();
+                    }
+
+                    const [textX, textY] = PDFAssertions.applyMatrix(ctm, textMatrix[4], textMatrix[5]);
+                    const padding = Math.max(4, fontSize * 0.5);
+                    textEvents.push({
+                        bbox: [textX - padding, textY - padding, textX + padding, textY + padding],
+                        clipped: hasClip || pendingClip,
+                        paintOp: token
+                    });
                     operands = [];
                     continue;
                 }
@@ -575,7 +797,7 @@ export class PDFAssertions {
             }
         }
 
-        const events = {paths: pathEvents, images: imageEvents};
+        const events = {paths: pathEvents, images: imageEvents, texts: textEvents};
         this.drawEventsCache.set(page, events);
         return events;
     }
@@ -625,6 +847,26 @@ export class PDFAssertions {
         return Boolean(best.clipped);
     }
 
+    private async findTextlineClippingState(text: string, page: number): Promise<boolean> {
+        const lines = await this.pdf.page(page).selectTextLinesStartingWith(text);
+        expect(lines.length).toBeGreaterThan(0);
+
+        const x = lines[0].position.getX();
+        const y = lines[0].position.getY();
+        expect(x).toBeDefined();
+        expect(y).toBeDefined();
+
+        const events = this.extractPageDrawEvents(page).texts;
+        const matches = events.filter(event => PDFAssertions.bboxContainsPoint(event.bbox, x!, y!, 2.0));
+        expect(matches.length).toBeGreaterThan(0);
+        const best = matches.reduce((previous, current) =>
+            PDFAssertions.bboxCenterDistance(current.bbox, x!, y!) <
+            PDFAssertions.bboxCenterDistance(previous.bbox, x!, y!) ? current : previous
+        );
+
+        return Boolean(best.clipped);
+    }
+
     async assertPathHasClipping(internalId: string, page = 1): Promise<this> {
         const clipped = await this.findPathClippingState(internalId, page);
         expect(clipped).toBe(true);
@@ -645,6 +887,18 @@ export class PDFAssertions {
 
     async assertImageHasNoClipping(internalId: string, page = 1): Promise<this> {
         const clipped = await this.findImageClippingState(internalId, page);
+        expect(clipped).toBe(false);
+        return this;
+    }
+
+    async assertTextlineHasClipping(text: string, page = 1): Promise<this> {
+        const clipped = await this.findTextlineClippingState(text, page);
+        expect(clipped).toBe(true);
+        return this;
+    }
+
+    async assertTextlineHasNoClipping(text: string, page = 1): Promise<this> {
+        const clipped = await this.findTextlineClippingState(text, page);
         expect(clipped).toBe(false);
         return this;
     }
