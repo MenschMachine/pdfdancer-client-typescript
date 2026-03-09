@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ '**' ]
+    branches: [ main ]
   pull_request:
     branches: [ '**' ]
 
@@ -24,7 +24,7 @@ jobs:
       - name: Set API base URL
         shell: bash
         run: |
-          if [ -f .api-url ]; then
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ -f .api-url ]; then
             URL=$(cat .api-url | tr -d '[:space:]')
           fi
           echo "PDFDANCER_BASE_URL=${URL:-https://api-staging.pdfdancer.com}" >> "$GITHUB_ENV"
@@ -75,7 +75,7 @@ jobs:
       - name: Set API base URL
         shell: bash
         run: |
-          if [ -f .api-url ]; then
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ -f .api-url ]; then
             URL=$(cat .api-url | tr -d '[:space:]')
           fi
           echo "PDFDANCER_BASE_URL=${URL:-https://api-staging.pdfdancer.com}" >> "$GITHUB_ENV"
