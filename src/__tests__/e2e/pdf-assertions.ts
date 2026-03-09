@@ -285,26 +285,62 @@ export class PDFAssertions {
         return index;
     }
 
-    private static findEndObjIndex(text: string, bodyStart: number): number {
-        let cursor = bodyStart;
-        while (cursor < text.length) {
-            const streamIndex = PDFAssertions.indexOfToken(text, 'stream', cursor);
-            const endObjIndex = PDFAssertions.indexOfToken(text, 'endobj', cursor);
-            if (endObjIndex === -1) {
-                return -1;
-            }
-            if (streamIndex === -1 || endObjIndex < streamIndex) {
-                return endObjIndex;
-            }
-
-            const streamContentStart = PDFAssertions.skipLineBreak(text, streamIndex + 'stream'.length);
-            const endStreamIndex = PDFAssertions.indexOfToken(text, 'endstream', streamContentStart);
-            if (endStreamIndex === -1) {
-                return endObjIndex;
-            }
-            cursor = endStreamIndex + 'endstream'.length;
+    private static trimTrailingLineBreaks(text: string, start: number, end: number): number {
+        let cursor = end;
+        while (cursor > start && (text[cursor - 1] === '\n' || text[cursor - 1] === '\r')) {
+            cursor -= 1;
         }
-        return -1;
+        return cursor;
+    }
+
+    private static parseIntegerToken(value: string): number | null {
+        const match = value.trim().match(/^([+-]?\d+)/);
+        if (!match) {
+            return null;
+        }
+        const parsed = Number(match[1]);
+        if (!Number.isInteger(parsed) || parsed < 0) {
+            return null;
+        }
+        return parsed;
+    }
+
+    private static resolveLengthFromRawPdf(rawPdf: string, objectId: number): number | null {
+        const pattern = new RegExp(`(^|[\\r\\n])${objectId}\\s+\\d+\\s+obj\\b([\\s\\S]*?)endobj`, 'm');
+        const match = rawPdf.match(pattern);
+        if (!match) {
+            return null;
+        }
+        return PDFAssertions.parseIntegerToken(match[2]);
+    }
+
+    private static extractStreamLength(
+        dictionary: string,
+        parsedObjects: Map<number, ParsedObject>,
+        rawPdf: string
+    ): number | null {
+        const lengthRefMatch = dictionary.match(/\/Length\s+(\d+)\s+\d+\s+R\b/);
+        if (lengthRefMatch) {
+            const lengthObjectId = parseInt(lengthRefMatch[1], 10);
+            const fromParsed = parsedObjects.get(lengthObjectId);
+            if (fromParsed) {
+                const parsedLength = PDFAssertions.parseIntegerToken(fromParsed.dictionary);
+                if (parsedLength !== null) {
+                    return parsedLength;
+                }
+            }
+            return PDFAssertions.resolveLengthFromRawPdf(rawPdf, lengthObjectId);
+        }
+
+        const directLengthMatch = dictionary.match(/\/Length\s+(\d+)\b(?!\s+\d+\s+R\b)/);
+        if (!directLengthMatch) {
+            return null;
+        }
+        const directLength = Number(directLengthMatch[1]);
+        if (!Number.isInteger(directLength) || directLength < 0) {
+            return null;
+        }
+        return directLength;
     }
 
     private static parsePdfObjects(pdfBytes: Buffer): Map<number, ParsedObject> {
@@ -316,32 +352,58 @@ export class PDFAssertions {
         while ((match = objectRegex.exec(rawPdf)) !== null) {
             const objectId = parseInt(match[2], 10);
             const bodyStart = objectRegex.lastIndex;
-            const endObjIndex = PDFAssertions.findEndObjIndex(rawPdf, bodyStart);
-            if (endObjIndex === -1) {
+            const firstEndObjIndex = PDFAssertions.indexOfToken(rawPdf, 'endobj', bodyStart);
+            if (firstEndObjIndex === -1) {
                 break;
             }
 
-            const body = rawPdf.slice(bodyStart, endObjIndex);
-            const streamIndex = PDFAssertions.indexOfToken(body, 'stream');
-            const parsed: ParsedObject = {
-                objectId,
-                dictionary: streamIndex >= 0 ? body.slice(0, streamIndex).trim() : body.trim()
-            };
+            const streamIndex = PDFAssertions.indexOfToken(rawPdf, 'stream', bodyStart);
+            if (streamIndex === -1 || streamIndex > firstEndObjIndex) {
+                const body = rawPdf.slice(bodyStart, firstEndObjIndex);
+                objects.set(objectId, {
+                    objectId,
+                    dictionary: body.trim()
+                });
+                objectRegex.lastIndex = firstEndObjIndex + 'endobj'.length;
+                continue;
+            }
 
-            if (streamIndex >= 0) {
-                const streamStartRel = PDFAssertions.skipLineBreak(body, streamIndex + 'stream'.length);
-                const endStreamRel = PDFAssertions.indexOfToken(body, 'endstream', streamStartRel);
-                if (endStreamRel >= 0) {
-                    const streamStart = bodyStart + streamStartRel;
+            const dictionary = rawPdf.slice(bodyStart, streamIndex).trim();
+            const parsed: ParsedObject = {objectId, dictionary};
+            const streamStart = PDFAssertions.skipLineBreak(rawPdf, streamIndex + 'stream'.length);
+            const streamLength = PDFAssertions.extractStreamLength(dictionary, objects, rawPdf);
 
-                    let streamEnd = bodyStart + endStreamRel;
-                    while (
-                        streamEnd > streamStart &&
-                        (rawPdf[streamEnd - 1] === '\n' || rawPdf[streamEnd - 1] === '\r')
-                    ) {
-                        streamEnd -= 1;
+            let endObjIndex = firstEndObjIndex;
+            if (streamLength !== null) {
+                const streamEnd = Math.min(pdfBytes.length, streamStart + streamLength);
+                parsed.stream = Buffer.from(pdfBytes.subarray(streamStart, streamEnd));
+
+                const endStreamSearchStart = PDFAssertions.skipLineBreak(rawPdf, streamEnd);
+                const endStreamIndex = PDFAssertions.indexOfToken(rawPdf, 'endstream', endStreamSearchStart);
+                if (endStreamIndex !== -1) {
+                    const resolvedEndObjIndex = PDFAssertions.indexOfToken(
+                        rawPdf,
+                        'endobj',
+                        endStreamIndex + 'endstream'.length
+                    );
+                    if (resolvedEndObjIndex !== -1) {
+                        endObjIndex = resolvedEndObjIndex;
                     }
+                }
+            } else {
+                const endStreamIndex = PDFAssertions.indexOfToken(rawPdf, 'endstream', streamStart);
+                if (endStreamIndex !== -1) {
+                    const streamEnd = PDFAssertions.trimTrailingLineBreaks(rawPdf, streamStart, endStreamIndex);
                     parsed.stream = Buffer.from(pdfBytes.subarray(streamStart, streamEnd));
+
+                    const resolvedEndObjIndex = PDFAssertions.indexOfToken(
+                        rawPdf,
+                        'endobj',
+                        endStreamIndex + 'endstream'.length
+                    );
+                    if (resolvedEndObjIndex !== -1) {
+                        endObjIndex = resolvedEndObjIndex;
+                    }
                 }
             }
 
@@ -534,6 +596,35 @@ export class PDFAssertions {
         const textEvents: DrawEvent[] = [];
         const paintOps = new Set(['S', 's', 'f', 'F', 'f*', 'B', 'B*', 'b', 'b*']);
         const pathOps = new Set(['m', 'l', 'c', 'v', 'y', 'h', 're']);
+        const stateStack: Array<{
+            hasClip: boolean;
+            pendingClip: boolean;
+            ctm: Matrix;
+            inText: boolean;
+            textMatrix: Matrix;
+            textLineMatrix: Matrix;
+            textLeading: number;
+            fontSize: number;
+        }> = [];
+        let hasClip = false;
+        let pendingClip = false;
+        let ctm: Matrix = [1, 0, 0, 1, 0, 0];
+        let inText = false;
+        let textMatrix: Matrix = [1, 0, 0, 1, 0, 0];
+        let textLineMatrix: Matrix = [1, 0, 0, 1, 0, 0];
+        let textLeading = 0;
+        let fontSize = 12;
+        let currentPathPoints: Array<[number, number]> = [];
+
+        const addPathPoint = (rawX: number, rawY: number): void => {
+            currentPathPoints.push(PDFAssertions.applyMatrix(ctm, rawX, rawY));
+        };
+
+        const moveTextToNextLine = (): void => {
+            const translation: Matrix = [1, 0, 0, 1, 0, -textLeading];
+            textLineMatrix = PDFAssertions.matrixMultiply(translation, textLineMatrix);
+            textMatrix = [...textLineMatrix] as Matrix;
+        };
 
         for (const contentObjectId of contentObjectIds) {
             const object = objects.get(contentObjectId);
@@ -571,36 +662,8 @@ export class PDFAssertions {
             if (!hasRelevantOps) {
                 continue;
             }
-            const stateStack: Array<{
-                hasClip: boolean;
-                pendingClip: boolean;
-                ctm: Matrix;
-                inText: boolean;
-                textMatrix: Matrix;
-                textLineMatrix: Matrix;
-                textLeading: number;
-                fontSize: number;
-            }> = [];
-            let hasClip = false;
-            let pendingClip = false;
-            let ctm: Matrix = [1, 0, 0, 1, 0, 0];
-            let inText = false;
-            let textMatrix: Matrix = [1, 0, 0, 1, 0, 0];
-            let textLineMatrix: Matrix = [1, 0, 0, 1, 0, 0];
-            let textLeading = 0;
-            let fontSize = 12;
-            let currentPathPoints: Array<[number, number]> = [];
+
             let operands: string[] = [];
-
-            const addPathPoint = (rawX: number, rawY: number): void => {
-                currentPathPoints.push(PDFAssertions.applyMatrix(ctm, rawX, rawY));
-            };
-
-            const moveTextToNextLine = (): void => {
-                const translation: Matrix = [1, 0, 0, 1, 0, -textLeading];
-                textLineMatrix = PDFAssertions.matrixMultiply(translation, textLineMatrix);
-                textMatrix = [...textLineMatrix] as Matrix;
-            };
 
             for (const token of tokens) {
                 const isOperator = /^[A-Za-z*'"]+$/.test(token);
