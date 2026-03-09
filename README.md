@@ -136,7 +136,7 @@ async function workWithForms() {
 }
 ```
 
-Selectors return typed objects (`ParagraphObject`, `TextLineObject`, `ImageObject`, `FormFieldObject`, `PageRef`, …) with helpers such as `delete()`, `moveTo(x, y)`, or `edit()` depending on the object type.
+Selectors return typed objects (`ParagraphObject`, `TextLineObject`, `ImageObject`, `FormFieldObject`, `PageRef`, …) with helpers such as `delete()`, `moveTo(x, y)`, `clearClipping()`, or `edit()` depending on the object type.
 
 ## Configuration
 

@@ -322,6 +322,7 @@ interface PDFDancerInternals {
     createPathGroup(pageIndex: number, pathIds: string[]): Promise<PathGroupObject>;
     createPathGroupInRegion(pageIndex: number, region: BoundingRect): Promise<PathGroupObject>;
     listPathGroups(pageIndex: number): Promise<PathGroupObject[]>;
+    clearPathGroupClipping(pageNumber: number, groupId: string): Promise<boolean>;
 }
 
 class PageClient {
@@ -1607,6 +1608,10 @@ export class PDFDancer {
         return this._redactTargets(targets, options);
     }
 
+    async clearClipping(objectRef: ObjectRef): Promise<boolean> {
+        return this._clearClipping(objectRef);
+    }
+
     /**
      * Internal method to redact by targets (used by BaseObject.redact())
      */
@@ -1635,6 +1640,20 @@ export class PDFDancer {
         const result = await response.json() as RedactResponse;
 
         // Invalidate cache after mutation
+        this._invalidateCache();
+
+        return result;
+    }
+
+    private async _clearClipping(objectRef: ObjectRef): Promise<boolean> {
+        if (!objectRef) {
+            throw new ValidationException("Object reference cannot be null");
+        }
+
+        const requestData = {objectRef: objectRef.toDict()};
+        const response = await this._makeRequest('PUT', '/pdf/clipping/clear', requestData);
+        const result = await response.json() as boolean;
+
         this._invalidateCache();
 
         return result;
@@ -1741,6 +1760,23 @@ export class PDFDancer {
         const response = await this._makeRequest('GET', `/pdf/page/${pageIndex}/path-groups`);
         const infos = (await response.json() as any[]).map((d: any) => PathGroupInfo.fromDict(d));
         return infos.map(info => new PathGroupObject(this, pageIndex, info));
+    }
+
+    async clearPathGroupClipping(pageNumber: number, groupId: string): Promise<boolean> {
+        return this._clearPathGroupClipping(pageNumber, groupId);
+    }
+
+    private async _clearPathGroupClipping(pageNumber: number, groupId: string): Promise<boolean> {
+        this._validatePageNumber(pageNumber, 'pageNumber');
+        if (!groupId || !groupId.trim()) {
+            throw new ValidationException("Group ID cannot be null or empty");
+        }
+
+        const data = {pageNumber, groupId};
+        const response = await this._makeRequest('PUT', '/pdf/path-group/clipping/clear', data);
+        const result = await response.json() as boolean;
+        this._invalidateCache();
+        return result;
     }
 
     /**

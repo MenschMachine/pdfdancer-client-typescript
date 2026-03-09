@@ -27,6 +27,8 @@ interface PDFDancerInternals {
 
     move(objectRef: ObjectRef, position: Position): Promise<boolean>;
 
+    clearClipping(objectRef: ObjectRef): Promise<boolean>;
+
     changeFormField(formFieldRef: FormFieldRef, value: string): Promise<boolean>;
 
     modifyTextLine(objectRef: ObjectRef, newText: string): Promise<CommandResult>;
@@ -38,6 +40,8 @@ interface PDFDancerInternals {
     _redactTargets(targets: RedactTarget[], options?: RedactOptions): Promise<RedactResponse>;
 
     transformImage(request: ImageTransformRequest): Promise<CommandResult>;
+
+    clearPathGroupClipping(pageNumber: number, groupId: string): Promise<boolean>;
 }
 
 export class BaseObject<TRef extends ObjectRef = ObjectRef> {
@@ -65,8 +69,16 @@ export class BaseObject<TRef extends ObjectRef = ObjectRef> {
         return new ObjectRef(this.internalId, this.position, this.type) as TRef;
     }
 
+    objectRef(): TRef {
+        return this.ref();
+    }
+
     async moveTo(x: number, y: number) {
         return this._internals.move(this.ref(), Position.atPageCoordinates(this.position.pageNumber!, x, y));
+    }
+
+    async clearClipping(): Promise<boolean> {
+        return this._internals.clearClipping(this.ref());
     }
 
     /**
@@ -115,6 +127,7 @@ export class PathGroupObject {
     }
 
     get pathCount(): number { return this._info.pathCount; }
+    get groupId(): string { return this._info.groupId; }
     get boundingBox(): Record<string, any> | null { return this._info.boundingBox; }
     get x(): number { return this._info.x; }
     get y(): number { return this._info.y; }
@@ -138,6 +151,10 @@ export class PathGroupObject {
     async remove(): Promise<boolean> {
         return this._internals.removePathGroup(this._pageIndex, this._info.groupId);
     }
+
+    async clearClipping(): Promise<boolean> {
+        return this._internals.clearPathGroupClipping(this._pageIndex + 1, this._info.groupId);
+    }
 }
 
 // Internal interface for path group operations
@@ -147,6 +164,7 @@ interface PathGroupInternals {
     rotatePathGroup(pageIndex: number, groupId: string, degrees: number): Promise<boolean>;
     resizePathGroup(pageIndex: number, groupId: string, width: number, height: number): Promise<boolean>;
     removePathGroup(pageIndex: number, groupId: string): Promise<boolean>;
+    clearPathGroupClipping(pageNumber: number, groupId: string): Promise<boolean>;
 }
 
 export class ImageObject extends BaseObject {
