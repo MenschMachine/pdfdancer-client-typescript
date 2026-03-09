@@ -1,11 +1,21 @@
 import {Color, FontType, PDFDancer, StandardFonts} from '../../index';
-import {getFontPath, requireEnvAndFixture} from './test-helpers';
+import {getBaseUrl, getFontPath, readFontFixture, readToken, requireEnvAndFixture, serverUp} from './test-helpers';
 import {expectWithin} from '../assertions';
 import {PDFAssertions} from './pdf-assertions';
 
 const SAMPLE_PARAGRAPH = 'This is regular Sans text showing alignment and styles.';
 
 describe('Paragraph E2E Tests (Showcase)', () => {
+
+    beforeAll(async () => {
+        const baseUrl = getBaseUrl();
+        const token = readToken();
+        if (!token || !await serverUp(baseUrl)) return;
+        const pdf = await PDFDancer.new({initialPageCount: 1}, token, baseUrl);
+        await pdf.registerFont(readFontFixture('Asimovian-Regular.ttf'));
+        await pdf.registerFont(readFontFixture('Roboto-Regular.ttf'));
+    }, 120_000);
+
     test('find paragraphs by position', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Showcase.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
