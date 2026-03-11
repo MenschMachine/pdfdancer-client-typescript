@@ -10,6 +10,7 @@
     "LICENSE"
   ],
   "scripts": {
+    "prepare": "npm run build",
     "build": "node scripts/generate-version.js && tsc",
     "test": "jest",
     "test:unit": "jest --selectProjects unit",
