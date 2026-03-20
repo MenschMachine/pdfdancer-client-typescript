@@ -913,6 +913,37 @@ export class ModifyRequest {
 }
 
 /**
+ * Request object for path color modification operations.
+ */
+export class ModifyPathRequest {
+    constructor(
+        public ref: ObjectRef,
+        public strokeColor?: Color,
+        public fillColor?: Color
+    ) {
+    }
+
+    toDict(): Record<string, any> {
+        const colorToDict = (color?: Color | null) => {
+            if (!color) {
+                return null;
+            }
+            return {red: color.r, green: color.g, blue: color.b, alpha: color.a};
+        };
+
+        return {
+            ref: {
+                internalId: this.ref.internalId,
+                position: positionToDict(this.ref.position),
+                type: this.ref.type
+            },
+            strokeColor: colorToDict(this.strokeColor),
+            fillColor: colorToDict(this.fillColor)
+        };
+    }
+}
+
+/**
  * Request object for text modification operations.
  */
 export class ModifyTextRequest {

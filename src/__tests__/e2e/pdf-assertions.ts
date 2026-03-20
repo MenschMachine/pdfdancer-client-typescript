@@ -11,12 +11,15 @@ import {expectWithin} from '../assertions';
 
 type Matrix = [number, number, number, number, number, number];
 type BBox = [number, number, number, number];
+type RGB = [number, number, number];
 
 interface DrawEvent {
     bbox: BBox;
     clipped: boolean;
     paintOp?: string;
     name?: string;
+    strokeColor?: RGB;
+    fillColor?: RGB;
 }
 
 interface DrawEvents {
@@ -201,6 +204,30 @@ export class PDFAssertions {
     async assertNoPathAt(x: number, y: number, page = 1): Promise<this> {
         const paths = await this.pdf.page(page).selectPathsAt(x, y);
         expect(paths.length).toBe(0);
+        return this;
+    }
+
+    async assertPathPaintOperator(internalId: string, expectedPaintOp: string, page = 1): Promise<this> {
+        const event = await this.findPathDrawEvent(internalId, page);
+        expect(event.paintOp).toBe(expectedPaintOp);
+        return this;
+    }
+
+    async assertPathHasStrokeColor(internalId: string, expectedColor: Color, page = 1): Promise<this> {
+        const event = await this.findPathDrawEvent(internalId, page);
+        expect(event.strokeColor).toBeDefined();
+        expect(event.strokeColor![0]).toBeCloseTo(expectedColor.r, 0);
+        expect(event.strokeColor![1]).toBeCloseTo(expectedColor.g, 0);
+        expect(event.strokeColor![2]).toBeCloseTo(expectedColor.b, 0);
+        return this;
+    }
+
+    async assertPathHasFillColor(internalId: string, expectedColor: Color, page = 1): Promise<this> {
+        const event = await this.findPathDrawEvent(internalId, page);
+        expect(event.fillColor).toBeDefined();
+        expect(event.fillColor![0]).toBeCloseTo(expectedColor.r, 0);
+        expect(event.fillColor![1]).toBeCloseTo(expectedColor.g, 0);
+        expect(event.fillColor![2]).toBeCloseTo(expectedColor.b, 0);
         return this;
     }
 
@@ -434,6 +461,38 @@ export class PDFAssertions {
         return values;
     }
 
+    private static normalizeColorComponent(value: number): number {
+        return Math.max(0, Math.min(255, Math.round(value * 255)));
+    }
+
+    private static grayscaleToRgb(gray: number): RGB {
+        const component = PDFAssertions.normalizeColorComponent(gray);
+        return [component, component, component];
+    }
+
+    private static rgbToRgb(r: number, g: number, b: number): RGB {
+        return [
+            PDFAssertions.normalizeColorComponent(r),
+            PDFAssertions.normalizeColorComponent(g),
+            PDFAssertions.normalizeColorComponent(b)
+        ];
+    }
+
+    private static cmykToRgb(c: number, m: number, y: number, k: number): RGB {
+        const r = 1 - Math.min(1, c + k);
+        const g = 1 - Math.min(1, m + k);
+        const b = 1 - Math.min(1, y + k);
+        return PDFAssertions.rgbToRgb(r, g, b);
+    }
+
+    private static usesStrokeColor(paintOp: string): boolean {
+        return new Set(['S', 's', 'B', 'B*', 'b', 'b*']).has(paintOp);
+    }
+
+    private static usesFillColor(paintOp: string): boolean {
+        return new Set(['f', 'F', 'f*', 'B', 'B*', 'b', 'b*']).has(paintOp);
+    }
+
     private static tokenizeContentStream(content: string): string[] {
         const tokens: string[] = [];
         let i = 0;
@@ -600,6 +659,8 @@ export class PDFAssertions {
             hasClip: boolean;
             pendingClip: boolean;
             ctm: Matrix;
+            strokingColor?: RGB;
+            nonStrokingColor?: RGB;
             inText: boolean;
             textMatrix: Matrix;
             textLineMatrix: Matrix;
@@ -615,6 +676,8 @@ export class PDFAssertions {
         let textLeading = 0;
         let fontSize = 12;
         let currentPathPoints: Array<[number, number]> = [];
+        let strokingColor: RGB | undefined;
+        let nonStrokingColor: RGB | undefined;
 
         const addPathPoint = (rawX: number, rawY: number): void => {
             currentPathPoints.push(PDFAssertions.applyMatrix(ctm, rawX, rawY));
@@ -647,6 +710,12 @@ export class PDFAssertions {
                 token === 'q' ||
                 token === 'Q' ||
                 token === 'cm' ||
+                token === 'g' ||
+                token === 'G' ||
+                token === 'rg' ||
+                token === 'RG' ||
+                token === 'k' ||
+                token === 'K' ||
                 token === 'BT' ||
                 token === 'ET' ||
                 token === 'Tj' ||
@@ -677,6 +746,8 @@ export class PDFAssertions {
                         hasClip,
                         pendingClip,
                         ctm: [...ctm] as Matrix,
+                        strokingColor,
+                        nonStrokingColor,
                         inText,
                         textMatrix: [...textMatrix] as Matrix,
                         textLineMatrix: [...textLineMatrix] as Matrix,
@@ -692,6 +763,8 @@ export class PDFAssertions {
                         hasClip = previous.hasClip;
                         pendingClip = previous.pendingClip;
                         ctm = previous.ctm;
+                        strokingColor = previous.strokingColor;
+                        nonStrokingColor = previous.nonStrokingColor;
                         inText = previous.inText;
                         textMatrix = previous.textMatrix;
                         textLineMatrix = previous.textLineMatrix;
@@ -706,6 +779,45 @@ export class PDFAssertions {
                     const values = PDFAssertions.parseNumberOperands(operands, 6);
                     if (values) {
                         ctm = PDFAssertions.matrixMultiply(values as Matrix, ctm);
+                    }
+                    operands = [];
+                    continue;
+                }
+                if (token === 'g' || token === 'G') {
+                    const values = PDFAssertions.parseNumberOperands(operands, 1);
+                    if (values) {
+                        const color = PDFAssertions.grayscaleToRgb(values[0]);
+                        if (token === 'g') {
+                            nonStrokingColor = color;
+                        } else {
+                            strokingColor = color;
+                        }
+                    }
+                    operands = [];
+                    continue;
+                }
+                if (token === 'rg' || token === 'RG') {
+                    const values = PDFAssertions.parseNumberOperands(operands, 3);
+                    if (values) {
+                        const color = PDFAssertions.rgbToRgb(values[0], values[1], values[2]);
+                        if (token === 'rg') {
+                            nonStrokingColor = color;
+                        } else {
+                            strokingColor = color;
+                        }
+                    }
+                    operands = [];
+                    continue;
+                }
+                if (token === 'k' || token === 'K') {
+                    const values = PDFAssertions.parseNumberOperands(operands, 4);
+                    if (values) {
+                        const color = PDFAssertions.cmykToRgb(values[0], values[1], values[2], values[3]);
+                        if (token === 'k') {
+                            nonStrokingColor = color;
+                        } else {
+                            strokingColor = color;
+                        }
                     }
                     operands = [];
                     continue;
@@ -828,7 +940,9 @@ export class PDFAssertions {
                         pathEvents.push({
                             bbox: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)],
                             clipped: hasClip || pendingClip,
-                            paintOp: token
+                            paintOp: token,
+                            strokeColor: PDFAssertions.usesStrokeColor(token) ? strokingColor : undefined,
+                            fillColor: PDFAssertions.usesFillColor(token) ? nonStrokingColor : undefined
                         });
                     }
                     if (pendingClip) {
@@ -866,6 +980,11 @@ export class PDFAssertions {
     }
 
     private async findPathClippingState(internalId: string, page: number): Promise<boolean> {
+        const best = await this.findPathDrawEvent(internalId, page);
+        return Boolean(best.clipped);
+    }
+
+    private async findPathDrawEvent(internalId: string, page: number): Promise<DrawEvent> {
         const paths = await this.pdf.page(page).selectPaths();
         const pathRef = paths.find(pathObject => pathObject.internalId === internalId);
         expect(pathRef).toBeDefined();
@@ -878,11 +997,9 @@ export class PDFAssertions {
         const events = this.extractPageDrawEvents(page).paths;
         const matches = events.filter(event => PDFAssertions.bboxContainsPoint(event.bbox, x!, y!));
         expect(matches.length).toBeGreaterThan(0);
-        const best = matches.reduce((previous, current) =>
+        return matches.reduce((previous, current) =>
             PDFAssertions.bboxArea(current.bbox) < PDFAssertions.bboxArea(previous.bbox) ? current : previous
         );
-
-        return Boolean(best.clipped);
     }
 
     private async findImageClippingState(internalId: string, page: number): Promise<boolean> {
