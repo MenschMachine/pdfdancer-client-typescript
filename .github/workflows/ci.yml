@@ -11,6 +11,10 @@ jobs:
     # Run minimal config on non-main branches
     if: github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
 
     strategy:
       fail-fast: false
@@ -23,13 +27,50 @@ jobs:
         with:
           submodules: true
 
-      - name: Set API base URL
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ] && [ -f .api-url ]; then
-            URL=$(cat .api-url | tr -d '[:space:]')
-          fi
-          echo "PDFDANCER_BASE_URL=${URL:-https://api-staging.pdfdancer.com}" >> "$GITHUB_ENV"
+      - name: Resolve API base URL
+        id: resolve-api-base-url
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fallbackUrl = 'https://api-staging.pdfdancer.com';
+            const pr = context.payload.pull_request;
+            if (!pr) {
+              core.setOutput('base_url', fallbackUrl);
+              return;
+            }
+
+            const body = pr.body || '';
+            const apiPrMatch = body.match(/## Source API PR[\s\S]*?^- Repository:\s*MenschMachine\/pdfdancer-api\s*$[\s\S]*?^- PR:\s*#?(\d+)\s*$/im);
+            if (!apiPrMatch) {
+              core.info('No Source API PR block found in the PR body; using staging API.');
+              core.setOutput('base_url', fallbackUrl);
+              return;
+            }
+
+            const apiPrNumber = Number(apiPrMatch[1]);
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: 'MenschMachine',
+              repo: 'pdfdancer-api',
+              issue_number: apiPrNumber,
+              per_page: 100,
+            });
+            const previewComments = comments.filter((comment) =>
+              typeof comment.body === 'string' && comment.body.includes('### Preview Environment')
+            );
+            if (previewComments.length === 0) {
+              core.setFailed(`Source API PR #${apiPrNumber} is referenced by this PR, but no preview comment was found.`);
+              return;
+            }
+
+            const previewComment = previewComments[previewComments.length - 1];
+            const urlMatch = previewComment.body.match(/\*\*API URL:\*\*\s*(https?:\/\/\S+)/);
+            if (!urlMatch) {
+              core.setFailed(`Preview comment on source API PR #${apiPrNumber} does not contain a parseable API URL.`);
+              return;
+            }
+
+            core.info(`Using preview API URL from source API PR #${apiPrNumber}: ${urlMatch[1]}`);
+            core.setOutput('base_url', urlMatch[1]);
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
@@ -48,6 +89,7 @@ jobs:
 
       - name: Run tests
         run: |
+          PDFDANCER_BASE_URL=${{ steps.resolve-api-base-url.outputs.base_url }} \
           PDFDANCER_API_TOKEN=42 \
           npm run test
 
@@ -63,6 +105,10 @@ jobs:
     # Run full OS + Node version matrix only on main
     if: github.ref == 'refs/heads/main'
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
 
     strategy:
       fail-fast: false
@@ -76,13 +122,12 @@ jobs:
         with:
           submodules: true
 
-      - name: Set API base URL
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ] && [ -f .api-url ]; then
-            URL=$(cat .api-url | tr -d '[:space:]')
-          fi
-          echo "PDFDANCER_BASE_URL=${URL:-https://api-staging.pdfdancer.com}" >> "$GITHUB_ENV"
+      - name: Resolve API base URL
+        id: resolve-api-base-url
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.setOutput('base_url', 'https://api-staging.pdfdancer.com');
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
@@ -102,6 +147,7 @@ jobs:
       - name: Run tests (Unix)
         if: runner.os != 'Windows'
         run: |
+          PDFDANCER_BASE_URL=${{ steps.resolve-api-base-url.outputs.base_url }} \
           PDFDANCER_API_TOKEN=42 \
           npm run test
 
@@ -109,6 +155,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: cmd
         run: |
+          set PDFDANCER_BASE_URL=${{ steps.resolve-api-base-url.outputs.base_url }}
           set PDFDANCER_API_TOKEN=42
           npm run test
 
