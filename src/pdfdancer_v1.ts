@@ -30,6 +30,7 @@ import {
     Image,
     ImageTransformRequest,
     ModifyRequest,
+    ModifyPathRequest,
     ModifyTextRequest,
     MovePageRequest,
     MoveRequest,
@@ -1695,6 +1696,23 @@ export class PDFDancer {
         const result = CommandResult.fromDict(await response.json());
 
         // Invalidate cache after mutation
+        this._invalidateCache();
+
+        return result;
+    }
+
+    private async modifyPath(objectRef: ObjectRef, strokeColor?: Color, fillColor?: Color): Promise<CommandResult> {
+        if (!objectRef) {
+            throw new ValidationException("Object reference cannot be null");
+        }
+        if (!strokeColor && !fillColor) {
+            return CommandResult.empty("ModifyPath", objectRef.internalId);
+        }
+
+        const requestData = new ModifyPathRequest(objectRef, strokeColor, fillColor).toDict();
+        const response = await this._makeRequest('PUT', '/pdf/modify/path', requestData);
+        const result = CommandResult.fromDict(await response.json());
+
         this._invalidateCache();
 
         return result;

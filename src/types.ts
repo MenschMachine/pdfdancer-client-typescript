@@ -37,6 +37,8 @@ interface PDFDancerInternals {
 
     modifyParagraph(objectRef: ObjectRef, update: Paragraph | string | null): Promise<CommandResult>;
 
+    modifyPath(objectRef: ObjectRef, strokeColor?: Color, fillColor?: Color): Promise<CommandResult>;
+
     _redactTargets(targets: RedactTarget[], options?: RedactOptions): Promise<RedactResponse>;
 
     transformImage(request: ImageTransformRequest): Promise<CommandResult>;
@@ -110,6 +112,49 @@ export class PathObject extends BaseObject {
 
     static fromRef(_client: PDFDancer, objectRef: ObjectRef) {
         return new PathObject(_client, objectRef.internalId, objectRef.type, objectRef.position);
+    }
+
+    edit(): PathEditSession {
+        return new PathEditSession(this._client, this.ref());
+    }
+}
+
+export class PathEditSession {
+    private _strokeColor?: Color;
+    private _fillColor?: Color;
+    private _hasChanges = false;
+    private readonly _internals: PDFDancerInternals;
+
+    constructor(private readonly _client: PDFDancer, private readonly _objectRef: ObjectRef) {
+        this._internals = this._client as unknown as PDFDancerInternals;
+    }
+
+    strokeColor(color: Color): this {
+        if (!color) {
+            throw new ValidationException("Color cannot be null");
+        }
+        this._strokeColor = color;
+        this._hasChanges = true;
+        return this;
+    }
+
+    fillColor(color: Color): this {
+        if (!color) {
+            throw new ValidationException("Color cannot be null");
+        }
+        this._fillColor = color;
+        this._hasChanges = true;
+        return this;
+    }
+
+    async apply(): Promise<CommandResult> {
+        if (!this._hasChanges) {
+            return CommandResult.empty("ModifyPath", this._objectRef.internalId);
+        }
+
+        const result = await this._internals.modifyPath(this._objectRef, this._strokeColor, this._fillColor);
+        this._hasChanges = false;
+        return result;
     }
 }
 

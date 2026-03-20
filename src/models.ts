@@ -934,6 +934,37 @@ export class ModifyTextRequest {
     }
 }
 
+/**
+ * Request object for path color modification operations.
+ */
+export class ModifyPathRequest {
+    constructor(
+        public objectRef: ObjectRef,
+        public strokeColor?: Color,
+        public fillColor?: Color
+    ) {
+    }
+
+    toDict(): Record<string, any> {
+        const colorToDict = (color?: Color | null) => {
+            if (!color) {
+                return null;
+            }
+            return {red: color.r, green: color.g, blue: color.b, alpha: color.a};
+        };
+
+        return {
+            ref: {
+                internalId: this.objectRef.internalId,
+                position: positionToDict(this.objectRef.position),
+                type: this.objectRef.type
+            },
+            strokeColor: colorToDict(this.strokeColor),
+            fillColor: colorToDict(this.fillColor)
+        };
+    }
+}
+
 export class ChangeFormFieldRequest {
     constructor(
         public formFieldRef: FormFieldRef,

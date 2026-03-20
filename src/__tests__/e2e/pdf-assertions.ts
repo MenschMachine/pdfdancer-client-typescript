@@ -17,6 +17,8 @@ interface DrawEvent {
     clipped: boolean;
     paintOp?: string;
     name?: string;
+    strokeColor?: [number, number, number];
+    fillColor?: [number, number, number];
 }
 
 interface DrawEvents {
@@ -605,6 +607,8 @@ export class PDFAssertions {
             textLineMatrix: Matrix;
             textLeading: number;
             fontSize: number;
+            strokeColor: [number, number, number];
+            fillColor: [number, number, number];
         }> = [];
         let hasClip = false;
         let pendingClip = false;
@@ -614,6 +618,8 @@ export class PDFAssertions {
         let textLineMatrix: Matrix = [1, 0, 0, 1, 0, 0];
         let textLeading = 0;
         let fontSize = 12;
+        let strokeColor: [number, number, number] = [0, 0, 0];
+        let fillColor: [number, number, number] = [0, 0, 0];
         let currentPathPoints: Array<[number, number]> = [];
 
         const addPathPoint = (rawX: number, rawY: number): void => {
@@ -681,7 +687,9 @@ export class PDFAssertions {
                         textMatrix: [...textMatrix] as Matrix,
                         textLineMatrix: [...textLineMatrix] as Matrix,
                         textLeading,
-                        fontSize
+                        fontSize,
+                        strokeColor: [...strokeColor] as [number, number, number],
+                        fillColor: [...fillColor] as [number, number, number]
                     });
                     operands = [];
                     continue;
@@ -697,6 +705,8 @@ export class PDFAssertions {
                         textLineMatrix = previous.textLineMatrix;
                         textLeading = previous.textLeading;
                         fontSize = previous.fontSize;
+                        strokeColor = previous.strokeColor;
+                        fillColor = previous.fillColor;
                     }
                     currentPathPoints = [];
                     operands = [];
@@ -741,6 +751,54 @@ export class PDFAssertions {
                     const values = PDFAssertions.parseNumberOperands(operands, 1);
                     if (values) {
                         fontSize = Math.abs(values[0]);
+                    }
+                    operands = [];
+                    continue;
+                }
+                if (token === 'RG') {
+                    const values = PDFAssertions.parseNumberOperands(operands, 3);
+                    if (values) {
+                        strokeColor = [values[0], values[1], values[2]];
+                    }
+                    operands = [];
+                    continue;
+                }
+                if (token === 'rg') {
+                    const values = PDFAssertions.parseNumberOperands(operands, 3);
+                    if (values) {
+                        fillColor = [values[0], values[1], values[2]];
+                    }
+                    operands = [];
+                    continue;
+                }
+                if (token === 'G') {
+                    const values = PDFAssertions.parseNumberOperands(operands, 1);
+                    if (values) {
+                        strokeColor = [values[0], values[0], values[0]];
+                    }
+                    operands = [];
+                    continue;
+                }
+                if (token === 'g') {
+                    const values = PDFAssertions.parseNumberOperands(operands, 1);
+                    if (values) {
+                        fillColor = [values[0], values[0], values[0]];
+                    }
+                    operands = [];
+                    continue;
+                }
+                if (token === 'K') {
+                    const values = PDFAssertions.parseNumberOperands(operands, 4);
+                    if (values) {
+                        strokeColor = PDFAssertions.cmykToRgb(values[0], values[1], values[2], values[3]);
+                    }
+                    operands = [];
+                    continue;
+                }
+                if (token === 'k') {
+                    const values = PDFAssertions.parseNumberOperands(operands, 4);
+                    if (values) {
+                        fillColor = PDFAssertions.cmykToRgb(values[0], values[1], values[2], values[3]);
                     }
                     operands = [];
                     continue;
@@ -828,7 +886,9 @@ export class PDFAssertions {
                         pathEvents.push({
                             bbox: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)],
                             clipped: hasClip || pendingClip,
-                            paintOp: token
+                            paintOp: token,
+                            strokeColor: [...strokeColor] as [number, number, number],
+                            fillColor: [...fillColor] as [number, number, number]
                         });
                     }
                     if (pendingClip) {
@@ -866,6 +926,11 @@ export class PDFAssertions {
     }
 
     private async findPathClippingState(internalId: string, page: number): Promise<boolean> {
+        const best = await this.findPathDrawEvent(internalId, page);
+        return Boolean(best.clipped);
+    }
+
+    private async findPathDrawEvent(internalId: string, page: number): Promise<DrawEvent> {
         const paths = await this.pdf.page(page).selectPaths();
         const pathRef = paths.find(pathObject => pathObject.internalId === internalId);
         expect(pathRef).toBeDefined();
@@ -882,7 +947,7 @@ export class PDFAssertions {
             PDFAssertions.bboxArea(current.bbox) < PDFAssertions.bboxArea(previous.bbox) ? current : previous
         );
 
-        return Boolean(best.clipped);
+        return best;
     }
 
     private async findImageClippingState(internalId: string, page: number): Promise<boolean> {
@@ -975,6 +1040,26 @@ export class PDFAssertions {
         expect(bounds).toBeDefined();
         expectWithin(bounds!.width, expectedWidth, epsilon);
         expectWithin(bounds!.height, expectedHeight, epsilon);
+        return this;
+    }
+
+    async assertPathPaintOperator(internalId: string, expectedPaintOp: string, page = 1): Promise<this> {
+        const event = await this.findPathDrawEvent(internalId, page);
+        expect(event.paintOp).toBe(expectedPaintOp);
+        return this;
+    }
+
+    async assertPathStrokeColor(internalId: string, color: Color, page = 1, epsilon = 0.01): Promise<this> {
+        const event = await this.findPathDrawEvent(internalId, page);
+        expect(event.strokeColor).toBeDefined();
+        PDFAssertions.expectRgbColor(event.strokeColor!, color, epsilon);
+        return this;
+    }
+
+    async assertPathFillColor(internalId: string, color: Color, page = 1, epsilon = 0.01): Promise<this> {
+        const event = await this.findPathDrawEvent(internalId, page);
+        expect(event.fillColor).toBeDefined();
+        PDFAssertions.expectRgbColor(event.fillColor!, color, epsilon);
         return this;
     }
 
@@ -1107,5 +1192,19 @@ export class PDFAssertions {
         const lines = await this.pdf.page(page).selectTextLinesStartingWith(text);
         expect(lines.length).toBe(0);
         return this;
+    }
+
+    private static cmykToRgb(c: number, m: number, y: number, k: number): [number, number, number] {
+        return [
+            1 - Math.min(1, c + k),
+            1 - Math.min(1, m + k),
+            1 - Math.min(1, y + k)
+        ];
+    }
+
+    private static expectRgbColor(actual: [number, number, number], expected: Color, epsilon: number): void {
+        expectWithin(actual[0], expected.r / 255, epsilon);
+        expectWithin(actual[1], expected.g / 255, epsilon);
+        expectWithin(actual[2], expected.b / 255, epsilon);
     }
 }
