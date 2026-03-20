@@ -304,6 +304,32 @@ await images[1].delete();
 
 Use `.fromBytes()` when image data already exists in memory.
 
+## Working with Paths
+
+```typescript
+await pdf.page(0).newPath()
+  .moveTo(72, 500)
+  .lineTo(220, 500)
+  .lineTo(220, 620)
+  .lineTo(72, 620)
+  .lineTo(72, 500)
+  .strokeColor(new Color(20, 20, 20))
+  .strokeWidth(2)
+  .at(0, 0)
+  .add();
+
+const path = await pdf.page(0).selectPathAt(72, 500);
+
+if (path) {
+  await path.edit()
+    .strokeColor(new Color(255, 90, 0))
+    .fillColor(new Color(255, 240, 210))
+    .apply();
+}
+```
+
+Use `selectPathAt(...)` or `selectPaths()` to locate existing vector paths, then apply stroke and fill color updates through the fluent editor.
+
 ## Form Fields
 
 ```typescript

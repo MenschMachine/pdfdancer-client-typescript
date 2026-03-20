@@ -36,6 +36,15 @@ async function pathBuilderExample() {
         .at(0, 0)  // Position (0, 0) on the current page
         .add();
 
+    // Example 2b: Edit an existing path's stroke and fill colors
+    const editablePath = await pdf.page(0).selectPathAt(50, 50);
+    if (editablePath) {
+        await editablePath.edit()
+            .strokeColor(new Color(255, 128, 0))
+            .fillColor(new Color(255, 245, 200))
+            .apply();
+    }
+
     // Example 3: Filled rectangle
     await pdf.newPath()
         .moveTo(250, 50)
