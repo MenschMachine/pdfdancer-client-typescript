@@ -227,6 +227,25 @@ const point = Position.atPageCoordinates(1, 250, 400);
 const paragraphsAtPoint = await pdf.page(1).selectParagraphsAt(point.getX()!, point.getY()!);
 ```
 
+## Editing Paths
+
+```typescript
+const badge = await pdf.page(1).selectPathAt(80, 720);
+
+if (badge) {
+  const result = await badge.edit()
+    .strokeColor(new Color(255, 102, 0))
+    .fillColor(new Color(255, 240, 220))
+    .apply();
+
+  if (result.warning) {
+    console.warn('Operation warning:', result.warning);
+  }
+}
+```
+
+Path edits use the latest v1 API and let you update stroke and fill colors independently on existing vector paths.
+
 ## Creating and Editing Paragraphs
 
 ### Add a Paragraph

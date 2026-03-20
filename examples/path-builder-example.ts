@@ -92,6 +92,15 @@ async function pathBuilderExample() {
         .at(0, 0, 0)
         .add();
 
+    // Example 8: Update colors on an existing path
+    const existingPath = await pdf.page(1).selectPathAt(100, 100);
+    if (existingPath) {
+        await existingPath.edit()
+            .strokeColor(new Color(255, 102, 0))
+            .fillColor(new Color(255, 240, 220))
+            .apply();
+    }
+
     // Save the modified PDF
     const modifiedPdf = await pdf.getBytes();
     fs.writeFileSync('output-with-paths.pdf', modifiedPdf);

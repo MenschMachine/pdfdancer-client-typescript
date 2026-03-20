@@ -1941,6 +1941,47 @@ export class PDFDancer {
     }
 
     /**
+     * Modifies stroke and fill colors of a path object.
+     */
+    private async modifyPath(
+        objectRef: ObjectRef,
+        options: { strokeColor?: Color; fillColor?: Color }
+    ): Promise<CommandResult> {
+        if (!objectRef) {
+            throw new ValidationException("Object reference cannot be null");
+        }
+        if (!options.strokeColor && !options.fillColor) {
+            return CommandResult.empty("ModifyPath", objectRef.internalId);
+        }
+
+        const toColorDict = (color?: Color): Record<string, any> | null => {
+            if (!color) {
+                return null;
+            }
+
+            return {
+                red: color.r,
+                green: color.g,
+                blue: color.b,
+                alpha: color.a
+            };
+        };
+
+        const requestData = {
+            ref: objectRef.toDict(),
+            strokeColor: toColorDict(options.strokeColor),
+            fillColor: toColorDict(options.fillColor)
+        };
+
+        const response = await this._makeRequest('PUT', '/pdf/modify/path', requestData);
+        const result = CommandResult.fromDict(await response.json());
+
+        this._invalidateCache();
+
+        return result;
+    }
+
+    /**
      * Modifies a text line object.
      */
     private async modifyTextLine(objectRef: ObjectRef, newText: string): Promise<CommandResult> {
