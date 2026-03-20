@@ -144,6 +144,35 @@ describe('Path E2E Tests (New API)', () => {
         await assertions.assertPathHasFillColor('PATH_0_000003', new Color(0, 0, 255));
     });
 
+    test('example flow edits existing path colors through the fluent editor', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const strokeOnlyPath = await pdf.page(1).selectPathAt(80, 720);
+        expect(strokeOnlyPath).not.toBeNull();
+
+        const strokeResult = await strokeOnlyPath!.edit()
+            .strokeColor(new Color(255, 120, 0))
+            .apply();
+        expect(strokeResult.success).toBe(true);
+
+        const fillOnlyPath = (await pdf.selectPaths()).find(item => item.internalId === 'PATH_0_000004');
+        expect(fillOnlyPath).toBeDefined();
+
+        const fillResult = await fillOnlyPath!.edit()
+            .fillColor(new Color(0, 120, 255))
+            .strokeColor(new Color(20, 20, 20))
+            .apply();
+        expect(fillResult.success).toBe(true);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertPathPaintOperator('PATH_0_000001', 'S');
+        await assertions.assertPathHasStrokeColor('PATH_0_000001', new Color(255, 120, 0));
+        await assertions.assertPathPaintOperator('PATH_0_000004', 'B');
+        await assertions.assertPathHasFillColor('PATH_0_000004', new Color(0, 120, 255));
+        await assertions.assertPathHasStrokeColor('PATH_0_000004', new Color(20, 20, 20));
+    });
+
     // Tests for singular select methods
     test('selectPath returns first path or null', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
