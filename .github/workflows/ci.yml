@@ -31,6 +31,7 @@ jobs:
         id: resolve-api-base-url
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.PROPAGATE_TOKEN }}
           script: |
             const fallbackUrl = 'https://api-staging.pdfdancer.com';
             const pr = context.payload.pull_request;
@@ -126,6 +127,7 @@ jobs:
         id: resolve-api-base-url
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.PROPAGATE_TOKEN }}
           script: |
             core.setOutput('base_url', 'https://api-staging.pdfdancer.com');
 

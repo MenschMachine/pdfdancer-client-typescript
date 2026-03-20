@@ -20,6 +20,7 @@ jobs:
       - name: Probe API PR comment access
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.PROPAGATE_TOKEN }}
           script: |
             const apiPrNumber = Number('${{ inputs.api_pr_number }}');
             if (!Number.isInteger(apiPrNumber) || apiPrNumber <= 0) {
