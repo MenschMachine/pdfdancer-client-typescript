@@ -62,6 +62,13 @@ async function run() {
     .replace('Overview')
     .apply();
 
+  const divider = await pdf.page(0).selectPathAt(80, 720);
+  if (divider) {
+    await divider.edit()
+      .strokeColor(new Color(255, 90, 60))
+      .apply();
+  }
+
   // Add a new paragraph with precise placement
   await pdf.page(0).newParagraph()
     .text('Generated with PDFDancer')

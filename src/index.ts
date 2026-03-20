@@ -59,7 +59,8 @@ export {
   Word,
   ReflowPreset,
   TemplateReplacement,
-  TemplateReplaceRequest
+  TemplateReplaceRequest,
+  ModifyPathRequest
 } from './models';
 
 export { DocumentFontInfo as FontRecommendation } from './models';
