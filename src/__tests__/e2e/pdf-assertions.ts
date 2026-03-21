@@ -17,6 +17,8 @@ interface DrawEvent {
     clipped: boolean;
     paintOp?: string;
     name?: string;
+    strokeColor?: Color;
+    fillColor?: Color;
 }
 
 interface DrawEvents {
@@ -434,6 +436,43 @@ export class PDFAssertions {
         return values;
     }
 
+    private static colorFromNormalizedRgb(red: number, green: number, blue: number): Color {
+        const toByte = (value: number) => Math.max(0, Math.min(255, Math.round(value * 255)));
+        return new Color(toByte(red), toByte(green), toByte(blue));
+    }
+
+    private static parseColorOperands(operands: string[], operator: string): Color | null {
+        if (operator === 'RG' || operator === 'rg') {
+            const values = PDFAssertions.parseNumberOperands(operands, 3);
+            return values ? PDFAssertions.colorFromNormalizedRgb(values[0], values[1], values[2]) : null;
+        }
+        if (operator === 'G' || operator === 'g') {
+            const values = PDFAssertions.parseNumberOperands(operands, 1);
+            return values ? PDFAssertions.colorFromNormalizedRgb(values[0], values[0], values[0]) : null;
+        }
+        if (operator === 'K' || operator === 'k') {
+            const values = PDFAssertions.parseNumberOperands(operands, 4);
+            if (!values) {
+                return null;
+            }
+            const [c, m, y, k] = values;
+            return PDFAssertions.colorFromNormalizedRgb(
+                (1 - c) * (1 - k),
+                (1 - m) * (1 - k),
+                (1 - y) * (1 - k)
+            );
+        }
+        return null;
+    }
+
+    private static paintOpUsesStroke(paintOp: string): boolean {
+        return ['S', 's', 'B', 'B*', 'b', 'b*'].includes(paintOp);
+    }
+
+    private static paintOpUsesFill(paintOp: string): boolean {
+        return ['f', 'F', 'f*', 'B', 'B*', 'b', 'b*'].includes(paintOp);
+    }
+
     private static tokenizeContentStream(content: string): string[] {
         const tokens: string[] = [];
         let i = 0;
@@ -605,6 +644,8 @@ export class PDFAssertions {
             textLineMatrix: Matrix;
             textLeading: number;
             fontSize: number;
+            strokeColor: Color;
+            fillColor: Color;
         }> = [];
         let hasClip = false;
         let pendingClip = false;
@@ -614,6 +655,8 @@ export class PDFAssertions {
         let textLineMatrix: Matrix = [1, 0, 0, 1, 0, 0];
         let textLeading = 0;
         let fontSize = 12;
+        let strokeColor = new Color(0, 0, 0);
+        let fillColor = new Color(0, 0, 0);
         let currentPathPoints: Array<[number, number]> = [];
 
         const addPathPoint = (rawX: number, rawY: number): void => {
@@ -681,7 +724,9 @@ export class PDFAssertions {
                         textMatrix: [...textMatrix] as Matrix,
                         textLineMatrix: [...textLineMatrix] as Matrix,
                         textLeading,
-                        fontSize
+                        fontSize,
+                        strokeColor,
+                        fillColor
                     });
                     operands = [];
                     continue;
@@ -697,6 +742,8 @@ export class PDFAssertions {
                         textLineMatrix = previous.textLineMatrix;
                         textLeading = previous.textLeading;
                         fontSize = previous.fontSize;
+                        strokeColor = previous.strokeColor;
+                        fillColor = previous.fillColor;
                     }
                     currentPathPoints = [];
                     operands = [];
@@ -788,6 +835,24 @@ export class PDFAssertions {
                     continue;
                 }
 
+                if (token === 'RG' || token === 'G' || token === 'K') {
+                    const parsed = PDFAssertions.parseColorOperands(operands, token);
+                    if (parsed) {
+                        strokeColor = parsed;
+                    }
+                    operands = [];
+                    continue;
+                }
+
+                if (token === 'rg' || token === 'g' || token === 'k') {
+                    const parsed = PDFAssertions.parseColorOperands(operands, token);
+                    if (parsed) {
+                        fillColor = parsed;
+                    }
+                    operands = [];
+                    continue;
+                }
+
                 if (pathOps.has(token)) {
                     if (token === 'm' || token === 'l') {
                         const values = PDFAssertions.parseNumberOperands(operands, 2);
@@ -828,7 +893,9 @@ export class PDFAssertions {
                         pathEvents.push({
                             bbox: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)],
                             clipped: hasClip || pendingClip,
-                            paintOp: token
+                            paintOp: token,
+                            strokeColor: PDFAssertions.paintOpUsesStroke(token) ? strokeColor : undefined,
+                            fillColor: PDFAssertions.paintOpUsesFill(token) ? fillColor : undefined
                         });
                     }
                     if (pendingClip) {
@@ -866,6 +933,11 @@ export class PDFAssertions {
     }
 
     private async findPathClippingState(internalId: string, page: number): Promise<boolean> {
+        const best = await this.findPathDrawEvent(internalId, page);
+        return Boolean(best.clipped);
+    }
+
+    private async findPathDrawEvent(internalId: string, page: number): Promise<DrawEvent> {
         const paths = await this.pdf.page(page).selectPaths();
         const pathRef = paths.find(pathObject => pathObject.internalId === internalId);
         expect(pathRef).toBeDefined();
@@ -882,7 +954,7 @@ export class PDFAssertions {
             PDFAssertions.bboxArea(current.bbox) < PDFAssertions.bboxArea(previous.bbox) ? current : previous
         );
 
-        return Boolean(best.clipped);
+        return best;
     }
 
     private async findImageClippingState(internalId: string, page: number): Promise<boolean> {
@@ -975,6 +1047,30 @@ export class PDFAssertions {
         expect(bounds).toBeDefined();
         expectWithin(bounds!.width, expectedWidth, epsilon);
         expectWithin(bounds!.height, expectedHeight, epsilon);
+        return this;
+    }
+
+    async assertPathPaint(
+        internalId: string,
+        options: { usesStroke?: boolean; usesFill?: boolean; strokeColor?: Color; fillColor?: Color },
+        page = 1
+    ): Promise<this> {
+        const event = await this.findPathDrawEvent(internalId, page);
+        expect(event.paintOp).toBeDefined();
+
+        if (options.usesStroke !== undefined) {
+            expect(PDFAssertions.paintOpUsesStroke(event.paintOp!)).toBe(options.usesStroke);
+        }
+        if (options.usesFill !== undefined) {
+            expect(PDFAssertions.paintOpUsesFill(event.paintOp!)).toBe(options.usesFill);
+        }
+        if (options.strokeColor) {
+            expect(event.strokeColor).toEqual(options.strokeColor);
+        }
+        if (options.fillColor) {
+            expect(event.fillColor).toEqual(options.fillColor);
+        }
+
         return this;
     }
 
