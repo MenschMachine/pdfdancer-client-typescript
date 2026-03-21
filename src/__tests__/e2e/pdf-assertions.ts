@@ -11,12 +11,17 @@ import {expectWithin} from '../assertions';
 
 type Matrix = [number, number, number, number, number, number];
 type BBox = [number, number, number, number];
+type RGBColor = [number, number, number];
 
 interface DrawEvent {
     bbox: BBox;
     clipped: boolean;
     paintOp?: string;
     name?: string;
+    strokeColor?: RGBColor;
+    fillColor?: RGBColor;
+    strokeOpacity?: number;
+    fillOpacity?: number;
 }
 
 interface DrawEvents {
@@ -434,6 +439,188 @@ export class PDFAssertions {
         return values;
     }
 
+    private static skipWhitespace(text: string, index: number): number {
+        let cursor = index;
+        while (cursor < text.length && /\s/.test(text[cursor])) {
+            cursor += 1;
+        }
+        return cursor;
+    }
+
+    private static extractBalanced(text: string, start: number, open: string, close: string): { value: string; end: number } | null {
+        if (!text.startsWith(open, start)) {
+            return null;
+        }
+
+        let depth = 1;
+        let cursor = start + open.length;
+
+        while (cursor < text.length) {
+            if (text.startsWith(open, cursor)) {
+                depth += 1;
+                cursor += open.length;
+                continue;
+            }
+            if (text.startsWith(close, cursor)) {
+                depth -= 1;
+                cursor += close.length;
+                if (depth === 0) {
+                    return { value: text.slice(start, cursor), end: cursor };
+                }
+                continue;
+            }
+            cursor += 1;
+        }
+
+        return null;
+    }
+
+    private static readSimpleToken(text: string, start: number): { value: string; end: number } | null {
+        let cursor = start;
+        while (
+            cursor < text.length &&
+            !/\s/.test(text[cursor]) &&
+            !'[]<>(){}'.includes(text[cursor])
+        ) {
+            cursor += 1;
+        }
+
+        if (cursor === start) {
+            return null;
+        }
+
+        return {
+            value: text.slice(start, cursor),
+            end: cursor
+        };
+    }
+
+    private static parseObjectValue(text: string, start: number): { value: string; end: number } | null {
+        const cursor = PDFAssertions.skipWhitespace(text, start);
+        if (cursor >= text.length) {
+            return null;
+        }
+
+        if (text.startsWith('<<', cursor)) {
+            return PDFAssertions.extractBalanced(text, cursor, '<<', '>>');
+        }
+
+        if (text[cursor] === '[') {
+            return PDFAssertions.extractBalanced(text, cursor, '[', ']');
+        }
+
+        if (text[cursor] === '(') {
+            let i = cursor + 1;
+            let depth = 1;
+            while (i < text.length && depth > 0) {
+                if (text[i] === '\\') {
+                    i += 2;
+                    continue;
+                }
+                if (text[i] === '(') {
+                    depth += 1;
+                } else if (text[i] === ')') {
+                    depth -= 1;
+                }
+                i += 1;
+            }
+            return { value: text.slice(cursor, i), end: i };
+        }
+
+        if (text[cursor] === '/') {
+            return PDFAssertions.readSimpleToken(text, cursor);
+        }
+
+        const firstToken = PDFAssertions.readSimpleToken(text, cursor);
+        if (!firstToken) {
+            return null;
+        }
+
+        const refMiddle = PDFAssertions.skipWhitespace(text, firstToken.end);
+        const secondToken = PDFAssertions.readSimpleToken(text, refMiddle);
+        if (secondToken && /^\d+$/.test(firstToken.value) && /^\d+$/.test(secondToken.value)) {
+            const refEnd = PDFAssertions.skipWhitespace(text, secondToken.end);
+            const thirdToken = PDFAssertions.readSimpleToken(text, refEnd);
+            if (thirdToken?.value === 'R') {
+                return {
+                    value: text.slice(cursor, thirdToken.end),
+                    end: thirdToken.end
+                };
+            }
+        }
+
+        return firstToken;
+    }
+
+    private static extractTopLevelDictionary(dictionary: string): string | null {
+        const start = dictionary.indexOf('<<');
+        if (start === -1) {
+            return null;
+        }
+        return PDFAssertions.extractBalanced(dictionary, start, '<<', '>>')?.value ?? null;
+    }
+
+    private static parseDictionaryEntries(dictionary: string): Map<string, string> {
+        const outer = PDFAssertions.extractTopLevelDictionary(dictionary);
+        if (!outer) {
+            return new Map();
+        }
+
+        const entries = new Map<string, string>();
+        let cursor = 2;
+
+        while (cursor < outer.length - 2) {
+            cursor = PDFAssertions.skipWhitespace(outer, cursor);
+            if (cursor >= outer.length - 2 || outer.startsWith('>>', cursor)) {
+                break;
+            }
+            if (outer[cursor] !== '/') {
+                cursor += 1;
+                continue;
+            }
+
+            const keyToken = PDFAssertions.readSimpleToken(outer, cursor);
+            if (!keyToken) {
+                break;
+            }
+
+            const key = keyToken.value.slice(1);
+            const value = PDFAssertions.parseObjectValue(outer, keyToken.end);
+            if (!value) {
+                break;
+            }
+
+            entries.set(key, value.value.trim());
+            cursor = value.end;
+        }
+
+        return entries;
+    }
+
+    private static parseReferenceObjectId(value: string | undefined): number | null {
+        if (!value) {
+            return null;
+        }
+        const match = value.trim().match(/^(\d+)\s+\d+\s+R$/);
+        return match ? parseInt(match[1], 10) : null;
+    }
+
+    private static resolveDictionaryValue(
+        objects: Map<number, ParsedObject>,
+        value: string | undefined
+    ): string | null {
+        if (!value) {
+            return null;
+        }
+
+        const objectId = PDFAssertions.parseReferenceObjectId(value);
+        if (objectId !== null) {
+            return objects.get(objectId)?.dictionary ?? null;
+        }
+
+        return value;
+    }
+
     private static tokenizeContentStream(content: string): string[] {
         const tokens: string[] = [];
         let i = 0;
@@ -548,7 +735,7 @@ export class PDFAssertions {
         return ordered;
     }
 
-    private extractPageContentObjectIds(objects: Map<number, ParsedObject>, page: number): number[] {
+    private extractPageObjectId(objects: Map<number, ParsedObject>, page: number): number | null {
         const orderedPageObjectIds = this.extractPageObjectIdsInOrder(objects);
         const fallbackPageObjects = Array.from(objects.values())
             .filter(obj => /\/Type\s*\/Page\b/.test(obj.dictionary) && !/\/Type\s*\/Pages\b/.test(obj.dictionary))
@@ -556,19 +743,24 @@ export class PDFAssertions {
             .map(obj => obj.objectId);
         const pageObjectIds = orderedPageObjectIds.length > 0 ? orderedPageObjectIds : fallbackPageObjects;
 
+        if (page < 1 || page > pageObjectIds.length) {
+            return null;
+        }
+
+        return pageObjectIds[page - 1] ?? null;
+    }
+
+    private extractPageContentObjectIds(objects: Map<number, ParsedObject>, page: number): number[] {
         const streamObjectIds = Array.from(objects.values())
             .filter(obj => obj.stream)
             .map(obj => obj.objectId);
 
-        if (pageObjectIds.length === 0) {
+        const pageObjectId = this.extractPageObjectId(objects, page);
+        if (pageObjectId === null) {
             return streamObjectIds;
         }
 
-        if (page < 1 || page > pageObjectIds.length) {
-            return streamObjectIds;
-        }
-
-        const pageObject = objects.get(pageObjectIds[page - 1]);
+        const pageObject = objects.get(pageObjectId);
         if (!pageObject) {
             return streamObjectIds;
         }
@@ -582,6 +774,53 @@ export class PDFAssertions {
         return referenced.length > 0 ? referenced : streamObjectIds;
     }
 
+    private resolvePageExtGStates(objects: Map<number, ParsedObject>, page: number): Map<string, { strokeOpacity: number; fillOpacity: number }> {
+        const resolved = new Map<string, { strokeOpacity: number; fillOpacity: number }>();
+        let currentObjectId = this.extractPageObjectId(objects, page);
+        const visited = new Set<number>();
+
+        while (currentObjectId !== null && !visited.has(currentObjectId)) {
+            visited.add(currentObjectId);
+            const object = objects.get(currentObjectId);
+            if (!object) {
+                break;
+            }
+
+            const entries = PDFAssertions.parseDictionaryEntries(object.dictionary);
+            const resourcesDictionary = PDFAssertions.resolveDictionaryValue(objects, entries.get('Resources'));
+            if (resourcesDictionary) {
+                const resourceEntries = PDFAssertions.parseDictionaryEntries(resourcesDictionary);
+                const extGStateDictionary = PDFAssertions.resolveDictionaryValue(objects, resourceEntries.get('ExtGState'));
+
+                if (extGStateDictionary) {
+                    const extGStateEntries = PDFAssertions.parseDictionaryEntries(extGStateDictionary);
+                    for (const [name, value] of extGStateEntries.entries()) {
+                        if (resolved.has(name)) {
+                            continue;
+                        }
+
+                        const stateDictionary = PDFAssertions.resolveDictionaryValue(objects, value);
+                        if (!stateDictionary) {
+                            continue;
+                        }
+
+                        const stateEntries = PDFAssertions.parseDictionaryEntries(stateDictionary);
+                        const strokeOpacity = Number(stateEntries.get('CA') ?? '1');
+                        const fillOpacity = Number(stateEntries.get('ca') ?? '1');
+                        resolved.set(name, {
+                            strokeOpacity: Number.isFinite(strokeOpacity) ? strokeOpacity : 1,
+                            fillOpacity: Number.isFinite(fillOpacity) ? fillOpacity : 1
+                        });
+                    }
+                }
+            }
+
+            currentObjectId = PDFAssertions.parseReferenceObjectId(entries.get('Parent'));
+        }
+
+        return resolved;
+    }
+
     private extractPageDrawEvents(page: number): DrawEvents {
         if (this.drawEventsCache.has(page)) {
             return this.drawEventsCache.get(page)!;
@@ -591,6 +830,7 @@ export class PDFAssertions {
         const pdfBytes = fs.readFileSync(this.savedPdfPath!);
         const objects = PDFAssertions.parsePdfObjects(pdfBytes);
         const contentObjectIds = this.extractPageContentObjectIds(objects, page);
+        const extGStates = this.resolvePageExtGStates(objects, page);
         const pathEvents: DrawEvent[] = [];
         const imageEvents: DrawEvent[] = [];
         const textEvents: DrawEvent[] = [];
@@ -605,6 +845,10 @@ export class PDFAssertions {
             textLineMatrix: Matrix;
             textLeading: number;
             fontSize: number;
+            strokeColor: RGBColor;
+            fillColor: RGBColor;
+            strokeOpacity: number;
+            fillOpacity: number;
         }> = [];
         let hasClip = false;
         let pendingClip = false;
@@ -614,6 +858,10 @@ export class PDFAssertions {
         let textLineMatrix: Matrix = [1, 0, 0, 1, 0, 0];
         let textLeading = 0;
         let fontSize = 12;
+        let strokeColor: RGBColor = [0, 0, 0];
+        let fillColor: RGBColor = [0, 0, 0];
+        let strokeOpacity = 1;
+        let fillOpacity = 1;
         let currentPathPoints: Array<[number, number]> = [];
 
         const addPathPoint = (rawX: number, rawY: number): void => {
@@ -681,7 +929,11 @@ export class PDFAssertions {
                         textMatrix: [...textMatrix] as Matrix,
                         textLineMatrix: [...textLineMatrix] as Matrix,
                         textLeading,
-                        fontSize
+                        fontSize,
+                        strokeColor: [...strokeColor] as RGBColor,
+                        fillColor: [...fillColor] as RGBColor,
+                        strokeOpacity,
+                        fillOpacity
                     });
                     operands = [];
                     continue;
@@ -697,6 +949,10 @@ export class PDFAssertions {
                         textLineMatrix = previous.textLineMatrix;
                         textLeading = previous.textLeading;
                         fontSize = previous.fontSize;
+                        strokeColor = previous.strokeColor;
+                        fillColor = previous.fillColor;
+                        strokeOpacity = previous.strokeOpacity;
+                        fillOpacity = previous.fillOpacity;
                     }
                     currentPathPoints = [];
                     operands = [];
@@ -715,6 +971,18 @@ export class PDFAssertions {
                     operands = [];
                     continue;
                 }
+                if (token === 'gs') {
+                    const stateName = operands[operands.length - 1];
+                    if (stateName?.startsWith('/')) {
+                        const state = extGStates.get(stateName.slice(1));
+                        if (state) {
+                            strokeOpacity = state.strokeOpacity;
+                            fillOpacity = state.fillOpacity;
+                        }
+                    }
+                    operands = [];
+                    continue;
+                }
                 if (token === 'n') {
                     if (pendingClip) {
                         hasClip = true;
@@ -729,6 +997,54 @@ export class PDFAssertions {
                     inText = true;
                     textMatrix = [1, 0, 0, 1, 0, 0];
                     textLineMatrix = [1, 0, 0, 1, 0, 0];
+                    operands = [];
+                    continue;
+                }
+                if (token === 'RG') {
+                    const values = PDFAssertions.parseNumberOperands(operands, 3);
+                    if (values) {
+                        strokeColor = [values[0], values[1], values[2]];
+                    }
+                    operands = [];
+                    continue;
+                }
+                if (token === 'rg') {
+                    const values = PDFAssertions.parseNumberOperands(operands, 3);
+                    if (values) {
+                        fillColor = [values[0], values[1], values[2]];
+                    }
+                    operands = [];
+                    continue;
+                }
+                if (token === 'G') {
+                    const values = PDFAssertions.parseNumberOperands(operands, 1);
+                    if (values) {
+                        strokeColor = [values[0], values[0], values[0]];
+                    }
+                    operands = [];
+                    continue;
+                }
+                if (token === 'g') {
+                    const values = PDFAssertions.parseNumberOperands(operands, 1);
+                    if (values) {
+                        fillColor = [values[0], values[0], values[0]];
+                    }
+                    operands = [];
+                    continue;
+                }
+                if (token === 'K') {
+                    const values = PDFAssertions.parseNumberOperands(operands, 4);
+                    if (values) {
+                        strokeColor = PDFAssertions.cmykToRgb(values[0], values[1], values[2], values[3]);
+                    }
+                    operands = [];
+                    continue;
+                }
+                if (token === 'k') {
+                    const values = PDFAssertions.parseNumberOperands(operands, 4);
+                    if (values) {
+                        fillColor = PDFAssertions.cmykToRgb(values[0], values[1], values[2], values[3]);
+                    }
                     operands = [];
                     continue;
                 }
@@ -828,7 +1144,11 @@ export class PDFAssertions {
                         pathEvents.push({
                             bbox: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)],
                             clipped: hasClip || pendingClip,
-                            paintOp: token
+                            paintOp: token,
+                            strokeColor: [...strokeColor] as RGBColor,
+                            fillColor: [...fillColor] as RGBColor,
+                            strokeOpacity,
+                            fillOpacity
                         });
                     }
                     if (pendingClip) {
@@ -865,7 +1185,15 @@ export class PDFAssertions {
         return events;
     }
 
-    private async findPathClippingState(internalId: string, page: number): Promise<boolean> {
+    private static cmykToRgb(c: number, m: number, y: number, k: number): RGBColor {
+        return [
+            1 - Math.min(1, c + k),
+            1 - Math.min(1, m + k),
+            1 - Math.min(1, y + k)
+        ];
+    }
+
+    private async findBestPathEvent(internalId: string, page: number): Promise<DrawEvent> {
         const paths = await this.pdf.page(page).selectPaths();
         const pathRef = paths.find(pathObject => pathObject.internalId === internalId);
         expect(pathRef).toBeDefined();
@@ -878,10 +1206,14 @@ export class PDFAssertions {
         const events = this.extractPageDrawEvents(page).paths;
         const matches = events.filter(event => PDFAssertions.bboxContainsPoint(event.bbox, x!, y!));
         expect(matches.length).toBeGreaterThan(0);
-        const best = matches.reduce((previous, current) =>
+
+        return matches.reduce((previous, current) =>
             PDFAssertions.bboxArea(current.bbox) < PDFAssertions.bboxArea(previous.bbox) ? current : previous
         );
+    }
 
+    private async findPathClippingState(internalId: string, page: number): Promise<boolean> {
+        const best = await this.findBestPathEvent(internalId, page);
         return Boolean(best.clipped);
     }
 
@@ -975,6 +1307,46 @@ export class PDFAssertions {
         expect(bounds).toBeDefined();
         expectWithin(bounds!.width, expectedWidth, epsilon);
         expectWithin(bounds!.height, expectedHeight, epsilon);
+        return this;
+    }
+
+    async assertPathPaintOperator(internalId: string, expected: string | string[], page = 1): Promise<this> {
+        const event = await this.findBestPathEvent(internalId, page);
+        const expectedOps = Array.isArray(expected) ? expected : [expected];
+        expect(event.paintOp).toBeDefined();
+        expect(expectedOps).toContain(event.paintOp);
+        return this;
+    }
+
+    async assertPathStrokeColor(internalId: string, expected: Color, page = 1, epsilon = 0.01): Promise<this> {
+        const event = await this.findBestPathEvent(internalId, page);
+        expect(event.strokeColor).toBeDefined();
+        expectWithin(event.strokeColor![0], expected.r / 255, epsilon);
+        expectWithin(event.strokeColor![1], expected.g / 255, epsilon);
+        expectWithin(event.strokeColor![2], expected.b / 255, epsilon);
+        return this;
+    }
+
+    async assertPathFillColor(internalId: string, expected: Color, page = 1, epsilon = 0.01): Promise<this> {
+        const event = await this.findBestPathEvent(internalId, page);
+        expect(event.fillColor).toBeDefined();
+        expectWithin(event.fillColor![0], expected.r / 255, epsilon);
+        expectWithin(event.fillColor![1], expected.g / 255, epsilon);
+        expectWithin(event.fillColor![2], expected.b / 255, epsilon);
+        return this;
+    }
+
+    async assertPathStrokeOpacity(internalId: string, expected: number, page = 1, epsilon = 0.01): Promise<this> {
+        const event = await this.findBestPathEvent(internalId, page);
+        expect(event.strokeOpacity).toBeDefined();
+        expectWithin(event.strokeOpacity!, expected, epsilon);
+        return this;
+    }
+
+    async assertPathFillOpacity(internalId: string, expected: number, page = 1, epsilon = 0.01): Promise<this> {
+        const event = await this.findBestPathEvent(internalId, page);
+        expect(event.fillOpacity).toBeDefined();
+        expectWithin(event.fillOpacity!, expected, epsilon);
         return this;
     }
 

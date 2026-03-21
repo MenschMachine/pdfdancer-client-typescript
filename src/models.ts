@@ -953,6 +953,45 @@ export class ChangeFormFieldRequest {
     }
 }
 
+export class ModifyPathRequest {
+    constructor(
+        public objectRef: ObjectRef,
+        public strokeColor?: Color,
+        public fillColor?: Color
+    ) {
+    }
+
+    toDict(): Record<string, any> {
+        const payload: Record<string, any> = {
+            ref: {
+                internalId: this.objectRef.internalId,
+                position: positionToDict(this.objectRef.position),
+                type: this.objectRef.type
+            }
+        };
+
+        if (this.strokeColor) {
+            payload.strokeColor = {
+                red: this.strokeColor.r,
+                green: this.strokeColor.g,
+                blue: this.strokeColor.b,
+                alpha: this.strokeColor.a
+            };
+        }
+
+        if (this.fillColor) {
+            payload.fillColor = {
+                red: this.fillColor.r,
+                green: this.fillColor.g,
+                blue: this.fillColor.b,
+                alpha: this.fillColor.a
+            };
+        }
+
+        return payload;
+    }
+}
+
 /**
  * Request object for creating a new PDF document.
  */

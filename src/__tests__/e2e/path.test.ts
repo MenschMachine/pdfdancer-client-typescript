@@ -5,6 +5,7 @@
 import {requireEnvAndFixture} from './test-helpers';
 import {PDFDancer} from "../../pdfdancer_v1";
 import {PDFAssertions} from './pdf-assertions';
+import {Color} from "../../models";
 
 describe('Path E2E Tests (New API)', () => {
 
@@ -75,6 +76,138 @@ describe('Path E2E Tests (New API)', () => {
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertPathIsAt('PATH_0_000001', 50.1, 100);
+    });
+
+    test('change path stroke color', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const path = await pdf.page(1).selectPathAt(80, 720);
+        expect(path).not.toBeNull();
+
+        const result = await path!.edit().strokeColor(new Color(255, 0, 0)).apply();
+        expect(result.success).toBe(true);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertPathStrokeColor('PATH_0_000001', new Color(255, 0, 0), 1);
+        await assertions.assertPathPaintOperator('PATH_0_000001', ['S', 's'], 1);
+    });
+
+    test('change path fill color', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const path = (await pdf.selectPaths()).find(item => item.internalId === 'PATH_0_000004');
+        expect(path).toBeDefined();
+
+        const result = await path!.edit().fillColor(new Color(0, 0, 255)).apply();
+        expect(result.success).toBe(true);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertPathFillColor('PATH_0_000004', new Color(0, 0, 255), 1);
+        await assertions.assertPathPaintOperator('PATH_0_000004', ['f', 'F', 'f*'], 1);
+    });
+
+    test('add stroke to fill-only path', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const path = (await pdf.selectPaths()).find(item => item.internalId === 'PATH_0_000004');
+        expect(path).toBeDefined();
+
+        const result = await path!.edit().strokeColor(new Color(255, 0, 0)).apply();
+        expect(result.success).toBe(true);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertPathStrokeColor('PATH_0_000004', new Color(255, 0, 0), 1);
+        await assertions.assertPathFillColor('PATH_0_000004', new Color(0, 0, 0), 1);
+        await assertions.assertPathPaintOperator('PATH_0_000004', ['B', 'B*', 'b', 'b*'], 1);
+    });
+
+    test('set path stroke and fill simultaneously', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const path = (await pdf.selectPaths()).find(item => item.internalId === 'PATH_0_000003');
+        expect(path).toBeDefined();
+
+        const result = await path!.edit()
+            .strokeColor(new Color(255, 0, 0))
+            .fillColor(new Color(0, 0, 255))
+            .apply();
+        expect(result.success).toBe(true);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertPathStrokeColor('PATH_0_000003', new Color(255, 0, 0), 1);
+        await assertions.assertPathFillColor('PATH_0_000003', new Color(0, 0, 255), 1);
+        await assertions.assertPathPaintOperator('PATH_0_000003', ['B', 'B*', 'b', 'b*'], 1);
+    });
+
+    test('reusing one path edit session resets staged changes after apply', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const path = await pdf.page(1).selectPathAt(80, 720);
+        expect(path).not.toBeNull();
+
+        const session = path!.edit();
+
+        const firstResult = await session.strokeColor(new Color(255, 0, 0)).apply();
+        expect(firstResult.success).toBe(true);
+
+        const noOpResult = await session.apply();
+        expect(noOpResult).toEqual({
+            commandName: 'ModifyPath',
+            elementId: 'PATH_0_000001',
+            message: null,
+            success: true,
+            warning: null
+        });
+
+        const secondResult = await session.fillColor(new Color(0, 0, 255)).apply();
+        expect(secondResult.success).toBe(true);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertPathStrokeColor('PATH_0_000001', new Color(255, 0, 0), 1);
+        await assertions.assertPathFillColor('PATH_0_000001', new Color(0, 0, 255), 1);
+        await assertions.assertPathPaintOperator('PATH_0_000001', ['B', 'B*', 'b', 'b*'], 1);
+    });
+
+    test('change path colors preserves stroke and fill alpha', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const path = (await pdf.selectPaths()).find(item => item.internalId === 'PATH_0_000003');
+        expect(path).toBeDefined();
+
+        const stroke = new Color(255, 0, 0, 128);
+        const fill = new Color(0, 0, 255, 64);
+        const result = await path!.edit().strokeColor(stroke).fillColor(fill).apply();
+        expect(result.success).toBe(true);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertPathStrokeColor('PATH_0_000003', stroke, 1);
+        await assertions.assertPathFillColor('PATH_0_000003', fill, 1);
+        await assertions.assertPathStrokeOpacity('PATH_0_000003', stroke.a / 255, 1);
+        await assertions.assertPathFillOpacity('PATH_0_000003', fill.a / 255, 1);
+        await assertions.assertPathPaintOperator('PATH_0_000003', ['B', 'B*', 'b', 'b*'], 1);
+    });
+
+    test('apply with no edits is a no-op', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+
+        const path = await pdf.page(1).selectPathAt(80, 720);
+        expect(path).not.toBeNull();
+
+        const result = await path!.edit().apply();
+        expect(result.success).toBe(true);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertNumberOfPaths(9);
+        await assertions.assertPathIsAt('PATH_0_000001', 80, 720, 1, 1);
+        await assertions.assertPathStrokeColor('PATH_0_000001', new Color(0, 0, 0), 1);
+        await assertions.assertPathPaintOperator('PATH_0_000001', ['S', 's'], 1);
     });
 
     // Tests for singular select methods

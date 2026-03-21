@@ -30,6 +30,7 @@ import {
     Image,
     ImageTransformRequest,
     ModifyRequest,
+    ModifyPathRequest,
     ModifyTextRequest,
     MovePageRequest,
     MoveRequest,
@@ -1935,6 +1936,26 @@ export class PDFDancer {
         }
 
         // Invalidate cache after mutation
+        this._invalidateCache();
+
+        return result;
+    }
+
+    /**
+     * Modifies the stroke and/or fill colors of a path object.
+     */
+    private async modifyPath(
+        objectRef: ObjectRef,
+        options: { strokeColor?: Color; fillColor?: Color }
+    ): Promise<CommandResult> {
+        if (!objectRef) {
+            throw new ValidationException("Object reference cannot be null");
+        }
+
+        const requestData = new ModifyPathRequest(objectRef, options.strokeColor, options.fillColor).toDict();
+        const response = await this._makeRequest('PUT', '/pdf/modify/path', requestData);
+        const result = CommandResult.fromDict(await response.json());
+
         this._invalidateCache();
 
         return result;
