@@ -89,10 +89,10 @@ That delta is `abs(1.0 - 128/255)`, which means the saved PDF stroke opacity is 
 The generated PDF from the failing test was saved at:
 
 ```text
-/tmp/test-1774057313116.pdf
+/tmp/path-opacity-repro.pdf
 ```
 
-After decompressing with `mutool clean -d`, the relevant objects are:
+After decompressing with `mutool clean -d /tmp/path-opacity-repro.pdf /tmp/path-opacity-repro-uncompressed.pdf`, the relevant objects are:
 
 ```pdf
 16 0 obj
@@ -195,3 +195,5 @@ The resulting saved PDF for the reproduction above should contain an `ExtGState`
 - The TypeScript SDK keeps the failing regression test in place.
 - No client-side workaround was added.
 - On `2026-03-21`, the full `src/__tests__/e2e/path.test.ts` suite was rerun against the PR image at `http://localhost:18080`: 12 tests passed and only `change path colors preserves stroke and fill alpha` failed.
+- On `2026-03-21`, `npm test -- --runInBand --selectProjects unit` passed (`5/5` suites, `54/54` tests).
+- On `2026-03-21`, `npm run build` passed.
