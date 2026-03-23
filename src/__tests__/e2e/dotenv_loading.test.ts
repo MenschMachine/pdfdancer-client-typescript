@@ -43,6 +43,7 @@ describe('.env file loading E2E Tests', () => {
     });
 
     beforeEach(() => {
+        resetEnvLoader();
         delete process.env.PDFDANCER_API_TOKEN;
         delete process.env.PDFDANCER_BASE_URL;
         if (fs.existsSync(tempEnvPath)) {
@@ -52,6 +53,7 @@ describe('.env file loading E2E Tests', () => {
 
     afterEach(() => {
         restoreEnv();
+        resetEnvLoader();
     });
 
     afterAll(() => {
