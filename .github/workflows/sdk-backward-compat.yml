@@ -58,11 +58,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd sdk
-          npm install
+          cd sdk && npm install
 
       - name: Run e2e tests
         run: |
+          cd sdk && \
           PDFDANCER_BASE_URL=${{ github.event.client_payload.api_url || inputs.api_url }} \
           PDFDANCER_TOKEN=${{ github.event.client_payload.sdk_token || inputs.sdk_token }} \
           npm run test:e2e
