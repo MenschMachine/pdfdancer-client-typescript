@@ -29,6 +29,7 @@ import {
     FormFieldRef,
     Image,
     ImageTransformRequest,
+    ModifyPathRequest,
     ModifyRequest,
     ModifyTextRequest,
     MovePageRequest,
@@ -42,6 +43,7 @@ import {
     PageSnapshot,
     Paragraph,
     Path,
+    PathObjectRef,
     Position,
     PositionMode,
     RedactOptions,
@@ -1998,6 +2000,22 @@ export class PDFDancer {
         return result;
     }
 
+    /**
+     * Modifies a path object's stroke and fill colors.
+     * Setting colors to null means "don't change them".
+     */
+    private async modifyPath(objectRef: ObjectRef, strokeColor?: Color | null, fillColor?: Color | null): Promise<CommandResult> {
+        if (!objectRef) {
+            throw new ValidationException("Object reference cannot be null");
+        }
+
+        const requestData = new ModifyPathRequest(objectRef, strokeColor, fillColor).toDict();
+        const response = await this._makeRequest('PUT', '/pdf/modify/path', requestData);
+        const result = CommandResult.fromDict(await response.json());
+        this._invalidateCache();
+        return result;
+    }
+
     private _positionToDict(position: Position): Record<string, any> {
         const result: Record<string, any> = {
             pageNumber: position.pageNumber,
@@ -2169,6 +2187,20 @@ export class PDFDancer {
         ];
         if (formFieldTypes.includes(objectType)) {
             return this._parseFormFieldRef(objData);
+        }
+
+        // Check if this is a path type
+        if (objectType === ObjectType.PATH) {
+            return new PathObjectRef(
+                objData.internalId,
+                position,
+                objectType,
+                objData.strokeColor ? this._parseColor(objData.strokeColor) : null,
+                objData.fillColor ? this._parseColor(objData.fillColor) : null,
+                objData.strokeWidth ?? null,
+                objData.dashArray ?? null,
+                objData.dashPhase ?? null
+            );
         }
 
         return new ObjectRef(

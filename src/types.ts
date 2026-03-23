@@ -11,6 +11,7 @@ import {
     ObjectType,
     Paragraph,
     PathGroupInfo,
+    PathObjectRef,
     Position,
     RedactOptions,
     RedactResponse,
@@ -36,6 +37,8 @@ interface PDFDancerInternals {
     modifyTextLineObject(objectRef: TextObjectRef, options: { text?: string; fontName?: string; fontSize?: number; color?: Color; position?: Position }): Promise<CommandResult>;
 
     modifyParagraph(objectRef: ObjectRef, update: Paragraph | string | null): Promise<CommandResult>;
+
+    modifyPath(objectRef: ObjectRef, strokeColor?: Color | null, fillColor?: Color | null): Promise<CommandResult>;
 
     _redactTargets(targets: RedactTarget[], options?: RedactOptions): Promise<RedactResponse>;
 
@@ -108,8 +111,64 @@ export class BaseObject<TRef extends ObjectRef = ObjectRef> {
 
 export class PathObject extends BaseObject {
 
+    private _strokeColor?: Color | null;
+    private _fillColor?: Color | null;
+    private _strokeWidth?: number | null;
+    private _dashArray?: number[] | null;
+    private _dashPhase?: number | null;
+
     static fromRef(_client: PDFDancer, objectRef: ObjectRef) {
-        return new PathObject(_client, objectRef.internalId, objectRef.type, objectRef.position);
+        const pathObj = new PathObject(_client, objectRef.internalId, objectRef.type, objectRef.position);
+        if (objectRef instanceof PathObjectRef) {
+            pathObj._strokeColor = objectRef.strokeColor;
+            pathObj._fillColor = objectRef.fillColor;
+            pathObj._strokeWidth = objectRef.strokeWidth;
+            pathObj._dashArray = objectRef.dashArray;
+            pathObj._dashPhase = objectRef.dashPhase;
+        }
+        return pathObj;
+    }
+
+    /**
+     * Returns the stroke color of this path, or undefined if not set.
+     */
+    get strokeColor(): Color | null | undefined {
+        return this._strokeColor;
+    }
+
+    /**
+     * Returns the fill color of this path, or undefined if not set.
+     */
+    get fillColor(): Color | null | undefined {
+        return this._fillColor;
+    }
+
+    /**
+     * Returns the stroke width of this path, or undefined if not set.
+     */
+    get strokeWidth(): number | null | undefined {
+        return this._strokeWidth;
+    }
+
+    /**
+     * Returns the dash array of this path, or undefined if not set.
+     */
+    get dashArray(): number[] | null | undefined {
+        return this._dashArray;
+    }
+
+    /**
+     * Returns the dash phase of this path, or undefined if not set.
+     */
+    get dashPhase(): number | null | undefined {
+        return this._dashPhase;
+    }
+
+    /**
+     * Starts an edit session to modify this path's colors.
+     */
+    edit(): PathEditSession {
+        return new PathEditSession(this._client, this.ref());
     }
 }
 
@@ -613,6 +672,56 @@ export class ParagraphEditSession {
         }
 
         const result = await builder.modify(this._objectRef);
+        this._hasChanges = false;
+        return result;
+    }
+}
+
+/**
+ * Edit session for modifying path colors.
+ * Allows setting stroke and fill colors independently.
+ * Setting a color to null means "don't change it".
+ */
+export class PathEditSession {
+    private _strokeColor?: Color | null;
+    private _fillColor?: Color | null;
+    private _hasChanges = false;
+    private readonly _internals: PDFDancerInternals;
+
+    constructor(private readonly _client: PDFDancer, private readonly _objectRef: ObjectRef) {
+        this._internals = this._client as unknown as PDFDancerInternals;
+    }
+
+    /**
+     * Sets the stroke color for the path.
+     * @param color The stroke color to set, or null to leave unchanged
+     */
+    strokeColor(color: Color | null): this {
+        this._strokeColor = color;
+        this._hasChanges = true;
+        return this;
+    }
+
+    /**
+     * Sets the fill color for the path.
+     * @param color The fill color to set, or null to leave unchanged
+     */
+    fillColor(color: Color | null): this {
+        this._fillColor = color;
+        this._hasChanges = true;
+        return this;
+    }
+
+    /**
+     * Applies the color changes to the path.
+     * If no changes have been made, this is a no-op.
+     */
+    async apply(): Promise<CommandResult> {
+        if (!this._hasChanges) {
+            return CommandResult.empty("ModifyPath", this._objectRef.internalId);
+        }
+
+        const result = await this._internals.modifyPath(this._objectRef, this._strokeColor, this._fillColor);
         this._hasChanges = false;
         return result;
     }

@@ -984,6 +984,50 @@ export class PDFAssertions {
         return this;
     }
 
+    /**
+     * Asserts that a path has the expected stroke color.
+     * @param internalId The internal ID of the path
+     * @param color The expected stroke color
+     * @param page Page number (1-based)
+     */
+    async assertPathHasStrokeColor(internalId: string, color: Color, page = 1): Promise<this> {
+        const paths = await this.pdf.page(page).selectPaths();
+        const path = paths.find(p => p.internalId === internalId);
+        expect(path).toBeDefined();
+        expect(path!.strokeColor).toEqual(color);
+        return this;
+    }
+
+    /**
+     * Asserts that a path has the expected fill color.
+     * @param internalId The internal ID of the path
+     * @param color The expected fill color
+     * @param page Page number (1-based)
+     */
+    async assertPathHasFillColor(internalId: string, color: Color, page = 1): Promise<this> {
+        const paths = await this.pdf.page(page).selectPaths();
+        const path = paths.find(p => p.internalId === internalId);
+        expect(path).toBeDefined();
+        expect(path!.fillColor).toEqual(color);
+        return this;
+    }
+
+    /**
+     * Asserts that a path has the expected stroke and fill colors.
+     * @param internalId The internal ID of the path
+     * @param strokeColor The expected stroke color
+     * @param fillColor The expected fill color
+     * @param page Page number (1-based)
+     */
+    async assertPathHasColors(internalId: string, strokeColor: Color, fillColor: Color, page = 1): Promise<this> {
+        const paths = await this.pdf.page(page).selectPaths();
+        const path = paths.find(p => p.internalId === internalId);
+        expect(path).toBeDefined();
+        expect(path!.strokeColor).toEqual(strokeColor);
+        expect(path!.fillColor).toEqual(fillColor);
+        return this;
+    }
+
     async assertNumberOfImages(expected: number, page?: number): Promise<this> {
         const images = page === undefined ? await this.pdf.selectImages() : await this.pdf.page(page).selectImages();
         expect(images.length).toBe(expected);
