@@ -431,6 +431,25 @@ export class TextObjectRef extends ObjectRef {
 }
 
 /**
+ * Represents a path object reference with styling information.
+ * Extends ObjectRef to include stroke/fill colors and stroke properties.
+ */
+export class PathObjectRef extends ObjectRef {
+    constructor(
+        internalId: string,
+        position: Position,
+        type: ObjectType,
+        public strokeColor?: Color | null,
+        public fillColor?: Color | null,
+        public strokeWidth?: number | null,
+        public dashArray?: number[] | null,
+        public dashPhase?: number | null
+    ) {
+        super(internalId, position, type);
+    }
+}
+
+/**
  * Represents an RGB color with optional alpha channel, values from 0-255.
  */
 export class Color {
@@ -930,6 +949,38 @@ export class ModifyTextRequest {
                 type: this.objectRef.type
             },
             newTextLine: this.newText
+        };
+    }
+}
+
+/**
+ * Request object for modifying path colors.
+ * Setting colors to null means "don't change them".
+ */
+export class ModifyPathRequest {
+    constructor(
+        public objectRef: ObjectRef,
+        public strokeColor?: Color | null,
+        public fillColor?: Color | null
+    ) {
+    }
+
+    toDict(): Record<string, any> {
+        const colorToDict = (color?: Color | null) => {
+            if (!color) {
+                return null;
+            }
+            return {red: color.r, green: color.g, blue: color.b, alpha: color.a};
+        };
+
+        return {
+            ref: {
+                internalId: this.objectRef.internalId,
+                position: positionToDict(this.objectRef.position),
+                type: this.objectRef.type
+            },
+            strokeColor: colorToDict(this.strokeColor),
+            fillColor: colorToDict(this.fillColor)
         };
     }
 }
