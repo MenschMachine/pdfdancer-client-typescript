@@ -5,7 +5,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import os from "os";
-import { loadEnv } from '../../env-loader';
+import {loadEnv} from '../../env-loader';
 
 /**
  * Get the base URL from environment variable or default
@@ -43,21 +43,29 @@ export function readToken(): string | null {
 /**
  * Check if server is up and running
  */
-export async function serverUp(baseUrl: string): Promise<boolean> {
-    try {
-        const response = await fetch(`${baseUrl}/ping`, {
-            signal: AbortSignal.timeout(60000)
-        });
-        const text = await response.text();
-        let pongReceived = response.status === 200 && text.includes('Pong');
-        if (!pongReceived) {
+export async function serverUp(baseUrl: string, maxRetries: number = 3): Promise<boolean> {
+    const timeout = 20000;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const response = await fetch(`${baseUrl}/ping`, {
+                signal: AbortSignal.timeout(timeout)
+            });
+            const text = await response.text();
+            if (response.status === 200 && text.includes('Pong')) {
+                return true;
+            }
             console.error(`Server did not respond with Pong. Response: ${text}, status ${response.status}`);
+            return false;
+        } catch (e) {
+            if (attempt < maxRetries) {
+                await new Promise(resolve => setTimeout(resolve, 1000 * 10 * attempt));
+                continue;
+            }
+            console.error("Server down", e)
+            return false;
         }
-        return pongReceived;
-    } catch (e) {
-        console.error("Server down", e)
-        return false;
     }
+    return false;
 }
 
 /**

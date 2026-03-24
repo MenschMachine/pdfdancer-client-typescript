@@ -58,25 +58,14 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: |
-          cd sdk && npm install
+        working-directory: sdk
+        run: npm ci
 
       - name: Run e2e tests
+        working-directory: sdk
         run: |
-          cd sdk && \
           PDFDANCER_BASE_URL=${{ github.event.client_payload.api_url || inputs.api_url }} \
           PDFDANCER_TOKEN=${{ github.event.client_payload.sdk_token || inputs.sdk_token }} \
           npm run test:e2e
         env:
           NODE_TLS_REJECT_UNAUTHORIZED: '0'
-
-      - name: Upload test results
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-${{ matrix.tag }}
-          path: |
-            sdk/test-results/
-            sdk/**/*.png
-            sdk/**/*.pdf
-          retention-days: 7

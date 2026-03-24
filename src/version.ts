@@ -6,4 +6,4 @@
  * if version generation fails.
  */
 
-export const VERSION = "2.0.9";
+export const VERSION = "0.0.0-dev";
