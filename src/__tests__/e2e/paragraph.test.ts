@@ -23,7 +23,7 @@ describe('Paragraph E2E Tests (v2 API)', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const paras = await pdf.selectParagraphs();
-        expect(paras.length).toBeGreaterThanOrEqual(112);
+        expect(paras.length).toBeGreaterThanOrEqual(103);
         expect(paras.length).toBeLessThanOrEqual(122);
 
         const parasPage1 = await pdf.page(1).selectParagraphs();

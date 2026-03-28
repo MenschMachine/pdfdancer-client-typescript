@@ -104,12 +104,13 @@ describe('Template Replace with Line Breaks', () => {
         const pdf = await createTemplateWithPlaceholder();
 
         await pdf.replace('{{DESCRIPTION}}', 'First line\nSecond line')
-            .bestEffort()
+            .fitOrFail()
             .apply();
 
         const textLines = await pdf.page(1).selectTextLines();
         const texts = textLines.map(l => l.getText());
 
+        const assertions = await PDFAssertions.create(pdf);
         expect(texts).toContain('First line');
         // With bestEffort, remaining text gets appended to the second line
         expect(texts.some(t => t !== undefined && t.startsWith('Second line'))).toBe(true);

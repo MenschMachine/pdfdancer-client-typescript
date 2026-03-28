@@ -52,7 +52,7 @@ describe('Env Token E2E Tests', () => {
 
     test('fails with unreachable base url', async () => {
         process.env.PDFDANCER_API_TOKEN = validToken;
-        process.env.PDFDANCER_BASE_URL = "http://www.google.com";
+        process.env.PDFDANCER_BASE_URL = "https://www.google.com";
 
         await expect(async () => {
             try {

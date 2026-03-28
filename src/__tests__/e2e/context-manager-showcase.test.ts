@@ -104,7 +104,7 @@ describe('Paragraph Edit Session E2E Tests (Showcase)', () => {
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextlineHasFont(SAMPLE_PARAGRAPH, 'AAAZPH+Roboto-Regular', 12);
-        await assertions.assertParagraphIsAt(SAMPLE_PARAGRAPH, 150, 300, 1);
+        await assertions.assertParagraphIsAt(SAMPLE_PARAGRAPH, 150, 316, 1);  // paragraph lost one line and is now shorter, y is measured from bottom-left edge! sic
     });
 
     test('multiple edits sequential', async () => {
@@ -129,7 +129,11 @@ describe('Paragraph Edit Session E2E Tests (Showcase)', () => {
 
         const paragraphs = await pdf.page(1).selectParagraphs();
         await paragraphs[0].edit().replace('Modified First').font('Helvetica', 14).apply();
-        await paragraphs[1].edit().replace('Modified Second').font('Helvetica', 14).apply();
+        // Don't do this: await paragraphs[1].edit().replace('Modified Second').font('Helvetica', 14).apply();
+        // after the first page mutation, references are stale and should be re-fetched
+        // TODO document then inherently unstableness of paragraph semantics through mutation
+        let refetchParagraphs = await pdf.page(1).selectParagraphs();
+        await refetchParagraphs[1].edit().replace('Modified Second').font('Helvetica', 14).apply();
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextlineHasFont('Modified First', 'Helvetica', 14);

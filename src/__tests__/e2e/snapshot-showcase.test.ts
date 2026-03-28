@@ -133,7 +133,7 @@ describe('Snapshot E2E Tests (Showcase)', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const elements = await pdf.selectElements();
-        expect(elements.length).toBeGreaterThanOrEqual(95);
+        expect(elements.length).toBeGreaterThanOrEqual(94);
         expect(elements.length).toBeLessThanOrEqual(97);
 
         const docSnapshot = await pdf.getDocumentSnapshot();

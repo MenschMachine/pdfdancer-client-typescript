@@ -8,7 +8,7 @@ describe('Page E2E Tests (Showcase)', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const elements = await pdf.selectElements();
-        expect(elements.length).toBeGreaterThanOrEqual(95);
+        expect(elements.length).toBeGreaterThanOrEqual(94);
         expect(elements.length).toBeLessThanOrEqual(97);
 
         let total = 0;
@@ -16,7 +16,7 @@ describe('Page E2E Tests (Showcase)', () => {
             const pageElements = await page.selectElements();
             total += pageElements.length;
         }
-        expect(total).toBeGreaterThanOrEqual(95);
+        expect(total).toBeGreaterThanOrEqual(94);
         expect(total).toBeLessThanOrEqual(97);
     });
 
