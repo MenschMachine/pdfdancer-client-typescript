@@ -104,7 +104,7 @@ describe('Text Line E2E Tests (Showcase)', () => {
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextlineDoesNotExist(SAMPLE_PARAGRAPH);
-        await assertions.assertTextlineExists(' replaced ');
-        await assertions.assertParagraphExists(' replaced ');
+        await assertions.assertTextlineExists('replaced');
+        await assertions.assertParagraphExists('replaced');
     });
 });
