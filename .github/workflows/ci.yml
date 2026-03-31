@@ -41,7 +41,7 @@ jobs:
             }
 
             const body = pr.body || '';
-            const apiPrMatch = body.match(/## Source API PR[\s\S]*?^- Repository:\s*MenschMachine\/pdfdancer-api\s*$[\s\S]*?^- PR:\s*#?(\d+)\s*$/im);
+            const apiPrMatch = body.match(/## Source API PR[\s\S]*?^\s+- Repository:\s*MenschMachine\/pdfdancer-api\s*$[\s\S]*?^\s+- PR:\s*#?(\d+)\s*$/im);
             if (!apiPrMatch) {
               core.info('No Source API PR block found in the PR body; using staging API.');
               core.setOutput('base_url', fallbackUrl);
