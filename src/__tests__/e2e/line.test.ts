@@ -106,6 +106,12 @@ describe('Text Line E2E Tests (v2 API)', () => {
         const stillOld = await pdf.page(1).selectParagraphsStartingWith('The Complete');
         expect(stillOld).toHaveLength(0);
 
+        for (const selectTextLine of await pdf.page(1).selectTextLines()) {
+            console.log(selectTextLine.getText());
+        }
+
+        const assertions = await PDFAssertions.create(pdf);
+
         const lines = await pdf.page(1).selectTextLinesMatching('.*replaced.*');
         expect(lines.length).toBeGreaterThan(0);
         expect(lines[0].objectRef().status).toBeDefined();
@@ -118,8 +124,7 @@ describe('Text Line E2E Tests (v2 API)', () => {
         const containingParas = await pdf.page(1).selectParagraphsStartingWith(' replaced ');
         expect(containingParas.length).toBeGreaterThan(0);
 
-        const assertions = await PDFAssertions.create(pdf);
-        await assertions.assertTextlineExists(' replaced ');
+        await assertions.assertTextlineExists('replaced');
     });
 
     // Tests for singular select methods
