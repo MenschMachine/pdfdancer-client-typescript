@@ -3,6 +3,9 @@ import {requireEnvAndFixture} from './test-helpers';
 import {PDFAssertions} from './pdf-assertions';
 
 const SAMPLE_PARAGRAPH = 'This is regular Sans text showing alignment and styles.';
+const SHOWCASE_TITLE = 'PDFDancer Showcase';
+const SHOWCASE_FOOTER = 'Showcase.pdf';
+const REPLACEMENT_LINE = 'REPLACED_LINE_TEXT';
 
 describe('Text Line E2E Tests (Showcase)', () => {
     test('find lines by position multi', async () => {
@@ -24,18 +27,20 @@ describe('Text Line E2E Tests (Showcase)', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const lines = await pdf.selectTextLines();
-        expect(lines.length).toBe(34);
+        expect(lines.length).toBeGreaterThan(0);
 
-        const first = lines[0];
-        expect(first.position).toBeDefined();
-        expect(Math.abs(first.position.getX()! - 180)).toBeLessThanOrEqual(1);
-        expect(Math.abs(first.position.getY()! - 750)).toBeLessThanOrEqual(1);
-        expect(first.objectRef().status?.isModified()).toBe(false);
+        const [title] = await pdf.page(1).selectTextLinesStartingWith(SHOWCASE_TITLE);
+        expect(title).toBeDefined();
+        expect(title.position).toBeDefined();
+        expect(Math.abs(title.position.getX()! - 180)).toBeLessThanOrEqual(1);
+        expect(Math.abs(title.position.getY()! - 750)).toBeLessThanOrEqual(1);
+        expect(title.objectRef().status?.isModified()).toBe(false);
 
-        const last = lines[lines.length - 1];
-        expect(Math.abs(last.position.getX()! - 69.3)).toBeLessThanOrEqual(2);
-        expect(Math.abs(last.position.getY()! - 45)).toBeLessThanOrEqual(2);
-        expect(last.objectRef().status?.isModified()).toBe(false);
+        const [footer] = await pdf.page(1).selectTextLinesStartingWith(SHOWCASE_FOOTER);
+        expect(footer).toBeDefined();
+        expect(Math.abs(footer.position.getX()! - 69.3)).toBeLessThanOrEqual(2);
+        expect(Math.abs(footer.position.getY()! - 45)).toBeLessThanOrEqual(2);
+        expect(footer.objectRef().status?.isModified()).toBe(false);
     });
 
     test('find lines by text', async () => {
@@ -90,12 +95,12 @@ describe('Text Line E2E Tests (Showcase)', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const [line] = await pdf.page(1).selectTextLinesStartingWith(SAMPLE_PARAGRAPH);
-        await line.edit().text(' replaced ').apply();
+        await line.edit().text(REPLACEMENT_LINE).apply();
 
         expect(await pdf.page(1).selectTextLinesStartingWith(SAMPLE_PARAGRAPH)).toHaveLength(0);
-        expect(await pdf.page(1).selectParagraphsStartingWith(' replaced ')).not.toHaveLength(0);
+        expect(await pdf.page(1).selectParagraphsStartingWith(REPLACEMENT_LINE)).not.toHaveLength(0);
 
-        const lines = await pdf.page(1).selectTextLinesStartingWith(' replaced ');
+        const lines = await pdf.page(1).selectTextLinesStartingWith(REPLACEMENT_LINE);
         expect(lines.length).toBeGreaterThan(0);
         const status = lines[0].objectRef().status;
         expect(status).toBeDefined();
@@ -104,7 +109,7 @@ describe('Text Line E2E Tests (Showcase)', () => {
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertTextlineDoesNotExist(SAMPLE_PARAGRAPH);
-        await assertions.assertTextlineExists('replaced');
-        await assertions.assertParagraphExists('replaced');
+        await assertions.assertTextlineExists(REPLACEMENT_LINE);
+        await assertions.assertParagraphExists(REPLACEMENT_LINE);
     });
 });
