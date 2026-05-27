@@ -141,6 +141,20 @@ const DEFAULT_RETRY_CONFIG: Required<RetryConfig> = {
     respectRetryAfter: true
 };
 
+const API_VERSION_PATH = 'v2';
+
+function buildVersionedUrl(baseUrl: string, path: string): string {
+    const base = baseUrl.replace(/\/+$/, '');
+    const endpoint = path.replace(/^\/+/, '');
+    const versionPrefix = `/${API_VERSION_PATH}`;
+
+    if (base.endsWith(versionPrefix)) {
+        return `${base}/${endpoint}`;
+    }
+
+    return `${base}${versionPrefix}/${endpoint}`;
+}
+
 /**
  * Static helper function for retry logic with exponential backoff.
  * Used by static methods that don't have access to instance retry config.
@@ -748,10 +762,7 @@ export class PDFDancer {
         }
 
         try {
-            // Build URL ensuring no double slashes
-            const base = resolvedBaseUrl.replace(/\/+$/, '');
-            const endpoint = '/session/new'.replace(/^\/+/, '');
-            const url = `${base}/${endpoint}`;
+            const url = buildVersionedUrl(resolvedBaseUrl, '/session/new');
 
             // Generate fingerprint for this request
             const fingerprint = await generateFingerprint();
@@ -811,8 +822,7 @@ export class PDFDancer {
     }
 
     private static async _obtainAnonymousToken(baseUrl: string, timeout: number = 60000): Promise<string> {
-        const normalizedBaseUrl = (baseUrl || "https://api.pdfdancer.com").replace(/\/+$/, '');
-        const url = `${normalizedBaseUrl}/keys/anon`;
+        const url = buildVersionedUrl(baseUrl || "https://api.pdfdancer.com", '/keys/anon');
 
         try {
             const fingerprint = await generateFingerprint();
@@ -906,9 +916,7 @@ export class PDFDancer {
      * Combines baseUrl and path while handling trailing/leading slashes.
      */
     private _buildUrl(path: string): string {
-        const base = this._baseUrl.replace(/\/+$/, '');
-        const endpoint = path.replace(/^\/+/, '');
-        return `${base}/${endpoint}`;
+        return buildVersionedUrl(this._baseUrl, path);
     }
 
     /**
@@ -1063,7 +1071,6 @@ export class PDFDancer {
             'Content-Type': 'application/json',
             'X-Generated-At': generateTimestamp(),
             'X-Fingerprint': fingerprint,
-            'X-API-VERSION': '1',
             'X-PDFDancer-Client': `typescript/${VERSION}`
         };
 
@@ -1759,7 +1766,8 @@ export class PDFDancer {
     }
 
     private async listPathGroups(pageIndex: number): Promise<PathGroupObject[]> {
-        const response = await this._makeRequest('GET', `/pdf/page/${pageIndex}/path-groups`);
+        const pageNumber = pageIndex + 1;
+        const response = await this._makeRequest('GET', `/pdf/page/${pageNumber}/path-groups`);
         const infos = (await response.json() as any[]).map((d: any) => PathGroupInfo.fromDict(d));
         return infos.map(info => new PathGroupObject(this, pageIndex, info));
     }

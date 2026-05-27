@@ -66,7 +66,7 @@ describe('Env Token E2E Tests', () => {
 
     test('fails with invalid token', async () => {
         process.env.PDFDANCER_API_TOKEN = "invalid-token";
-        process.env.PDFDANCER_BASE_URL = "https://api.pdfdancer.com";
+        process.env.PDFDANCER_BASE_URL = baseUrl;
 
         await expect(async () => {
             try {
