@@ -163,14 +163,19 @@ async function fetchWithRetry(
     url: string,
     // eslint-disable-next-line no-undef
     options: RequestInit,
-    retryConfig: Required<RetryConfig>
+    retryConfig: Required<RetryConfig>,
+    timeout?: number
 ): Promise<Response> {
     let lastError: Error | null = null;
     let lastResponse: Response | null = null;
 
     for (let attempt = 0; attempt <= retryConfig.maxRetries; attempt++) {
         try {
-            const response = await fetch(url, options);
+            const attemptOptions = {
+                ...options,
+                signal: timeout && timeout > 0 ? AbortSignal.timeout(timeout) : options.signal
+            };
+            const response = await fetch(url, attemptOptions);
 
             // Check if we should retry based on status code
             if (!response.ok && retryConfig.retryableStatusCodes.includes(response.status)) {
@@ -780,9 +785,9 @@ export class PDFDancer {
                         'X-PDFDancer-Client': `typescript/${VERSION}`
                     },
                     body: JSON.stringify(createRequest.toDict()),
-                    signal: resolvedTimeout > 0 ? AbortSignal.timeout(resolvedTimeout) : undefined
                 },
-                DEFAULT_RETRY_CONFIG
+                DEFAULT_RETRY_CONFIG,
+                resolvedTimeout
             );
 
             if (!response.ok) {
@@ -835,10 +840,10 @@ export class PDFDancer {
                         'X-Fingerprint': fingerprint,
                         'X-Generated-At': generateTimestamp(),
                         'X-PDFDancer-Client': `typescript/${VERSION}`
-                    },
-                    signal: timeout > 0 ? AbortSignal.timeout(timeout) : undefined
+                    }
                 },
-                DEFAULT_RETRY_CONFIG
+                DEFAULT_RETRY_CONFIG,
+                timeout
             );
 
             if (!response.ok) {
@@ -989,9 +994,9 @@ export class PDFDancer {
                         'X-Fingerprint': fingerprint,
                         'X-PDFDancer-Client': `typescript/${VERSION}`
                     },
-                    body: formData,
-                    signal: this._readTimeout > 0 ? AbortSignal.timeout(this._readTimeout) : undefined
-                }
+                    body: formData
+                },
+                this._readTimeout
             );
 
             if (!response.ok) {
@@ -1042,9 +1047,10 @@ export class PDFDancer {
     private async _fetchWithRetry(
         url: string,
         // eslint-disable-next-line no-undef
-        options: RequestInit
+        options: RequestInit,
+        timeout?: number
     ): Promise<Response> {
-        return fetchWithRetry(url, options, this._retryConfig);
+        return fetchWithRetry(url, options, this._retryConfig, timeout);
     }
 
     /**
@@ -1080,9 +1086,9 @@ export class PDFDancer {
                 {
                     method,
                     headers,
-                    body: data ? JSON.stringify(data) : undefined,
-                    signal: this._readTimeout > 0 ? AbortSignal.timeout(this._readTimeout) : undefined
-                }
+                    body: data ? JSON.stringify(data) : undefined
+                },
+                this._readTimeout
             );
 
             // Handle 404 errors
@@ -2116,9 +2122,9 @@ export class PDFDancer {
                         'X-Fingerprint': fingerprint,
                         'X-PDFDancer-Client': `typescript/${VERSION}`
                     },
-                    body: formData,
-                    signal: AbortSignal.timeout(60000)
-                }
+                    body: formData
+                },
+                60000
             );
 
             if (!response.ok) {

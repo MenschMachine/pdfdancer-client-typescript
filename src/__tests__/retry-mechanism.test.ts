@@ -189,6 +189,47 @@ describe('Retry Mechanism', () => {
             expect(mockFetch).toHaveBeenCalledTimes(2);
         });
 
+        test('should create a fresh timeout signal for each retry attempt', async () => {
+            const mockFetch = global.fetch as jest.Mock;
+            const signals: AbortSignal[] = [];
+
+            mockFetch.mockImplementation((_url: string, options: {signal?: AbortSignal | null}) => {
+                const signal = options.signal as AbortSignal;
+                signals.push(signal);
+
+                if (signal.aborted) {
+                    return Promise.reject(new Error('Signal was already aborted'));
+                }
+
+                if (signals.length === 1) {
+                    return new Promise((_resolve, reject) => {
+                        signal.addEventListener('abort', () => {
+                            reject(new Error('TimeoutError: The operation was aborted due to timeout'));
+                        }, {once: true});
+                    });
+                }
+
+                return Promise.resolve(createMockResponse(200, 'session-123'));
+            });
+
+            const pdfData = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
+            const retryConfig: RetryConfig = {
+                maxRetries: 2,
+                initialDelay: 1,
+                retryOnNetworkError: true,
+                useJitter: false
+            };
+
+            await expect(
+                PDFDancer.open(pdfData, 'test-token', undefined, 1, retryConfig)
+            ).resolves.toBeDefined();
+
+            expect(mockFetch).toHaveBeenCalledTimes(2);
+            expect(signals).toHaveLength(2);
+            expect(signals[1]).not.toBe(signals[0]);
+            expect(signals[1].aborted).toBe(false);
+        });
+
         test('should NOT retry on network errors when retryOnNetworkError is false', async () => {
             const mockFetch = global.fetch as jest.Mock;
 
