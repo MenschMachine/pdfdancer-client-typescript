@@ -10,9 +10,15 @@ import {
     PositionMode,
     ShapeType
 } from '../models';
+import {PageClient, PDFDancer} from '../pdfdancer_v1';
 import {VERSION} from '../version';
 
 describe('model exposure and serialization', () => {
+    test('singular form-field selection requires a criterion', () => {
+        expect(PDFDancer.prototype).not.toHaveProperty('selectFormField');
+        expect(PageClient.prototype).not.toHaveProperty('selectFormField');
+    });
+
     test('package version is publicly exposed as a non-empty string', () => {
         expect(typeof VERSION).toBe('string');
         expect(VERSION.length).toBeGreaterThan(0);

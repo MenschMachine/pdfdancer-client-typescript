@@ -584,11 +584,6 @@ export class PageClient {
         return forms.length > 0 ? forms[0] : null;
     }
 
-    async selectFormField() {
-        const fields = await this.selectFormFields();
-        return fields.length > 0 ? fields[0] : null;
-    }
-
     async selectFormFieldAt(x: number, y: number, tolerance: number = 0.01) {
         const fields = await this.selectFormFieldsAt(x, y, tolerance);
         return fields.length > 0 ? fields[0] : null;
@@ -2256,11 +2251,6 @@ export class PDFDancer {
     async selectForm() {
         const forms = await this.selectForms();
         return forms.length > 0 ? forms[0] : null;
-    }
-
-    async selectFormField() {
-        const fields = await this.selectFormFields();
-        return fields.length > 0 ? fields[0] : null;
     }
 
     async selectFormFieldByName(fieldName: string) {
