@@ -217,12 +217,14 @@ export class ObjectRef {
     }
 }
 
+/** Page dimensions in PDF points. */
 export interface PageSize {
     name?: string;
     width?: number;
     height?: number;
 }
 
+/** Named page dimensions available to page and document builders. */
 export const STANDARD_PAGE_SIZES: Record<string, {width: number; height: number}> = {
     A0: {width: 2384.0, height: 3370.0},
     A1: {width: 1684.0, height: 2384.0},
@@ -241,6 +243,7 @@ export const STANDARD_PAGE_SIZES: Record<string, {width: number; height: number}
     INDEX_3X5: {width: 216.0, height: 360.0}
 };
 
+/** Resolves dimensions to a named standard size when they are within the supplied tolerance. */
 export function pageSizeFromDimensions(width: number, height: number, tolerance = 0.5): PageSize {
     if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
         throw new Error('Page size width and height must be finite positive numbers');
@@ -255,6 +258,7 @@ export function pageSizeFromDimensions(width: number, height: number, tolerance 
     return {width, height};
 }
 
+/** Page orientation used when creating pages and documents. */
 export enum Orientation {
     PORTRAIT = "PORTRAIT",
     LANDSCAPE = "LANDSCAPE"
@@ -290,6 +294,7 @@ export class DocumentFontInfo {
 export { DocumentFontInfo as FontRecommendation };
 
 
+/** Immutable reference data for one page in a PDFDancer session. */
 export class PageRef extends ObjectRef {
     pageSize?: PageSize;
     orientation?: Orientation;

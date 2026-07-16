@@ -34,6 +34,7 @@ interface PDFDancerInternals {
     clearPathGroupClipping(pageNumber: number, groupId: string): Promise<boolean>;
 }
 
+/** Common operations and metadata for a selected existing PDF object. */
 export class BaseObject<TRef extends ObjectRef = ObjectRef> {
 
     _client: PDFDancer;
@@ -73,6 +74,7 @@ export class BaseObject<TRef extends ObjectRef = ObjectRef> {
 
 }
 
+/** A selected vector path that can be inspected or edited. */
 export class PathObject extends BaseObject {
 
     private _strokeColor?: Color | null;
@@ -136,6 +138,7 @@ export class PathObject extends BaseObject {
     }
 }
 
+/** A named group of vector paths that can be transformed together. */
 export class PathGroupObject {
     private _client: PDFDancer;
     private _pageIndex: number;
@@ -190,6 +193,7 @@ interface PathGroupInternals {
     clearPathGroupClipping(pageNumber: number, groupId: string): Promise<boolean>;
 }
 
+/** A selected raster image with image-specific transformation operations. */
 export class ImageObject extends BaseObject {
 
     static fromRef(_client: PDFDancer, objectRef: ObjectRef) {
@@ -418,6 +422,7 @@ export class ImageObject extends BaseObject {
     }
 }
 
+/** A selected Form XObject, which is a reusable PDF content stream. */
 export class FormXObject extends BaseObject {
 
     static fromRef(_client: PDFDancer, objectRef: ObjectRef) {
@@ -425,6 +430,7 @@ export class FormXObject extends BaseObject {
     }
 }
 
+/** A selected interactive AcroForm field and its stored value. */
 export class FormFieldObject extends BaseObject<FormFieldRef> {
     name: string;
     value: string | null;
@@ -448,6 +454,7 @@ export class FormFieldObject extends BaseObject<FormFieldRef> {
     }
 }
 
+/** Collects path appearance changes and applies them as one operation. */
 export class PathEditSession {
     private _strokeColor?: Color | null;
     private _fillColor?: Color | null;

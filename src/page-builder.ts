@@ -42,6 +42,7 @@ const normalizePageSize = (value: PageSize | string): PageSize => {
     };
 };
 
+/** Builds and inserts a page into the current PDFDancer session. */
 export class PageBuilder {
     private readonly _client: PDFDancer;
     private readonly _internals: PDFDancerInternals;

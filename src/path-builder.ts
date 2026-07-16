@@ -327,6 +327,7 @@ abstract class SinglePathBuilder<T extends SinglePathBuilder<T>> {
     }
 }
 
+/** Builds and adds one straight line segment. */
 export class LineBuilder extends SinglePathBuilder<LineBuilder> {
     private start?: PathPoint;
     private end?: PathPoint;
@@ -338,6 +339,7 @@ export class LineBuilder extends SinglePathBuilder<LineBuilder> {
     }
 }
 
+/** Builds and adds one cubic Bézier segment. */
 export class BezierBuilder extends SinglePathBuilder<BezierBuilder> {
     private start?: PathPoint;
     private c1?: PathPoint;
@@ -358,6 +360,7 @@ export class BezierBuilder extends SinglePathBuilder<BezierBuilder> {
     }
 }
 
+/** Builds and adds a rectangular vector path. */
 export class RectangleBuilder extends SinglePathBuilder<RectangleBuilder> {
     private origin?: PathPoint;
     private rectangleWidth?: number;

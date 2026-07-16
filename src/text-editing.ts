@@ -20,12 +20,14 @@ function normalizedPages(values: Array<number | number[]>): number[] {
     return pages;
 }
 
+/** Color spaces accepted by text-style color values. */
 export enum PdfColorSpace {
     RGB = 'rgb',
     CMYK = 'cmyk',
     GRAY = 'gray'
 }
 
+/** A serializable color value used by text-editing requests. */
 export class PdfColorRequest {
     constructor(
         public readonly space: PdfColorSpace,
@@ -69,6 +71,7 @@ export class PdfColorRequest {
     }
 }
 
+/** A six-value PDF affine transformation matrix. */
 export class PdfAffineTransform {
     private constructor(private readonly coefficients: [number, number, number, number, number, number]) {
         coefficients.forEach(value => finite(value, 'PDF affine matrix coefficient'));
@@ -103,6 +106,7 @@ export class PdfAffineTransform {
     }
 }
 
+/** Builds a PDF affine transformation matrix. */
 export class PdfAffineTransformBuilder {
     private transform = PdfAffineTransform.fromPdfMatrix([1, 0, 0, 1, 0, 0]);
 
@@ -135,18 +139,21 @@ export class PdfAffineTransformBuilder {
     }
 }
 
+/** Determines whether unaffected text remains anchored or is recomposed. */
 export enum TextLayoutMode {
     SOURCE_ANCHORED = 'sourceAnchored',
     REFLOW_WHEN_SUPPORTED = 'reflowWhenSupported',
     REQUIRE_REFLOW = 'requireReflow'
 }
 
+/** Selects the layout strategy used when text is recomposed. */
 export enum TextLayoutProfile {
     DEFAULT = 'default',
     BODY_TEXT = 'bodyText',
     NO_REFLOW = 'noReflow'
 }
 
+/** Layout settings attached to a text-editing request. */
 export class TextLayoutRequest {
     constructor(
         public readonly mode?: TextLayoutMode,
@@ -189,6 +196,7 @@ export class TextLayoutRequest {
     }
 }
 
+/** A literal or regular-expression selector for existing PDF text. */
 export class TextSelectorRequest {
     constructor(
         public readonly literal?: string,
@@ -230,6 +238,7 @@ function validateStyleFields(fields: StyleFields, requireAny: boolean): void {
     if (fields.wordSpacing !== undefined) finite(fields.wordSpacing, 'wordSpacing');
 }
 
+/** Optional appearance changes; omitted fields retain their existing values. */
 export class TextStylePatchRequest implements StyleFields {
     constructor(
         public readonly font?: string,
@@ -250,6 +259,7 @@ export class TextStylePatchRequest implements StyleFields {
     toJSON(): Record<string, unknown> { return compact({...this}); }
 }
 
+/** Builds an appearance patch for replacement, insertion, or styling. */
 export class TextStylePatchBuilder {
     private fields: StyleFields = {};
     font(value: string): this { this.fields.font = value; return this; }
@@ -263,6 +273,7 @@ export class TextStylePatchBuilder {
     }
 }
 
+/** A complete set of explicitly supplied text appearance values. */
 export class TextStyleSetRequest implements StyleFields {
     constructor(
         public readonly font?: string,
@@ -288,6 +299,7 @@ export class TextStyleSetRequest implements StyleFields {
     toJSON(): Record<string, unknown> { return compact({...this}); }
 }
 
+/** Builds a complete text appearance value. */
 export class TextStyleSetBuilder {
     private fields: StyleFields & {resetSpacingOverrides?: boolean} = {};
     constructor(style?: TextStyleSetRequest) { if (style) this.fields = {...style}; }
@@ -334,6 +346,7 @@ abstract class SelectorLayoutBuilder<T> {
     abstract build(): T;
 }
 
+/** Describes an image that replaces a selected text match. */
 export class TextReplacementImageRequest {
     constructor(public readonly data: Uint8Array, public readonly transformation: PdfAffineTransform) {}
     toJSON(): Record<string, unknown> {
@@ -341,6 +354,7 @@ export class TextReplacementImageRequest {
     }
 }
 
+/** A validated operation that replaces selected PDF text. */
 export class TextReplaceRequest {
     constructor(
         public readonly pages: number[] | undefined,
@@ -373,6 +387,7 @@ export class TextReplaceRequest {
     toJSON(): Record<string, unknown> { return compact({...this}); }
 }
 
+/** Builds a validated text-replacement request. */
 export class TextReplaceRequestBuilder extends SelectorLayoutBuilder<TextReplaceRequest> {
     private replacement?: string;
     private image?: TextReplacementImageRequest;
@@ -395,6 +410,7 @@ export class TextReplaceRequestBuilder extends SelectorLayoutBuilder<TextReplace
     }
 }
 
+/** A validated operation that deletes selected PDF text. */
 export class TextDeleteRequest {
     constructor(public readonly pages: number[] | undefined, public readonly select: TextSelectorRequest, public readonly layout?: TextLayoutRequest) {}
     static literal(text: string): TextDeleteRequestBuilder { return new TextDeleteRequestBuilder().literal(text); }
@@ -405,10 +421,12 @@ export class TextDeleteRequest {
     toJSON(): Record<string, unknown> { return compact({...this}); }
 }
 
+/** Builds a validated text-deletion request. */
 export class TextDeleteRequestBuilder extends SelectorLayoutBuilder<TextDeleteRequest> {
     build(): TextDeleteRequest { return new TextDeleteRequest(this.pageValues, this.builtSelector(), this.builtLayout()).validated(); }
 }
 
+/** Placement of inserted text relative to an existing text anchor. */
 export enum TextInsertCaret { BEFORE = 'before', AFTER = 'after' }
 
 export interface TextInsertAnchorTarget { pages?: number[]; select: TextSelectorRequest; caret: TextInsertCaret; }
@@ -416,6 +434,7 @@ export interface TextInsertCoordinateTarget { page?: number; x: number; y: numbe
 export interface TextInsertTarget { anchor?: TextInsertAnchorTarget; coordinate?: TextInsertCoordinateTarget; }
 export interface TextInsertStyle { from?: 'anchor'; patch?: TextStylePatchRequest; }
 
+/** A validated operation that inserts text at an anchor or coordinate. */
 export class TextInsertRequest {
     constructor(
         public readonly target: TextInsertTarget,
@@ -469,6 +488,7 @@ export class TextInsertRequest {
     toJSON(): Record<string, unknown> { return compact({...this}); }
 }
 
+/** Builds a validated text-insertion request. */
 export class TextInsertRequestBuilder extends SelectorLayoutBuilder<TextInsertRequest> {
     private targetKind: 'anchor' | 'coordinate' = 'anchor';
     private caretValue?: TextInsertCaret;
@@ -518,6 +538,7 @@ export class TextInsertRequestBuilder extends SelectorLayoutBuilder<TextInsertRe
     }
 }
 
+/** Numeric comparison criteria for matching existing text style runs. */
 export class TextStyleNumericFilterRequest {
     constructor(public readonly eq?: number, public readonly tolerance?: number) {}
     static equals(eq: number, tolerance?: number): TextStyleNumericFilterRequest { return new TextStyleNumericFilterRequest(eq, tolerance).validated(); }
@@ -529,6 +550,7 @@ export class TextStyleNumericFilterRequest {
     }
 }
 
+/** Existing appearance criteria used to select text style runs. */
 export interface TextStyleRunFilterRequest {
     textContains?: string;
     font?: string;
@@ -540,12 +562,14 @@ export interface TextStyleRunFilterRequest {
     containsUnmappedGlyphs?: boolean;
 }
 
+/** Text and appearance criteria used by a style operation. */
 export interface TextStyleSelectorRequest extends Omit<TextSelectorRequest, 'validated' | 'toJSON'> {
     runs?: {where: TextStyleRunFilterRequest; maxMatches?: number};
 }
 
 export interface TextStyleValue extends StyleFields { resetSpacingOverrides?: boolean; }
 
+/** A validated operation that changes existing text appearance. */
 export class TextStyleRequest {
     constructor(
         public readonly pages: number[] | undefined,
@@ -587,6 +611,7 @@ function validateRunFilter(runs: {where: TextStyleRunFilterRequest; maxMatches?:
     if (runs.maxMatches !== undefined && (!Number.isInteger(runs.maxMatches) || runs.maxMatches <= 0)) fail('maxMatches must be positive');
 }
 
+/** Builds a validated text-style request. */
 export class TextStyleRequestBuilder extends SelectorLayoutBuilder<TextStyleRequest> {
     private selectorKind: 'text' | 'runs' = 'text';
     private where: TextStyleRunFilterRequest = {};
@@ -619,6 +644,7 @@ export class TextStyleRequestBuilder extends SelectorLayoutBuilder<TextStyleRequ
     }
 }
 
+/** Per-change diagnostic information returned by a text operation. */
 export interface TextEditChangeDiagnostic {
     page?: number;
     operation?: string;
@@ -633,6 +659,7 @@ export interface TextEditChangeDiagnostic {
     reflowUnitIds?: string[];
 }
 
+/** Diagnostic information about the complete text operation. */
 export interface TextOperationDiagnostic {
     page?: number;
     code?: string;
@@ -641,6 +668,7 @@ export interface TextOperationDiagnostic {
     reflowUnitIds?: string[];
 }
 
+/** Counts, warnings, errors, and diagnostics returned by a text operation. */
 export interface TextEditResponse {
     matched?: number;
     changed?: number;
@@ -657,6 +685,7 @@ type TextEditingFunction = (
     request: TextReplaceRequest | TextDeleteRequest | TextInsertRequest | TextStyleRequest
 ) => Promise<TextEditResponse>;
 
+/** Performs selector-based text operations at document or page scope. */
 export class TextClient {
     constructor(private readonly edit: TextEditingFunction, private readonly pageNumber?: number) {}
     replace(request: TextReplaceRequest): Promise<TextEditResponse> { return this.edit('replace', this.scoped(request)); }

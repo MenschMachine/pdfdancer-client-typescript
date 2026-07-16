@@ -430,6 +430,7 @@ interface PDFDancerInternals {
     createTextClient(pageNumber?: number): TextClient;
 }
 
+/** Provides page-scoped selection, creation, and text-editing operations. */
 export class PageClient {
 
     private _pageNumber: number;
