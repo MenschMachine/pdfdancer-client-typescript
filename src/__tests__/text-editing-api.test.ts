@@ -1,4 +1,4 @@
-import {PDFDancer} from '../pdfdancer_v1';
+import {PDFDancer} from '../pdfdancer_v2';
 /* global RequestInit */
 import {
     PdfColorRequest,

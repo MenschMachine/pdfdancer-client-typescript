@@ -1,5 +1,5 @@
 import {requireEnvAndFixture} from './test-helpers';
-import {PDFDancer} from '../../pdfdancer_v1';
+import {PDFDancer} from '../../pdfdancer_v2';
 import {PDFAssertions} from './pdf-assertions';
 
 const CLIPPING_FIXTURE = 'invisible-content-clipping-test.pdf';

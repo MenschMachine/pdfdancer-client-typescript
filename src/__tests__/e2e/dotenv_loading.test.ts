@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import {PDFDancer} from "../../pdfdancer_v1";
+import {PDFDancer} from "../../pdfdancer_v2";
 import {requireEnvAndFixture} from "./test-helpers";
 import {resetEnvLoader} from "../../env-loader";
 

@@ -459,7 +459,7 @@ export class PDFAssertions {
                 continue;
             }
 
-            if ('[]<>{}'.includes(ch)) {
+            if ('[]<>(){}'.includes(ch)) {
                 i += 1;
                 continue;
             }

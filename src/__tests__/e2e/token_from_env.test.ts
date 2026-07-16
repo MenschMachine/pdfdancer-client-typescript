@@ -1,5 +1,5 @@
 import {requireEnvAndFixture} from "./test-helpers";
-import {PDFDancer} from "../../pdfdancer_v1";
+import {PDFDancer} from "../../pdfdancer_v2";
 import {HttpClientException, ValidationException} from "../../exceptions";
 import {resetEnvLoader} from "../../env-loader";
 

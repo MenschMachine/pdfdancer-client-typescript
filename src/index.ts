@@ -4,8 +4,8 @@
  * A TypeScript client library for the PDFDancer PDF manipulation API.
  */
 
-export { PDFDancer, PageClient } from './pdfdancer_v1';
-export type { RetryConfig } from './pdfdancer_v1';
+export { PDFDancer, PageClient } from './pdfdancer_v2';
+export type { RetryConfig } from './pdfdancer_v2';
 export { PageBuilder } from './page-builder';
 export { PathBuilder, LineBuilder, BezierBuilder, RectangleBuilder } from './path-builder';
 

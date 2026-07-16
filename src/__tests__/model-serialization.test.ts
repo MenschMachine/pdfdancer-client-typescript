@@ -10,7 +10,7 @@ import {
     PositionMode,
     ShapeType
 } from '../models';
-import {PageClient, PDFDancer} from '../pdfdancer_v1';
+import {PageClient, PDFDancer} from '../pdfdancer_v2';
 import {VERSION} from '../version';
 
 describe('model exposure and serialization', () => {

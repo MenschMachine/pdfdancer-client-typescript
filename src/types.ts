@@ -12,7 +12,7 @@ import {
     PathObjectRef,
     Position,
 } from "./models";
-import {PDFDancer} from "./pdfdancer_v1";
+import {PDFDancer} from "./pdfdancer_v2";
 import {ValidationException} from "./exceptions";
 import fs from "node:fs";
 import path from "node:path";

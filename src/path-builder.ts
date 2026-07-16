@@ -1,4 +1,4 @@
-import {PDFDancer} from "./pdfdancer_v1";
+import {PDFDancer} from "./pdfdancer_v2";
 import {Bezier, Color, Line, Path, PathPoint, PathSegment, Position} from "./models";
 import {ValidationException} from "./exceptions";
 
