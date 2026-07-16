@@ -104,6 +104,9 @@ describe('AcroForm Fields E2E Tests (v2 API)', () => {
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertNumberOfFormFields(10);
+        const persisted = await assertions.getPdf().selectFormFieldByName('firstName');
+        expect(persisted).not.toBeNull();
+        expect(persisted!.value).toBe('Donald Duck');
     });
 
     // Tests for singular select methods

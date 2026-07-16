@@ -287,6 +287,43 @@ describe('Image Transform E2E Tests', () => {
         await assertions.assertImageSize(imageId, 100, 150, 1, 1);
     });
 
+    test('rotate wide image 270 degrees swaps dimensions', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-image-test.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+        const image = (await pdf.page(1).selectImages())[1];
+
+        expect((await image.rotate(270)).success).toBe(true);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertImageSize(image.internalId, 100, 150, 1, 1);
+    });
+
+    test('two quarter turns restore wide image dimensions', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-image-test.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+        const image = (await pdf.page(1).selectImages())[1];
+
+        expect((await image.rotate(90)).success).toBe(true);
+        const refreshed = (await pdf.page(1).selectImages()).find(candidate => candidate.internalId === image.internalId)!;
+        expect((await refreshed.rotate(90)).success).toBe(true);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertImageSize(image.internalId, 150, 100, 1, 1);
+    });
+
+    test('chained scale and rotation persist', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-image-test.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+        const image = (await pdf.page(1).selectImages())[1];
+
+        expect((await image.scale(0.5)).success).toBe(true);
+        const refreshed = (await pdf.page(1).selectImages()).find(candidate => candidate.internalId === image.internalId)!;
+        expect((await refreshed.rotate(90)).success).toBe(true);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertImageSize(image.internalId, 50, 75, 1, 1);
+    });
+
     test('crop square image', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-image-test.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
@@ -336,6 +373,19 @@ describe('Image Transform E2E Tests', () => {
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertImageSize(imageId, 100, 100, 1, 1);
+    });
+
+    test('opacity accepts both boundary values', async () => {
+        const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-image-test.pdf');
+        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
+        const image = (await pdf.page(1).selectImages())[0];
+
+        expect((await image.setOpacity(0)).success).toBe(true);
+        const refreshed = (await pdf.page(1).selectImages()).find(candidate => candidate.internalId === image.internalId)!;
+        expect((await refreshed.setOpacity(1)).success).toBe(true);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertImageSize(image.internalId, 100, 100, 1, 1);
     });
 
     test('flip wide image horizontally preserves dimensions', async () => {

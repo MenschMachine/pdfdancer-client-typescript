@@ -144,6 +144,9 @@ describe('Page E2E Tests (Showcase)', () => {
         const pageRef = await pdf.newPage().customSize(400, 600).landscape().add();
         expect(pageRef.position.pageNumber).toBe(8);
         expect((await pdf.pages()).length).toBe(8);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertPageDimension(400, 600, Orientation.LANDSCAPE, 8);
     });
 
     test('add page with builder all options', async () => {

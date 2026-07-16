@@ -84,6 +84,34 @@ describe('v2 selector-based text editing', () => {
         await assertions.assertPdfTextContains('This Workbook');
     });
 
+    test('case-insensitive replacement persists every selected match', async () => {
+        const pdf = await open();
+        const response = await pdf.text().replace(
+            TextReplaceRequest.literal('april dunford', 'April D.').caseSensitive(false).build());
+
+        expect(response.matched).toBe(3);
+        expect(response.changed).toBe(3);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertPdfTextOccurrenceCount('April Dunford', 0);
+        await assertions.assertPdfTextOccurrenceCount('April D.', 3);
+        await assertions.assertPdfTextContains('aprildunford.com');
+    });
+
+    test('empty replacement behaves as deletion and persists surrounding text', async () => {
+        const pdf = await open();
+        const response = await pdf.text().replace(
+            TextReplaceRequest.literal('Please do not distribute this workbook', '').build());
+
+        expect(response.matched).toBe(1);
+        expect(response.changed).toBe(1);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertPdfTextOccurrenceCount('Please do not distribute this workbook', 0);
+        await assertions.assertPdfTextContains('I like to make updates');
+        await assertions.assertPdfTextContains('April Dunford');
+    });
+
     test('no-match replacement returns zero diagnostics and preserves the PDF', async () => {
         const pdf = await open();
         const response = await pdf.text().replace(
@@ -131,6 +159,32 @@ describe('v2 selector-based text editing', () => {
         await assertions.assertPdfTextContains('aprildunford.com');
     });
 
+    test('delete honors whole-word and max-match constraints', async () => {
+        const pdf = await open();
+        const response = await pdf.text().delete(
+            TextDeleteRequest.literal('book').wholeWords(true).maxMatches(2).build());
+
+        expect(response.matched).toBe(2);
+        expect(response.changed).toBe(2);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertPdfTextOccurrenceCount('books', 9);
+        await assertions.assertPdfTextContains('This Workbook');
+    });
+
+    test('delete no-match response preserves the saved PDF', async () => {
+        const pdf = await open();
+        const response = await pdf.text().delete(
+            TextDeleteRequest.literal('DOES_NOT_EXIST_IN_WORKBOOK').build());
+
+        expect(response.matched).toBe(0);
+        expect(response.changed).toBe(0);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertPdfTextOccurrenceCount('Sales Pitch', 9);
+        await assertions.assertPdfTextContains('Obviously Awesome');
+    });
+
     test('anchor insertion persists and preserves selected text', async () => {
         const pdf = await open();
         const response = await pdf.text().insert(
@@ -145,6 +199,33 @@ describe('v2 selector-based text editing', () => {
         await assertions.assertPdfTextOccurrenceCount('Modern', 1);
         await assertions.assertPdfTextOccurrenceCount('B2B', 1);
         await assertions.assertPdfTextContains('consumer products');
+    });
+
+    test('insert honors whole-word and max-match constraints', async () => {
+        const pdf = await open();
+        const response = await pdf.text().insert(
+            TextInsertRequest.after('book', ' item').wholeWords(true).maxMatches(2).build());
+
+        expect(response.matched).toBe(2);
+        expect(response.changed).toBe(2);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertPdfTextOccurrenceCount('item', 2);
+        await assertions.assertPdfTextOccurrenceCount('books', 9);
+        await assertions.assertPdfTextContains('This Workbook');
+    });
+
+    test('insert no-match response preserves the saved PDF', async () => {
+        const pdf = await open();
+        const response = await pdf.text().insert(
+            TextInsertRequest.after('DOES_NOT_EXIST_IN_WORKBOOK', ' SHOULD_NOT_APPEAR').build());
+
+        expect(response.matched).toBe(0);
+        expect(response.changed).toBe(0);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertPdfTextOccurrenceCount('SHOULD_NOT_APPEAR', 0);
+        await assertions.assertPdfTextOccurrenceCount('Sales Pitch', 9);
     });
 
     test('coordinate insertion persists with an explicit complete style patch', async () => {
@@ -197,6 +278,33 @@ describe('v2 selector-based text editing', () => {
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertPdfTextOccurrenceCount('B2B', 1);
         await assertions.assertPdfTextContains('consumer products');
+    });
+
+    test('style honors whole-word and max-match constraints without changing text', async () => {
+        const pdf = await open();
+        const response = await pdf.text().style(TextStyleRequest.literal('book')
+            .wholeWords(true).maxMatches(2)
+            .fillColor(PdfColorRequest.rgb(0, 0.5, 0)).build());
+
+        expect(response.matched).toBe(2);
+        expect(response.changed).toBe(2);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertPdfTextOccurrenceCount('books', 9);
+        await assertions.assertPdfTextContains('This Workbook');
+    });
+
+    test('style no-match response preserves the saved PDF', async () => {
+        const pdf = await open();
+        const response = await pdf.text().style(TextStyleRequest.literal('DOES_NOT_EXIST_IN_WORKBOOK')
+            .fillColor(PdfColorRequest.rgb(1, 0, 0)).build());
+
+        expect(response.matched).toBe(0);
+        expect(response.changed).toBe(0);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertPdfTextOccurrenceCount('Sales Pitch', 9);
+        await assertions.assertPdfTextContains('Obviously Awesome');
     });
 
     test('required reflow exposes applied-layout and hyphenation diagnostics', async () => {

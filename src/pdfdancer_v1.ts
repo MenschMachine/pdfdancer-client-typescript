@@ -243,31 +243,126 @@ async function fetchWithRetry(
  * Returns the delay in milliseconds, or null if the header is invalid or missing.
  */
 function parseRetryAfter(response: Response): number | null {
-    const retryAfter = response.headers.get('Retry-After');
+    const retryAfter = response.headers.get('Retry-After')?.trim();
     if (!retryAfter) {
         return null;
     }
 
-    // Try parsing as delay-seconds (integer)
-    const delaySeconds = parseInt(retryAfter, 10);
-    if (!isNaN(delaySeconds) && delaySeconds >= 0) {
-        return delaySeconds * 1000; // Convert to milliseconds
+    // RFC 9110 defines delay-seconds as one or more decimal digits.
+    if (/^[0-9]+$/.test(retryAfter)) {
+        const delaySeconds = Number(retryAfter);
+        const largestSafeDelay = Math.floor(Number.MAX_SAFE_INTEGER / 1000);
+        return delaySeconds > largestSafeDelay
+            ? Number.MAX_SAFE_INTEGER
+            : delaySeconds * 1000;
     }
 
-    // Try parsing as HTTP-date
-    try {
-        const retryDate = new Date(retryAfter);
-        if (!isNaN(retryDate.getTime())) {
-            const now = Date.now();
-            const delay = retryDate.getTime() - now;
-            // Only return positive delays
-            return delay > 0 ? delay : 0;
+    const retryTimestamp = parseHttpDate(retryAfter);
+    if (retryTimestamp === null) {
+        return null;
+    }
+
+    return Math.max(0, retryTimestamp - Date.now());
+}
+
+const HTTP_MONTHS: Record<string, number> = {
+    Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
+    Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11
+};
+
+const HTTP_WEEKDAYS: Record<string, number> = {
+    Sun: 0, Sunday: 0,
+    Mon: 1, Monday: 1,
+    Tue: 2, Tuesday: 2,
+    Wed: 3, Wednesday: 3,
+    Thu: 4, Thursday: 4,
+    Fri: 5, Friday: 5,
+    Sat: 6, Saturday: 6
+};
+
+interface HttpDateParts {
+    weekday: number;
+    day: number;
+    month: number;
+    year: number;
+    hour: number;
+    minute: number;
+    second: number;
+}
+
+/** Parses the three HTTP-date formats required by RFC 9110 section 5.6.7. */
+function parseHttpDate(value: string): number | null {
+    const imfFixdate = /^(Sun|Mon|Tue|Wed|Thu|Fri|Sat), ([0-9]{2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) ([0-9]{4}) ([0-9]{2}):([0-9]{2}):([0-9]{2}) GMT$/.exec(value);
+    if (imfFixdate) {
+        return httpDateTimestamp({
+            weekday: HTTP_WEEKDAYS[imfFixdate[1]],
+            day: Number(imfFixdate[2]),
+            month: HTTP_MONTHS[imfFixdate[3]],
+            year: Number(imfFixdate[4]),
+            hour: Number(imfFixdate[5]),
+            minute: Number(imfFixdate[6]),
+            second: Number(imfFixdate[7])
+        });
+    }
+
+    const rfc850Date = /^(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday), ([0-9]{2})-(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2}) GMT$/.exec(value);
+    if (rfc850Date) {
+        const currentYear = new Date().getUTCFullYear();
+        let year = Math.floor(currentYear / 100) * 100 + Number(rfc850Date[4]);
+        if (year > currentYear + 50) {
+            year -= 100;
         }
-    } catch {
-        // Invalid date format
+        return httpDateTimestamp({
+            weekday: HTTP_WEEKDAYS[rfc850Date[1]],
+            day: Number(rfc850Date[2]),
+            month: HTTP_MONTHS[rfc850Date[3]],
+            year,
+            hour: Number(rfc850Date[5]),
+            minute: Number(rfc850Date[6]),
+            second: Number(rfc850Date[7])
+        });
+    }
+
+    const asctimeDate = /^(Sun|Mon|Tue|Wed|Thu|Fri|Sat) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) ( [1-9]|[0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2}) ([0-9]{4})$/.exec(value);
+    if (asctimeDate) {
+        return httpDateTimestamp({
+            weekday: HTTP_WEEKDAYS[asctimeDate[1]],
+            day: Number(asctimeDate[3].trim()),
+            month: HTTP_MONTHS[asctimeDate[2]],
+            year: Number(asctimeDate[7]),
+            hour: Number(asctimeDate[4]),
+            minute: Number(asctimeDate[5]),
+            second: Number(asctimeDate[6])
+        });
     }
 
     return null;
+}
+
+function httpDateTimestamp(parts: HttpDateParts): number | null {
+    if (parts.year < 1900 || parts.day < 1 || parts.day > 31 ||
+        parts.hour > 23 || parts.minute > 59 || parts.second > 60) {
+        return null;
+    }
+
+    const ordinarySecond = Math.min(parts.second, 59);
+    const timestamp = Date.UTC(
+        parts.year, parts.month, parts.day,
+        parts.hour, parts.minute, ordinarySecond
+    );
+    const date = new Date(timestamp);
+
+    if (date.getUTCFullYear() !== parts.year ||
+        date.getUTCMonth() !== parts.month ||
+        date.getUTCDate() !== parts.day ||
+        date.getUTCHours() !== parts.hour ||
+        date.getUTCMinutes() !== parts.minute ||
+        date.getUTCSeconds() !== ordinarySecond ||
+        date.getUTCDay() !== parts.weekday) {
+        return null;
+    }
+
+    return timestamp + (parts.second === 60 ? 1000 : 0);
 }
 
 /**
