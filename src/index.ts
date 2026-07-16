@@ -5,8 +5,6 @@
  */
 
 export { PDFDancer } from './pdfdancer_v1';
-export { ParagraphBuilder } from './paragraph-builder';
-export { ReplacementBuilder } from './replacement-builder';
 export { PageBuilder } from './page-builder';
 export { PathBuilder } from './path-builder';
 
@@ -24,7 +22,6 @@ export {
   FormFieldRef,
   PageRef,
   PageSize,
-  TextObjectRef,
   PathObjectRef,
   Position,
   ObjectType,
@@ -32,8 +29,6 @@ export {
   Color,
   Image,
   BoundingRect,
-  Paragraph,
-  TextLine,
   Path,
   PathSegment,
   Line,
@@ -46,24 +41,46 @@ export {
   STANDARD_PAGE_SIZES,
   Orientation,
   CommandResult,
-  TextStatus,
   DocumentFontInfo,
   FontType,
   DocumentSnapshot,
   PageSnapshot,
-  RedactTarget,
-  RedactOptions,
-  RedactResponse,
   ImageTransformType,
   FlipDirection,
   Size,
-  Word,
-  ReflowPreset,
-  TemplateReplacement,
-  TemplateReplaceRequest,
   ModifyPathRequest
 } from './models';
 
 export { DocumentFontInfo as FontRecommendation } from './models';
 
 export { VERSION } from './version';
+
+export {
+  PdfAffineTransform,
+  PdfAffineTransformBuilder,
+  PdfColorRequest,
+  PdfColorSpace,
+  TextClient,
+  TextDeleteRequest,
+  TextDeleteRequestBuilder,
+  TextEditChangeDiagnostic,
+  TextEditResponse,
+  TextInsertCaret,
+  TextInsertRequest,
+  TextInsertRequestBuilder,
+  TextLayoutMode,
+  TextLayoutProfile,
+  TextLayoutRequest,
+  TextOperationDiagnostic,
+  TextReplaceRequest,
+  TextReplaceRequestBuilder,
+  TextReplacementImageRequest,
+  TextSelectorRequest,
+  TextStyleNumericFilterRequest,
+  TextStylePatchBuilder,
+  TextStylePatchRequest,
+  TextStyleRequest,
+  TextStyleRequestBuilder,
+  TextStyleSetBuilder,
+  TextStyleSetRequest
+} from './text-editing';

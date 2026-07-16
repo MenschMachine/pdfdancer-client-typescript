@@ -2,7 +2,7 @@
  * Basic tests for the PDFDancer TypeScript client.
  */
 
-import {Color, Font, Paragraph, Position} from '../models';
+import {Color, Font, Position} from '../models';
 
 
 describe('Position', () => {
@@ -51,20 +51,5 @@ describe('Font', () => {
     test('should throw error for invalid font size', () => {
         expect(() => new Font('Arial', 0)).toThrow();
         expect(() => new Font('Arial', -5)).toThrow();
-    });
-});
-
-describe('Paragraph', () => {
-    test('should open paragraph with position', () => {
-        const position = Position.atPage(1);
-        const paragraph = new Paragraph(position);
-        expect(paragraph.getPosition()).toBe(position);
-    });
-
-    test('should set position', () => {
-        const paragraph = new Paragraph();
-        const position = Position.atPage(2);
-        paragraph.setPosition(position);
-        expect(paragraph.getPosition()).toBe(position);
     });
 });

@@ -6,7 +6,7 @@ export enum ObjectType {
     IMAGE = "IMAGE",
     FORM_X_OBJECT = "FORM_X_OBJECT",
     PATH = "PATH",
-    PARAGRAPH = "PARAGRAPH",
+    WORD = "WORD",
     TEXT_LINE = "TEXT_LINE",
     TEXT_ELEMENT = "TEXT_ELEMENT",
     PAGE = "PAGE",
@@ -17,8 +17,6 @@ export enum ObjectType {
     DROPDOWN = "DROPDOWN",
     BUTTON = "BUTTON"
 }
-
-const DEFAULT_LINE_SPACING = 1.2;
 
 /**
  * Defines how position matching should be performed when searching for objects.
@@ -94,15 +92,11 @@ export class Position {
         public pageNumber?: number,
         public shape?: ShapeType,
         public mode?: PositionMode,
-        public boundingRect?: BoundingRect,
-        public textStartsWith?: string,
-        public textPattern?: string
+        public boundingRect?: BoundingRect
     ) {
     }
 
-    /**
-     * Creates a position specification for an entire page. Page indexes start with 0.
-     */
+    /** Creates a position specification for an entire page using a 1-based page number. */
     static atPage(pageNumber: number): Position {
         return new Position(pageNumber, undefined, PositionMode.CONTAINS);
     }
@@ -115,10 +109,6 @@ export class Position {
         const pos = Position.atPage(pageNumber).atCoordinates({x, y});
         pos.tolerance = tolerance;
         return pos;
-    }
-
-    static atPageWithText(pageNumber: number, text: string) {
-        return Position.atPage(pageNumber).withTextStarts(text);
     }
 
     /**
@@ -137,11 +127,6 @@ export class Position {
         this.mode = PositionMode.CONTAINS;
         this.shape = ShapeType.POINT;
         this.boundingRect = new BoundingRect(point.x, point.y, 0, 0);
-        return this;
-    }
-
-    withTextStarts(text: string) {
-        this.textStartsWith = text;
         return this;
     }
 
@@ -201,8 +186,7 @@ export class Position {
             this.pageNumber,
             this.shape,
             this.mode,
-            boundingRectCopy,
-            this.textStartsWith
+            boundingRectCopy
         );
     }
 }
@@ -277,57 +261,6 @@ export class DocumentFontInfo {
 
 export { DocumentFontInfo as FontRecommendation };
 
-/**
- * Represents a word within a text line.
- */
-export class Word {
-    constructor(
-        public internalId?: string,
-        public position?: Position,
-        public objectType?: ObjectType,
-        public text?: string
-    ) {}
-}
-
-/**
- * Status information for text objects.
- */
-export class TextStatus {
-    constructor(
-        public modified: boolean,
-        public encodable: boolean,
-        public fontType: FontType,
-        public fontInfo?: DocumentFontInfo,
-        public words?: Word[]
-    ) {}
-
-    isModified(): boolean {
-        return this.modified;
-    }
-
-    isEncodable(): boolean {
-        return this.encodable;
-    }
-
-    getFontType(): FontType {
-        return this.fontType;
-    }
-
-    getFontInfo(): DocumentFontInfo | undefined {
-        return this.fontInfo;
-    }
-
-    /**
-     * @deprecated Use getFontInfo() instead.
-     */
-    getFontRecommendation(): DocumentFontInfo | undefined {
-        return this.getFontInfo();
-    }
-
-    getWords(): Word[] | undefined {
-        return this.words;
-    }
-}
 
 export class PageRef extends ObjectRef {
     pageSize?: PageSize;
@@ -362,73 +295,6 @@ export class FormFieldRef extends ObjectRef {
     }
 }
 
-export class TextObjectRef extends ObjectRef {
-    private _text?: string;
-    private _fontName?: string;
-    private _fontSize?: number;
-    private _lineSpacings?: number[] | null;
-    private _children?: TextObjectRef[];
-    private _color?: Color;
-    private _status?: TextStatus;
-
-    constructor(
-        internalId: string,
-        position: Position,
-        type: ObjectType,
-        text?: string,
-        fontName?: string,
-        fontSize?: number,
-        lineSpacings?: number[] | null,
-        children?: TextObjectRef[],
-        color?: Color,
-        status?: TextStatus
-    ) {
-        super(internalId, position, type);
-        this._text = text;
-        this._fontName = fontName;
-        this._fontSize = fontSize;
-        this._lineSpacings = lineSpacings;
-        this._children = children;
-        this._color = color;
-        this._status = status;
-    }
-
-    get text(): string | undefined {
-        return this._text;
-    }
-
-    get fontName(): string | undefined {
-        return this._fontName;
-    }
-
-    get fontSize(): number | undefined {
-        return this._fontSize;
-    }
-
-    get lineSpacings(): number[] | null | undefined {
-        return this._lineSpacings;
-    }
-
-    get children(): TextObjectRef[] | undefined {
-        return this._children;
-    }
-
-    set children(value: TextObjectRef[] | undefined) {
-        this._children = value;
-    }
-
-    get color(): Color | undefined {
-        return this._color;
-    }
-
-    get status(): TextStatus | undefined {
-        return this._status;
-    }
-
-    getStatus(): TextStatus | undefined {
-        return this._status;
-    }
-}
 
 /**
  * Represents a path object reference with styling information.
@@ -524,77 +390,6 @@ export class Image {
     }
 }
 
-/**
- * Represents a paragraph of text in a PDF document.
- */
-export class Paragraph {
-    constructor(
-        public position?: Position,
-        public textLines?: Array<TextLine | string>,
-        public font?: Font,
-        public color?: Color,
-        public lineSpacing: number = DEFAULT_LINE_SPACING,
-        public lineSpacings?: number[] | null
-    ) {
-    }
-
-    getPosition(): Position | undefined {
-        return this.position;
-    }
-
-    setPosition(position: Position): void {
-        this.position = position;
-    }
-
-    clearLines(): void {
-        this.textLines = [];
-    }
-
-    addLine(textLine: TextLine | string): void {
-        if (!this.textLines) {
-            this.textLines = [];
-        }
-        this.textLines.push(textLine);
-    }
-
-    getLines(): Array<TextLine | string> {
-        if (!this.textLines) {
-            this.textLines = [];
-        }
-        return this.textLines;
-    }
-
-    setLines(lines: Array<TextLine | string>): void {
-        this.textLines = [...lines];
-    }
-
-    setLineSpacings(spacings?: number[] | null): void {
-        this.lineSpacings = spacings ? [...spacings] : spacings ?? null;
-    }
-
-    getLineSpacings(): number[] | null | undefined {
-        return this.lineSpacings ? [...this.lineSpacings] : this.lineSpacings;
-    }
-}
-
-export class TextLine {
-    constructor(
-        public position?: Position,
-        public font?: Font,
-        public color?: Color,
-        public lineSpacing: number = DEFAULT_LINE_SPACING,
-        public text: string = ""
-    ) {
-    }
-
-    getPosition(): Position | undefined {
-        return this.position;
-    }
-
-    setPosition(position: Position): void {
-        this.position = position;
-    }
-}
 
 /**
  * Represents a 2D point with x and y coordinates for path operations.
@@ -756,7 +551,7 @@ export class MoveRequest {
  * Request object for add operations.
  */
 export class AddRequest {
-    constructor(public pdfObject: Image | Paragraph | Path) {
+    constructor(public pdfObject: Image | Path) {
     }
 
     toDict(): Record<string, any> {
@@ -765,7 +560,7 @@ export class AddRequest {
         };
     }
 
-    private objectToDict(obj: Image | Paragraph | Path): Record<string, any> {
+    private objectToDict(obj: Image | Path): Record<string, any> {
         if (obj instanceof Image) {
             const size = obj.width !== undefined && obj.height !== undefined
                 ? {width: obj.width, height: obj.height}
@@ -779,78 +574,6 @@ export class AddRequest {
                 format: obj.format || null,
                 size,
                 data: dataB64
-            };
-        } else if (obj instanceof Paragraph) {
-            const fontToDict = (font?: Font | null) => {
-                if (!font) {
-                    return null;
-                }
-                return {name: font.name, size: font.size};
-            };
-
-            const colorToDict = (color?: Color | null) => {
-                if (!color) {
-                    return null;
-                }
-                return {red: color.r, green: color.g, blue: color.b, alpha: color.a};
-            };
-
-            const lines: any[] = [];
-            if (obj.textLines) {
-                for (const line of obj.textLines) {
-                    let text: string;
-                    let font = obj.font;
-                    let color = obj.color;
-                    let position = obj.position;
-                    let spacing = obj.lineSpacing;
-
-                    if (line instanceof TextLine) {
-                        text = line.text;
-                        font = line.font ?? font;
-                        color = line.color ?? color;
-                        position = line.position ?? position;
-                        spacing = line.lineSpacing ?? spacing;
-                    } else {
-                        text = line;
-                    }
-
-                    const textElement = {
-                        text,
-                        font: fontToDict(font),
-                        color: colorToDict(color),
-                        position: position ? positionToDict(position) : null
-                    };
-
-                    const textLine: any = {
-                        textElements: [textElement]
-                    };
-
-                    if (color) {
-                        textLine.color = colorToDict(color);
-                    }
-                    if (position) {
-                        textLine.position = positionToDict(position);
-                    }
-                    if (spacing !== undefined && spacing !== null) {
-                        textLine.lineSpacing = spacing;
-                    }
-
-                    lines.push(textLine);
-                }
-            }
-
-            const lineSpacings = obj.lineSpacings
-                ? [...obj.lineSpacings]
-                : (obj.lineSpacing !== undefined && obj.lineSpacing !== null
-                    ? [obj.lineSpacing]
-                    : null);
-
-            return {
-                type: "PARAGRAPH",
-                position: obj.position ? positionToDict(obj.position) : null,
-                lines: lines.length ? lines : null,
-                lineSpacings,
-                font: fontToDict(obj.font)
             };
         } else if (obj instanceof Path) {
             const colorToDict = (color?: Color | null) => {
@@ -909,49 +632,6 @@ export class AddRequest {
     }
 }
 
-/**
- * Request object for modify operations.
- */
-export class ModifyRequest {
-    constructor(
-        public objectRef: ObjectRef,
-        public newObject: Image | Paragraph
-    ) {
-    }
-
-    toDict(): Record<string, any> {
-        return {
-            ref: {
-                internalId: this.objectRef.internalId,
-                position: positionToDict(this.objectRef.position),
-                type: this.objectRef.type
-            },
-            newObject: new AddRequest(this.newObject).toDict().object
-        };
-    }
-}
-
-/**
- * Request object for text modification operations.
- */
-export class ModifyTextRequest {
-    constructor(
-        public objectRef: ObjectRef,
-        public newText: string
-    ) {
-    }
-
-    toDict(): Record<string, any> {
-        return {
-            ref: {
-                internalId: this.objectRef.internalId,
-                position: positionToDict(this.objectRef.position),
-                type: this.objectRef.type
-            },
-            newTextLine: this.newText
-        };
-    }
-}
 
 /**
  * Request object for modifying path colors.
@@ -1240,31 +920,6 @@ export class DocumentSnapshot {
     }
 }
 
-/**
- * Represents a target for redaction operations.
- * Targets are identified by element ID.
- */
-export interface RedactTarget {
-    id: string;
-    replacement: string;
-}
-
-/**
- * Options for redaction operations.
- */
-export interface RedactOptions {
-    defaultReplacement?: string;
-    placeholderColor?: Color;
-}
-
-/**
- * Response from a redaction operation.
- */
-export interface RedactResponse {
-    count: number;
-    success: boolean;
-    warnings: string[];
-}
 
 /**
  * Types of image transformations supported.
@@ -1403,93 +1058,12 @@ export class ImageTransformRequest {
     }
 }
 
-/**
- * Preset for text reflow behavior during template replacement.
- */
-export enum ReflowPreset {
-    /** Best effort to fit text, may overflow if necessary */
-    BEST_EFFORT = "BEST_EFFORT",
-    /** Fail if text doesn't fit in the available space */
-    FIT_OR_FAIL = "FIT_OR_FAIL",
-    /** No reflow, keep original text layout */
-    NONE = "NONE"
-}
-
-/**
- * Represents a single template placeholder replacement.
- */
-export class TemplateReplacement {
-    constructor(
-        public placeholder: string,
-        public text?: string,
-        public font?: Font,
-        public color?: Color,
-        public image?: Image
-    ) {}
-
-    toDict(): Record<string, any> {
-        const result: Record<string, any> = {
-            placeholder: this.placeholder,
-        };
-
-        if (this.text !== undefined) {
-            result.text = this.text;
-        }
-        if (this.font) {
-            result.font = { name: this.font.name, size: this.font.size };
-        }
-        if (this.color) {
-            result.color = { red: this.color.r, green: this.color.g, blue: this.color.b, alpha: this.color.a };
-        }
-        if (this.image) {
-            const size = this.image.width != null && this.image.height != null
-                ? { width: this.image.width, height: this.image.height }
-                : null;
-            result.image = {
-                format: this.image.format || null,
-                size,
-                data: this.image.data ? btoa(String.fromCharCode(...this.image.data)) : null
-            };
-        }
-
-        return result;
-    }
-}
-
-/**
- * Request for batch template placeholder replacements.
- * Supports both document-level (all pages) and page-level replacements.
- */
-export class TemplateReplaceRequest {
-    constructor(
-        public replacements: TemplateReplacement[],
-        public pageIndex?: number,
-        public reflowPreset?: ReflowPreset
-    ) {}
-
-    toDict(): Record<string, any> {
-        const result: Record<string, any> = {
-            replacements: this.replacements.map(r => r.toDict())
-        };
-
-        if (this.pageIndex !== undefined) {
-            result.pageIndex = this.pageIndex;
-        }
-        if (this.reflowPreset !== undefined) {
-            result.reflowPreset = this.reflowPreset;
-        }
-
-        return result;
-    }
-}
 
 
 // Helper function to convert Position to dictionary for JSON serialization
 function positionToDict(position: Position): Record<string, any> {
     const result: Record<string, any> = {
         pageNumber: position.pageNumber,
-        textStartsWith: position.textStartsWith,
-        textPattern: position.textPattern,
         name: position.name
     };
 

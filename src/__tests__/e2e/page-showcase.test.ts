@@ -68,7 +68,7 @@ describe('Page E2E Tests (Showcase)', () => {
         expect(result.position.pageNumber).toBe(6);
 
         const assertions = await PDFAssertions.create(pdf);
-        await assertions.assertParagraphExists('This is regular Sans text showing alignment and styles.', 6);
+        await assertions.assertPdfTextContains('This is regular Sans text showing alignment and styles.', 6);
     });
 
     test('add page', async () => {
