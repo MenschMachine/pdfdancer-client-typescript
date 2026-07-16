@@ -4,18 +4,30 @@
  * A TypeScript client library for the PDFDancer PDF manipulation API.
  */
 
-export { PDFDancer } from './pdfdancer_v1';
+export { PDFDancer, PageClient } from './pdfdancer_v1';
+export type { RetryConfig } from './pdfdancer_v1';
 export { PageBuilder } from './page-builder';
-export { PathBuilder } from './path-builder';
+export { PathBuilder, LineBuilder, BezierBuilder, RectangleBuilder } from './path-builder';
 
 export {
   PdfDancerException,
   FontNotFoundException,
   ValidationException,
   HttpClientException,
+  RateLimitException,
   SessionException,
   SessionNotFoundException
 } from './exceptions';
+
+export {
+  BaseObject,
+  PathObject,
+  PathGroupObject,
+  ImageObject,
+  FormXObject,
+  FormFieldObject,
+  PathEditSession
+} from './types';
 
 export {
   ObjectRef,
@@ -39,6 +51,7 @@ export {
   Point,
   StandardFonts,
   STANDARD_PAGE_SIZES,
+  pageSizeFromDimensions,
   Orientation,
   CommandResult,
   DocumentFontInfo,
@@ -77,6 +90,8 @@ export {
   TextReplacementImageRequest,
   TextSelectorRequest,
   TextStyleNumericFilterRequest,
+  TextStyleRunFilterRequest,
+  TextStyleSelectorRequest,
   TextStylePatchBuilder,
   TextStylePatchRequest,
   TextStyleRequest,

@@ -14,6 +14,8 @@ import {
 } from "./models";
 import {PDFDancer} from "./pdfdancer_v1";
 import {ValidationException} from "./exceptions";
+import fs from "node:fs";
+import path from "node:path";
 
 // 👇 Internal view of PDFDancer methods, not exported
 interface PDFDancerInternals {
@@ -194,6 +196,24 @@ export class ImageObject extends BaseObject {
         return new ImageObject(_client, objectRef.internalId, objectRef.type, objectRef.position);
     }
 
+    get width(): number | undefined { return this.position.boundingRect?.width; }
+    get height(): number | undefined { return this.position.boundingRect?.height; }
+    get aspectRatio(): number | undefined {
+        const width = this.width;
+        const height = this.height;
+        return width !== undefined && height !== undefined && height !== 0 ? width / height : undefined;
+    }
+
+    async replaceFromFile(imagePath: string): Promise<CommandResult> {
+        if (!imagePath || !fs.existsSync(imagePath)) {
+            throw new ValidationException(`Image file not found: ${imagePath}`);
+        }
+        const data = new Uint8Array(fs.readFileSync(imagePath));
+        if (data.length === 0) throw new ValidationException('Image file cannot be empty');
+        const format = path.extname(imagePath).replace(/^\./, '').toUpperCase() || undefined;
+        return this.replace(new Image(undefined, format, undefined, undefined, data));
+    }
+
     /**
      * Replaces this image with a new image while keeping the same position.
      * @param newImage The new image to replace this one with
@@ -350,6 +370,9 @@ export class ImageObject extends BaseObject {
         return this._internals.transformImage(request);
     }
 
+    async flipHorizontal(): Promise<CommandResult> { return this.flip(FlipDirection.HORIZONTAL); }
+    async flipVertical(): Promise<CommandResult> { return this.flip(FlipDirection.VERTICAL); }
+
     /**
      * Fills a rectangular pixel region of the image with a solid color.
      *
@@ -412,7 +435,7 @@ export class FormFieldObject extends BaseObject<FormFieldRef> {
         this.value = value;
     }
 
-    async fill(value: string) {
+    async setValue(value: string) {
         return await this._internals.changeFormField(this.ref(), value);
     }
 

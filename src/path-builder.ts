@@ -1,5 +1,6 @@
 import {PDFDancer} from "./pdfdancer_v1";
 import {Bezier, Color, Line, Path, PathPoint, PathSegment, Position} from "./models";
+import {ValidationException} from "./exceptions";
 
 // 👇 Internal view of PDFDancer methods, not exported
 interface PDFDancerInternals {
@@ -39,9 +40,10 @@ export class PathBuilder {
     private _segments: PathSegment[] = [];
     private _position: Position | undefined;
     private _currentPoint: PathPoint | undefined;
-    private _strokeColor: Color | undefined;
+    private _subpathStart: PathPoint | undefined;
+    private _strokeColor: Color | undefined = Color.BLACK;
     private _fillColor: Color | undefined;
-    private _strokeWidth: number | undefined;
+    private _strokeWidth: number | undefined = 1.0;
     private _dashArray: number[] | undefined;
     private _dashPhase: number | undefined;
     private _evenOddFill: boolean | undefined;
@@ -57,7 +59,9 @@ export class PathBuilder {
      * Sets the current point for subsequent drawing operations.
      */
     moveTo(x: number, y: number): this {
+        this.validateCoordinate(x, y);
         this._currentPoint = {x, y};
+        this._subpathStart = {x, y};
         return this;
     }
 
@@ -66,8 +70,9 @@ export class PathBuilder {
      */
     lineTo(x: number, y: number): this {
         if (!this._currentPoint) {
-            throw new Error("No current point set. Call moveTo() first.");
+            throw new ValidationException("No current point set. Call moveTo() first.");
         }
+        this.validateCoordinate(x, y);
         const line = new Line(
             this._currentPoint,
             {x, y},
@@ -94,8 +99,9 @@ export class PathBuilder {
      */
     bezierTo(cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number): this {
         if (!this._currentPoint) {
-            throw new Error("No current point set. Call moveTo() first.");
+            throw new ValidationException("No current point set. Call moveTo() first.");
         }
+        [cp1x, cp1y, cp2x, cp2y, x, y].forEach(value => this.validateCoordinate(value));
         const bezier = new Bezier(
             this._currentPoint,
             {x: cp1x, y: cp1y},
@@ -117,6 +123,9 @@ export class PathBuilder {
      * Add a custom path segment.
      */
     addSegment(segment: PathSegment): this {
+        if (!segment) {
+            throw new ValidationException('Path segment cannot be null');
+        }
         this._segments.push(segment);
         return this;
     }
@@ -141,6 +150,9 @@ export class PathBuilder {
      * Set the stroke width for subsequent path segments.
      */
     strokeWidth(width: number): this {
+        if (!Number.isFinite(width) || width < 0) {
+            throw new ValidationException(`Stroke width must be a finite nonnegative number, got ${width}`);
+        }
         this._strokeWidth = width;
         return this;
     }
@@ -151,6 +163,13 @@ export class PathBuilder {
      * @param dashPhase Offset into the dash pattern
      */
     dashPattern(dashArray: number[], dashPhase: number = 0): this {
+        if (!dashArray || dashArray.some(value => !Number.isFinite(value) || value < 0) ||
+            (dashArray.length > 0 && dashArray.every(value => value === 0))) {
+            throw new ValidationException('Dash pattern values must be finite and nonnegative, and cannot all be zero');
+        }
+        if (!Number.isFinite(dashPhase) || dashPhase < 0) {
+            throw new ValidationException('Dash phase must be a finite nonnegative number');
+        }
         this._dashArray = dashArray;
         this._dashPhase = dashPhase;
         return this;
@@ -162,6 +181,47 @@ export class PathBuilder {
     evenOddFill(useEvenOdd: boolean): this {
         this._evenOddFill = useEvenOdd;
         return this;
+    }
+
+    solid(): this {
+        this._dashArray = undefined;
+        this._dashPhase = undefined;
+        return this;
+    }
+
+    closePath(): this {
+        if (!this._currentPoint || !this._subpathStart) {
+            throw new ValidationException('Call moveTo() before closePath()');
+        }
+        if (this._currentPoint.x !== this._subpathStart.x || this._currentPoint.y !== this._subpathStart.y) {
+            this.lineTo(this._subpathStart.x, this._subpathStart.y);
+        }
+        this._currentPoint = {...this._subpathStart};
+        return this;
+    }
+
+    rectangle(x: number, y: number, width: number, height: number): this {
+        if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+            throw new ValidationException('Rectangle width and height must be finite positive numbers');
+        }
+        return this.moveTo(x, y)
+            .lineTo(x + width, y)
+            .lineTo(x + width, y + height)
+            .lineTo(x, y + height)
+            .closePath();
+    }
+
+    circle(cx: number, cy: number, radius: number): this {
+        if (!Number.isFinite(radius) || radius <= 0) {
+            throw new ValidationException('Circle radius must be a finite positive number');
+        }
+        const k = 0.5522847498 * radius;
+        return this.moveTo(cx, cy + radius)
+            .bezierTo(cx + k, cy + radius, cx + radius, cy + k, cx + radius, cy)
+            .bezierTo(cx + radius, cy - k, cx + k, cy - radius, cx, cy - radius)
+            .bezierTo(cx - k, cy - radius, cx - radius, cy - k, cx - radius, cy)
+            .bezierTo(cx - radius, cy + k, cx - k, cy + radius, cx, cy + radius)
+            .closePath();
     }
 
     /**
@@ -195,10 +255,15 @@ export class PathBuilder {
      */
     async add(): Promise<boolean> {
         if (this._segments.length === 0) {
-            throw new Error("No path segments defined. Use moveTo(), lineTo(), or bezierTo() to create path segments.");
+            throw new ValidationException("No path segments defined. Use moveTo(), lineTo(), or bezierTo() to create path segments.");
         }
         if (!this._position) {
-            throw new Error("Position is not set. Use at() or atPosition() to set the position.");
+            const first = this._segments[0] as Line | Bezier;
+            const start = first.p0;
+            if (this._defaultPageNumber === undefined || !start) {
+                throw new ValidationException("Target page is not set. Pass a page number to newPath() or use atPosition().");
+            }
+            this._position = Position.atPageCoordinates(this._defaultPageNumber, start.x, start.y);
         }
 
         // Apply current styling and position to all segments
@@ -216,10 +281,101 @@ export class PathBuilder {
         return await this._internals.addPath(path);
     }
 
-    /**
-     * Alias for add(). Adds the path to the PDF document.
-     */
-    async apply(): Promise<boolean> {
-        return await this.add();
+    private validateCoordinate(...values: number[]): void {
+        if (values.some(value => !Number.isFinite(value))) {
+            throw new ValidationException('Coordinates must be finite numbers');
+        }
+    }
+}
+
+abstract class SinglePathBuilder<T extends SinglePathBuilder<T>> {
+    protected stroke = Color.BLACK;
+    protected fill?: Color;
+    protected width = 1.0;
+    protected dash?: number[];
+    protected phase = 0;
+
+    constructor(protected readonly client: PDFDancer, protected readonly pageNumber: number) {
+        if (!Number.isInteger(pageNumber) || pageNumber < 1) {
+            throw new ValidationException('Page number must be >= 1 (1-based indexing)');
+        }
+    }
+
+    strokeColor(color: Color): T { this.stroke = color; return this as unknown as T; }
+    fillColor(color: Color): T { this.fill = color; return this as unknown as T; }
+    strokeWidth(width: number): T {
+        if (!Number.isFinite(width) || width < 0) throw new ValidationException('Stroke width must be nonnegative');
+        this.width = width;
+        return this as unknown as T;
+    }
+    dashPattern(pattern: number[], phase = 0): T {
+        new PathBuilder(this.client, this.pageNumber).dashPattern(pattern, phase);
+        this.dash = [...pattern];
+        this.phase = phase;
+        return this as unknown as T;
+    }
+    solid(): T { this.dash = undefined; this.phase = 0; return this as unknown as T; }
+    protected path(): PathBuilder {
+        const builder = new PathBuilder(this.client, this.pageNumber)
+            .strokeColor(this.stroke).strokeWidth(this.width);
+        if (this.fill) builder.fillColor(this.fill);
+        if (this.dash) builder.dashPattern(this.dash, this.phase);
+        return builder;
+    }
+    protected point(x: number, y: number): void {
+        if (!Number.isFinite(x) || !Number.isFinite(y)) throw new ValidationException('Coordinates must be finite');
+    }
+}
+
+export class LineBuilder extends SinglePathBuilder<LineBuilder> {
+    private start?: PathPoint;
+    private end?: PathPoint;
+    from(x: number, y: number): this { this.point(x, y); this.start = {x, y}; return this; }
+    to(x: number, y: number): this { this.point(x, y); this.end = {x, y}; return this; }
+    async add(): Promise<boolean> {
+        if (!this.start || !this.end) throw new ValidationException('Line start and end points are required');
+        return this.path().moveTo(this.start.x, this.start.y).lineTo(this.end.x, this.end.y).add();
+    }
+}
+
+export class BezierBuilder extends SinglePathBuilder<BezierBuilder> {
+    private start?: PathPoint;
+    private c1?: PathPoint;
+    private c2?: PathPoint;
+    private end?: PathPoint;
+    private evenOdd = false;
+    from(x: number, y: number): this { this.point(x, y); this.start = {x, y}; return this; }
+    control1(x: number, y: number): this { this.point(x, y); this.c1 = {x, y}; return this; }
+    control2(x: number, y: number): this { this.point(x, y); this.c2 = {x, y}; return this; }
+    to(x: number, y: number): this { this.point(x, y); this.end = {x, y}; return this; }
+    evenOddFill(enabled = true): this { this.evenOdd = enabled; return this; }
+    async add(): Promise<boolean> {
+        if (!this.start || !this.c1 || !this.c2 || !this.end) {
+            throw new ValidationException('Bezier start, both control points, and end point are required');
+        }
+        return this.path().evenOddFill(this.evenOdd).moveTo(this.start.x, this.start.y)
+            .bezierTo(this.c1.x, this.c1.y, this.c2.x, this.c2.y, this.end.x, this.end.y).add();
+    }
+}
+
+export class RectangleBuilder extends SinglePathBuilder<RectangleBuilder> {
+    private origin?: PathPoint;
+    private rectangleWidth?: number;
+    private rectangleHeight?: number;
+    private evenOdd = false;
+    at(x: number, y: number): this { this.point(x, y); this.origin = {x, y}; return this; }
+    size(width: number, height: number): this {
+        if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+            throw new ValidationException('Rectangle width and height must be finite positive numbers');
+        }
+        this.rectangleWidth = width; this.rectangleHeight = height; return this;
+    }
+    evenOddFill(enabled = true): this { this.evenOdd = enabled; return this; }
+    async add(): Promise<boolean> {
+        if (!this.origin || this.rectangleWidth === undefined || this.rectangleHeight === undefined) {
+            throw new ValidationException('Rectangle origin and size are required');
+        }
+        return this.path().evenOddFill(this.evenOdd)
+            .rectangle(this.origin.x, this.origin.y, this.rectangleWidth, this.rectangleHeight).add();
     }
 }

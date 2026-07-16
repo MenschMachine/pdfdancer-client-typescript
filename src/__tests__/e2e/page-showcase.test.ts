@@ -64,8 +64,8 @@ describe('Page E2E Tests (Showcase)', () => {
         const pagesBefore = await pdf.pages();
         expect(pagesBefore.length).toBe(7);
 
-        const result = await pdf.movePage(1, 6);
-        expect(result.position.pageNumber).toBe(6);
+        const moved = await pdf.movePage(1, 6);
+        expect(moved).toBe(true);
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertPdfTextContains('This is regular Sans text showing alignment and styles.', 6);

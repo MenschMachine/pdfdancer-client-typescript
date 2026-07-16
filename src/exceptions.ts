@@ -41,6 +41,17 @@ export class HttpClientException extends PdfDancerException {
     }
 }
 
+/** Exception raised after the configured attempts for an HTTP 429 are exhausted. */
+export class RateLimitException extends HttpClientException {
+    public readonly retryAfter?: number;
+
+    constructor(message: string, response?: Response, retryAfter?: number) {
+        super(message, response);
+        this.name = 'RateLimitException';
+        this.retryAfter = retryAfter;
+    }
+}
+
 /**
  * Exception raised for session-related errors.
  * Occurs when session creation fails or session is invalid.

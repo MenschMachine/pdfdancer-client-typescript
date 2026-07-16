@@ -101,18 +101,18 @@ describe('PathBuilder E2E Tests (New API)', () => {
         expect(paths.length).toBeGreaterThan(0);
     });
 
-    test('validate position is required', async () => {
+    test('validate target page is required for document-scoped paths', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('Empty.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        // Try to add path without setting position
-        await expect(async () => {
-            await pdf.newPath()
+        // Try to add a document-scoped path without specifying its target page
+        await expect(
+            pdf.newPath()
                 .moveTo(100, 100)
                 .lineTo(200, 200)
                 .strokeColor(new Color(0, 0, 0))
-                .add();
-        }).rejects.toThrow(/Position is not set/);
+                .add()
+        ).rejects.toThrow(/Target page is not set/);
     });
 
     test('validate segments are required', async () => {

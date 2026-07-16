@@ -3,19 +3,24 @@
  */
 
 export enum ObjectType {
+    PDF = "PDF",
+    PAGE = "PAGE",
+    TEXT_ELEMENT = "TEXT_ELEMENT",
     IMAGE = "IMAGE",
-    FORM_X_OBJECT = "FORM_X_OBJECT",
     PATH = "PATH",
+    LINE = "LINE",
+    RECTANGLE = "RECTANGLE",
+    BEZIER = "BEZIER",
+    CLIPPING = "CLIPPING",
+    FORM_X_OBJECT = "FORM_X_OBJECT",
+    FORM_FIELD = "FORM_FIELD",
     WORD = "WORD",
     TEXT_LINE = "TEXT_LINE",
-    TEXT_ELEMENT = "TEXT_ELEMENT",
-    PAGE = "PAGE",
-    FORM_FIELD = "FORM_FIELD",
     TEXT_FIELD = "TEXT_FIELD",
-    CHECKBOX = "CHECKBOX",
     RADIO_BUTTON = "RADIO_BUTTON",
+    BUTTON = "BUTTON",
     DROPDOWN = "DROPDOWN",
-    BUTTON = "BUTTON"
+    CHECKBOX = "CHECKBOX"
 }
 
 /**
@@ -103,9 +108,9 @@ export class Position {
 
     /**
      * Creates a position specification for specific coordinates on a page.
-     * @param tolerance Optional tolerance in points for coordinate matching (default: 0)
+     * @param tolerance Optional tolerance in points for coordinate matching (default: 0.01)
      */
-    static atPageCoordinates(pageNumber: number, x: number, y: number, tolerance: number = 0): Position {
+    static atPageCoordinates(pageNumber: number, x: number, y: number, tolerance: number = 0.01): Position {
         const pos = Position.atPage(pageNumber).atCoordinates({x, y});
         pos.tolerance = tolerance;
         return pos;
@@ -219,13 +224,36 @@ export interface PageSize {
 }
 
 export const STANDARD_PAGE_SIZES: Record<string, {width: number; height: number}> = {
+    A0: {width: 2384.0, height: 3370.0},
+    A1: {width: 1684.0, height: 2384.0},
+    A2: {width: 1191.0, height: 1684.0},
+    A3: {width: 842.0, height: 1191.0},
     A4: {width: 595.0, height: 842.0},
+    A5: {width: 420.0, height: 595.0},
+    A6: {width: 298.0, height: 420.0},
+    B4: {width: 709.0, height: 1001.0},
+    B5: {width: 499.0, height: 709.0},
     LETTER: {width: 612.0, height: 792.0},
     LEGAL: {width: 612.0, height: 1008.0},
     TABLOID: {width: 792.0, height: 1224.0},
-    A3: {width: 842.0, height: 1191.0},
-    A5: {width: 420.0, height: 595.0}
+    EXECUTIVE: {width: 522.0, height: 756.0},
+    POSTCARD: {width: 288.0, height: 432.0},
+    INDEX_3X5: {width: 216.0, height: 360.0}
 };
+
+export function pageSizeFromDimensions(width: number, height: number, tolerance = 0.5): PageSize {
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+        throw new Error('Page size width and height must be finite positive numbers');
+    }
+    for (const [name, size] of Object.entries(STANDARD_PAGE_SIZES)) {
+        const direct = Math.abs(size.width - width) < tolerance && Math.abs(size.height - height) < tolerance;
+        const rotated = Math.abs(size.width - height) < tolerance && Math.abs(size.height - width) < tolerance;
+        if (direct || rotated) {
+            return {name, width: size.width, height: size.height};
+        }
+    }
+    return {width, height};
+}
 
 export enum Orientation {
     PORTRAIT = "PORTRAIT",
@@ -319,6 +347,10 @@ export class PathObjectRef extends ObjectRef {
  * Represents an RGB color with optional alpha channel, values from 0-255.
  */
 export class Color {
+    static readonly BLACK: Color = new Color(0, 0, 0);
+    static readonly WHITE: Color = new Color(255, 255, 255);
+    static readonly RED: Color = new Color(255, 0, 0);
+
     constructor(
         public r: number,
         public g: number,
@@ -326,7 +358,7 @@ export class Color {
         public a: number = 255 // Alpha channel, default fully opaque
     ) {
         for (const component of [this.r, this.g, this.b, this.a]) {
-            if (component < 0 || component > 255) {
+            if (!Number.isInteger(component) || component < 0 || component > 255) {
                 throw new Error(`Color component must be between 0 and 255, got ${component}`);
             }
         }
@@ -835,11 +867,11 @@ export class CommandResult {
 
     static fromDict(data: Record<string, any>): CommandResult {
         return new CommandResult(
-            data.commandName || '',
-            data.elementId || null,
-            data.message || null,
-            data.success || false,
-            data.warning || null
+            data.commandName ?? '',
+            data.elementId ?? null,
+            data.message ?? null,
+            data.success ?? false,
+            data.warning ?? null
         );
     }
 

@@ -1,0 +1,10 @@
+check = "npm run lint"
+idle_seconds = 60
+snapshot_mode = "both"
+commit_mode = "checkpoint"
+msg_source_cmd = 'gommit -A -n --diff-base "$AUTOSNAP_DIFF_BASE"'
+log_max_bytes = 1048576
+
+[watch]
+mode = "recursive"
+poll_interval = "5s"

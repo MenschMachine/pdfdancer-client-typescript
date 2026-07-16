@@ -8,6 +8,7 @@ import {
     FontNotFoundException,
     HttpClientException,
     PdfDancerException,
+    RateLimitException,
     SessionException,
     SessionNotFoundException,
     ValidationException
@@ -56,7 +57,7 @@ import {
     PathGroupObject
 } from "./types";
 import {ImageBuilder} from "./image-builder";
-import {PathBuilder} from "./path-builder";
+import {BezierBuilder, LineBuilder, PathBuilder, RectangleBuilder} from "./path-builder";
 import {generateFingerprint} from "./fingerprint";
 import {VERSION} from "./version";
 import {
@@ -76,9 +77,9 @@ import path from "node:path";
  */
 export interface RetryConfig {
     /**
-     * Maximum number of retry attempts (default: 3)
+     * Total number of attempts, including the initial request (default: 3)
      */
-    maxRetries?: number;
+    maxAttempts?: number;
 
     /**
      * Initial delay in milliseconds before first retry (default: 1000)
@@ -87,7 +88,7 @@ export interface RetryConfig {
     initialDelay?: number;
 
     /**
-     * Maximum delay in milliseconds between retries (default: 10000)
+     * Maximum delay in milliseconds between retries (default: 5000)
      */
     maxDelay?: number;
 
@@ -107,11 +108,6 @@ export interface RetryConfig {
     backoffMultiplier?: number;
 
     /**
-     * Whether to add random jitter to retry delays to prevent thundering herd (default: true)
-     */
-    useJitter?: boolean;
-
-    /**
      * Whether to respect Retry-After headers from server responses (default: true)
      * When enabled, the client will use the server-specified delay instead of exponential backoff
      * for responses that include a Retry-After header (typically 429 or 503 responses)
@@ -123,15 +119,28 @@ export interface RetryConfig {
  * Default retry configuration
  */
 const DEFAULT_RETRY_CONFIG: Required<RetryConfig> = {
-    maxRetries: 3,
+    maxAttempts: 3,
     initialDelay: 1000,
-    maxDelay: 10000,
+    maxDelay: 5000,
     retryableStatusCodes: [408, 429, 500, 502, 503, 504, 520],
     retryOnNetworkError: true,
     backoffMultiplier: 2,
-    useJitter: true,
     respectRetryAfter: true
 };
+
+function resolveRetryConfig(config?: RetryConfig): Required<RetryConfig> {
+    const resolved = {...DEFAULT_RETRY_CONFIG, ...config};
+    if (!Number.isInteger(resolved.maxAttempts) || resolved.maxAttempts < 1) {
+        throw new ValidationException('Retry maxAttempts must be an integer of at least 1');
+    }
+    if (![resolved.initialDelay, resolved.maxDelay].every(value => Number.isFinite(value) && value >= 0)) {
+        throw new ValidationException('Retry delays must be finite nonnegative numbers');
+    }
+    if (!Number.isFinite(resolved.backoffMultiplier) || resolved.backoffMultiplier < 1) {
+        throw new ValidationException('Retry backoffMultiplier must be at least 1');
+    }
+    return resolved;
+}
 
 const API_VERSION_PATH = 'v2';
 
@@ -161,7 +170,7 @@ async function fetchWithRetry(
     let lastError: Error | null = null;
     let lastResponse: Response | null = null;
 
-    for (let attempt = 0; attempt <= retryConfig.maxRetries; attempt++) {
+    for (let attempt = 0; attempt < retryConfig.maxAttempts; attempt++) {
         try {
             const attemptOptions = {
                 ...options,
@@ -174,11 +183,11 @@ async function fetchWithRetry(
                 lastResponse = response;
 
                 // If this is not the last attempt, wait and retry
-                if (attempt < retryConfig.maxRetries) {
+                if (attempt < retryConfig.maxAttempts - 1) {
                     let delay: number;
 
                     // Check for Retry-After header if configured
-                    if (retryConfig.respectRetryAfter) {
+                    if (retryConfig.respectRetryAfter && response.status === 429) {
                         const retryAfterDelay = parseRetryAfter(response);
                         if (retryAfterDelay !== null) {
                             // Use Retry-After header value, but cap at maxDelay
@@ -203,7 +212,7 @@ async function fetchWithRetry(
             lastError = error as Error;
 
             // Check if this is a network error and we should retry
-            if (retryConfig.retryOnNetworkError && attempt < retryConfig.maxRetries) {
+            if (retryConfig.retryOnNetworkError && attempt < retryConfig.maxAttempts - 1) {
                 const delay = calculateRetryDelay(attempt, retryConfig);
                 await sleep(delay);
                 continue;
@@ -271,11 +280,6 @@ function calculateRetryDelay(attemptNumber: number, retryConfig: Required<RetryC
     // Cap at maxDelay
     delay = Math.min(delay, retryConfig.maxDelay);
 
-    // Add jitter if enabled (randomize between 50% and 100% of calculated delay)
-    if (retryConfig.useJitter) {
-        delay = delay * (0.5 + Math.random() * 0.5);
-    }
-
     return Math.floor(delay);
 }
 
@@ -328,9 +332,10 @@ interface PDFDancerInternals {
     createPathGroupInRegion(pageIndex: number, region: BoundingRect): Promise<PathGroupObject>;
     listPathGroups(pageIndex: number): Promise<PathGroupObject[]>;
     clearPathGroupClipping(pageNumber: number, groupId: string): Promise<boolean>;
+    createTextClient(pageNumber?: number): TextClient;
 }
 
-class PageClient {
+export class PageClient {
 
     private _pageNumber: number;
     private _client: PDFDancer;
@@ -352,7 +357,7 @@ class PageClient {
         this._internals = this._client as unknown as PDFDancerInternals;
     }
 
-    async selectPathsAt(x: number, y: number, tolerance: number = 0) {
+    async selectPathsAt(x: number, y: number, tolerance: number = 0.01) {
         return this._internals.toPathObjects(await this._internals.findPaths(Position.atPageCoordinates(this._pageNumber, x, y, tolerance)));
     }
 
@@ -379,7 +384,7 @@ class PageClient {
         return this._internals.toImageObjects(await this._internals._findImages(Position.atPage(this._pageNumber)));
     }
 
-    async selectImagesAt(x: number, y: number, tolerance: number = 0) {
+    async selectImagesAt(x: number, y: number, tolerance: number = 0.01) {
         return this._internals.toImageObjects(await this._internals._findImages(Position.atPageCoordinates(this._pageNumber, x, y, tolerance)));
     }
 
@@ -387,14 +392,13 @@ class PageClient {
         return this._client.deletePage(this._pageNumber);
     }
 
-    async moveTo(targetPageNumber: number): Promise<PageRef> {
-        const pageRef = await this._client.movePage(this._pageNumber, targetPageNumber);
-        this._pageNumber = pageRef.position.pageNumber ?? targetPageNumber;
-        this.position = pageRef.position;
-        this.internalId = pageRef.internalId;
-        this.pageSize = pageRef.pageSize;
-        this.orientation = pageRef.orientation;
-        return pageRef;
+    async moveTo(targetPageNumber: number): Promise<boolean> {
+        const moved = await this._client.movePage(this._pageNumber, targetPageNumber);
+        if (moved) {
+            this._pageNumber = targetPageNumber;
+            this.position = Position.atPage(targetPageNumber);
+        }
+        return moved;
     }
 
     // noinspection JSUnusedGlobalSymbols
@@ -402,7 +406,7 @@ class PageClient {
         return this._internals.toFormXObjects(await this._internals.findFormXObjects(Position.atPage(this._pageNumber)));
     }
 
-    async selectFormsAt(x: number, y: number, tolerance: number = 0) {
+    async selectFormsAt(x: number, y: number, tolerance: number = 0.01) {
         return this._internals.toFormXObjects(await this._internals.findFormXObjects(Position.atPageCoordinates(this._pageNumber, x, y, tolerance)));
     }
 
@@ -410,7 +414,7 @@ class PageClient {
         return this._internals.toFormFields(await this._internals.findFormFields(Position.atPage(this._pageNumber)));
     }
 
-    async selectFormFieldsAt(x: number, y: number, tolerance: number = 0) {
+    async selectFormFieldsAt(x: number, y: number, tolerance: number = 0.01) {
         return this._internals.toFormFields(await this._internals.findFormFields(Position.atPageCoordinates(this._pageNumber, x, y, tolerance)));
     }
 
@@ -428,15 +432,17 @@ class PageClient {
     }
 
 
-    newImage(pageNumber?: number) {
-        const targetIndex = pageNumber ?? this.position.pageNumber;
-        return new ImageBuilder(this._client, targetIndex);
+    newImage() {
+        return new ImageBuilder(this._client, this._pageNumber);
     }
 
-    newPath(pageNumber?: number) {
-        const targetIndex = pageNumber ?? this.position.pageNumber;
-        return new PathBuilder(this._client, targetIndex);
+    newPath() {
+        return new PathBuilder(this._client, this._pageNumber);
     }
+
+    newLine() { return new LineBuilder(this._client, this._pageNumber); }
+    newBezier() { return new BezierBuilder(this._client, this._pageNumber); }
+    newRectangle() { return new RectangleBuilder(this._client, this._pageNumber); }
 
 
     /**
@@ -448,7 +454,7 @@ class PageClient {
     }
 
     text(): TextClient {
-        return new TextClient(this._client, this._pageNumber);
+        return this._internals.createTextClient(this._pageNumber);
     }
 
     // Singular convenience methods - return the first element or null
@@ -458,7 +464,7 @@ class PageClient {
         return paths.length > 0 ? paths[0] : null;
     }
 
-    async selectPathAt(x: number, y: number, tolerance: number = 0) {
+    async selectPathAt(x: number, y: number, tolerance: number = 0.01) {
         const paths = await this.selectPathsAt(x, y, tolerance);
         return paths.length > 0 ? paths[0] : null;
     }
@@ -468,7 +474,7 @@ class PageClient {
         return images.length > 0 ? images[0] : null;
     }
 
-    async selectImageAt(x: number, y: number, tolerance: number = 0) {
+    async selectImageAt(x: number, y: number, tolerance: number = 0.01) {
         const images = await this.selectImagesAt(x, y, tolerance);
         return images.length > 0 ? images[0] : null;
     }
@@ -478,7 +484,7 @@ class PageClient {
         return forms.length > 0 ? forms[0] : null;
     }
 
-    async selectFormAt(x: number, y: number, tolerance: number = 0) {
+    async selectFormAt(x: number, y: number, tolerance: number = 0.01) {
         const forms = await this.selectFormsAt(x, y, tolerance);
         return forms.length > 0 ? forms[0] : null;
     }
@@ -488,7 +494,7 @@ class PageClient {
         return fields.length > 0 ? fields[0] : null;
     }
 
-    async selectFormFieldAt(x: number, y: number, tolerance: number = 0) {
+    async selectFormFieldAt(x: number, y: number, tolerance: number = 0.01) {
         const fields = await this.selectFormFieldsAt(x, y, tolerance);
         return fields.length > 0 ? fields[0] : null;
     }
@@ -530,9 +536,9 @@ export class PDFDancer {
      */
     private constructor(
         token: string,
-        pdfData: Uint8Array | File | ArrayBuffer | string,
+        pdfData: Uint8Array | ArrayBuffer | string,
         baseUrl: string | null = null,
-        readTimeout: number = 60000,
+        readTimeout: number = 30000,
         retryConfig?: RetryConfig
     ) {
 
@@ -559,10 +565,7 @@ export class PDFDancer {
         this._readTimeout = readTimeout;
 
         // Merge retry config with defaults
-        this._retryConfig = {
-            ...DEFAULT_RETRY_CONFIG,
-            ...retryConfig
-        };
+        this._retryConfig = resolveRetryConfig(retryConfig);
 
         // Process PDF data with validation
         this._pdfBytes = this._processPdfData(pdfData);
@@ -588,12 +591,12 @@ export class PDFDancer {
      * @param pdfData PDF data as Uint8Array (raw bytes) or string (filepath)
      * @param token Authentication token (optional, falls back to PDFDANCER_API_TOKEN or PDFDANCER_TOKEN env var)
      * @param baseUrl Base URL for the PDFDancer API (optional)
-     * @param timeout Request timeout in milliseconds (default: 60000)
+     * @param timeout Request timeout in milliseconds (default: 30000)
      * @param retryConfig Retry configuration (optional, uses defaults if not specified)
      * @returns A PDFDancer client instance
      */
     static async open(
-        pdfData: Uint8Array | string | File | ArrayBuffer,
+        pdfData: Uint8Array | string | ArrayBuffer,
         token?: string,
         baseUrl?: string,
         timeout?: number,
@@ -605,11 +608,11 @@ export class PDFDancer {
             baseUrl ??
             process.env.PDFDANCER_BASE_URL ??
             "https://api.pdfdancer.com";
-        const resolvedTimeout = timeout ?? 60000;
+        const resolvedTimeout = timeout ?? 30000;
 
         let resolvedToken = token?.trim() ?? process.env.PDFDANCER_API_TOKEN?.trim() ?? process.env.PDFDANCER_TOKEN?.trim() ?? null;
         if (!resolvedToken) {
-            resolvedToken = await PDFDancer._obtainAnonymousToken(resolvedBaseUrl, resolvedTimeout);
+            resolvedToken = await PDFDancer._obtainAnonymousToken(resolvedBaseUrl, resolvedTimeout, retryConfig);
         }
 
         const client = new PDFDancer(resolvedToken, pdfData, resolvedBaseUrl, resolvedTimeout, retryConfig);
@@ -625,7 +628,7 @@ export class PDFDancer {
      * @param options.initialPageCount Number of initial pages (default: 1)
      * @param token Authentication token (optional, falls back to PDFDANCER_API_TOKEN or PDFDANCER_TOKEN env var)
      * @param baseUrl Base URL for the PDFDancer API (optional)
-     * @param timeout Request timeout in milliseconds (default: 60000)
+     * @param timeout Request timeout in milliseconds (default: 30000)
      * @param retryConfig Retry configuration (optional, uses defaults if not specified)
      */
     static async new(
@@ -645,11 +648,11 @@ export class PDFDancer {
             baseUrl ??
             process.env.PDFDANCER_BASE_URL ??
             "https://api.pdfdancer.com";
-        const resolvedTimeout = timeout ?? 60000;
+        const resolvedTimeout = timeout ?? 30000;
 
         let resolvedToken = token?.trim() ?? process.env.PDFDANCER_API_TOKEN?.trim() ?? process.env.PDFDANCER_TOKEN?.trim() ?? null;
         if (!resolvedToken) {
-            resolvedToken = await PDFDancer._obtainAnonymousToken(resolvedBaseUrl, resolvedTimeout);
+            resolvedToken = await PDFDancer._obtainAnonymousToken(resolvedBaseUrl, resolvedTimeout, retryConfig);
         }
 
         let createRequest: CreatePdfRequest;
@@ -685,12 +688,20 @@ export class PDFDancer {
                     },
                     body: JSON.stringify(createRequest.toDict()),
                 },
-                DEFAULT_RETRY_CONFIG,
+                resolveRetryConfig(retryConfig),
                 resolvedTimeout
             );
 
             if (!response.ok) {
                 const errorText = await response.text();
+                if (response.status === 429) {
+                    const delay = parseRetryAfter(response);
+                    throw new RateLimitException(
+                        `API rate limit exceeded while creating PDF: ${errorText}`,
+                        response,
+                        delay === null ? undefined : Math.ceil(delay / 1000)
+                    );
+                }
                 throw new HttpClientException(`Failed to create new PDF: ${errorText}`, response);
             }
 
@@ -707,10 +718,7 @@ export class PDFDancer {
             client._pdfBytes = new Uint8Array();
             client._sessionId = sessionId;
             // Initialize retry config
-            client._retryConfig = {
-                ...DEFAULT_RETRY_CONFIG,
-                ...retryConfig
-            };
+            client._retryConfig = resolveRetryConfig(retryConfig);
             // Initialize caches
             client._documentSnapshotCache = null;
             client._pageSnapshotCache = new Map();
@@ -725,7 +733,11 @@ export class PDFDancer {
         }
     }
 
-    private static async _obtainAnonymousToken(baseUrl: string, timeout: number = 60000): Promise<string> {
+    private static async _obtainAnonymousToken(
+        baseUrl: string,
+        timeout: number = 30000,
+        retryConfig?: RetryConfig
+    ): Promise<string> {
         const url = buildVersionedUrl(baseUrl || "https://api.pdfdancer.com", '/keys/anon');
 
         try {
@@ -742,12 +754,20 @@ export class PDFDancer {
                         'X-PDFDancer-Client': `typescript/${VERSION}`
                     }
                 },
-                DEFAULT_RETRY_CONFIG,
+                resolveRetryConfig(retryConfig),
                 timeout
             );
 
             if (!response.ok) {
                 const errorText = await response.text().catch(() => '');
+                if (response.status === 429) {
+                    const delay = parseRetryAfter(response);
+                    throw new RateLimitException(
+                        'API rate limit exceeded while obtaining anonymous token',
+                        response,
+                        delay === null ? undefined : Math.ceil(delay / 1000)
+                    );
+                }
                 throw new HttpClientException(
                     `Failed to obtain anonymous token: ${errorText || `HTTP ${response.status}`}`,
                     response
@@ -774,7 +794,7 @@ export class PDFDancer {
     /**
      * Process PDF data from various input types with strict validation.
      */
-    private _processPdfData(pdfData: Uint8Array | File | ArrayBuffer | string): Uint8Array {
+    private _processPdfData(pdfData: Uint8Array | ArrayBuffer | string): Uint8Array {
         if (!pdfData) {
             throw new ValidationException("PDF data cannot be null");
         }
@@ -791,11 +811,7 @@ export class PDFDancer {
                     throw new ValidationException("PDF data cannot be empty");
                 }
                 return uint8Array;
-            } else if (pdfData instanceof File) {
-                // Note: File reading will be handled asynchronously in the session creation
-                return new Uint8Array(); // Placeholder, will be replaced in _createSession
             } else if (typeof pdfData === 'string') {
-                // TODO why is this different to `instanceof File`?
                 // Handle string as filepath
                 if (!fs.existsSync(pdfData)) {
                     throw new ValidationException(`PDF file not found: ${pdfData}`);
@@ -874,13 +890,8 @@ export class PDFDancer {
         try {
             const formData = new FormData();
 
-            // Handle File objects by reading their content
-            if (this._pdfBytes instanceof File) {
-                formData.append('pdf', this._pdfBytes, 'document.pdf');
-            } else {
-                const blob = new Blob([this._pdfBytes.buffer as ArrayBuffer], {type: 'application/pdf'});
-                formData.append('pdf', blob, 'document.pdf');
-            }
+            const blob = new Blob([this._pdfBytes.buffer as ArrayBuffer], {type: 'application/pdf'});
+            formData.append('pdf', blob, 'document.pdf');
 
             const fingerprint = await this._getFingerprint();
 
@@ -910,6 +921,15 @@ export class PDFDancer {
                         ? normalized
                         : defaultMessage;
                     throw new ValidationException(message);
+                }
+
+                if (response.status === 429) {
+                    const delay = parseRetryAfter(response);
+                    throw new RateLimitException(
+                        `API rate limit exceeded while creating session: ${errorMessage}`,
+                        response,
+                        delay === null ? undefined : Math.ceil(delay / 1000)
+                    );
                 }
 
                 throw new HttpClientException(`Failed to create session: ${errorMessage}`, response);
@@ -1013,6 +1033,14 @@ export class PDFDancer {
 
             if (!response.ok) {
                 const errorMessage = await this._extractErrorMessage(response);
+                if (response.status === 429) {
+                    const delay = parseRetryAfter(response);
+                    throw new RateLimitException(
+                        `API rate limit exceeded: ${errorMessage}`,
+                        response,
+                        delay === null ? undefined : Math.ceil(delay / 1000)
+                    );
+                }
                 throw new HttpClientException(`API request failed: ${errorMessage}`, response);
             }
 
@@ -1110,7 +1138,7 @@ export class PDFDancer {
         return this.toFormFields(await this.findFormFields());
     }
 
-    async selectFieldsByName(fieldName: string) {
+    async selectFormFieldsByName(fieldName: string) {
         return this.toFormFields(await this.findFormFields(Position.byName(fieldName)));
     }
 
@@ -1210,7 +1238,7 @@ export class PDFDancer {
      * @returns The page reference at the new position
      * @throws ValidationException if fromPage or toPage is less than 1
      */
-    async movePage(fromPage: number, toPage: number): Promise<PageRef> {
+    async movePage(fromPage: number, toPage: number): Promise<boolean> {
         this._validatePageNumber(fromPage, 'fromPage');
         this._validatePageNumber(toPage, 'toPage');
 
@@ -1228,8 +1256,7 @@ export class PDFDancer {
         // Invalidate cache after mutation
         this._invalidateCache();
 
-        // Fetch the page again at its new position for up-to-date metadata
-        return await this._requirePageRef(toPage);
+        return true;
     }
 
     /**
@@ -1742,7 +1769,7 @@ export class PDFDancer {
     /**
      * Registers a custom font for use in PDF operations.
      */
-    async registerFont(ttfFile: Uint8Array | File | string): Promise<string> {
+    async registerFont(ttfFile: Uint8Array | string): Promise<string> {
         if (!ttfFile) {
             throw new ValidationException("TTF file cannot be null");
         }
@@ -1757,12 +1784,6 @@ export class PDFDancer {
                 }
                 fontData = ttfFile;
                 filename = 'font.ttf';
-            } else if (ttfFile instanceof File) {
-                if (ttfFile.size === 0) {
-                    throw new ValidationException("Font file is empty");
-                }
-                fontData = new Uint8Array(await ttfFile.arrayBuffer());
-                filename = ttfFile.name;
             } else if (typeof ttfFile === 'string') {
                 if (!fs.existsSync(ttfFile)) {
                     throw new Error(`Font file not found: ${ttfFile}`);
@@ -1794,7 +1815,7 @@ export class PDFDancer {
                     },
                     body: formData
                 },
-                60000
+                this._readTimeout
             );
 
             if (!response.ok) {
@@ -2057,15 +2078,23 @@ export class PDFDancer {
         return new PathBuilder(this, pageNumber);
     }
 
+    newLine(pageNumber: number) { return new LineBuilder(this, pageNumber); }
+    newBezier(pageNumber: number) { return new BezierBuilder(this, pageNumber); }
+    newRectangle(pageNumber: number) { return new RectangleBuilder(this, pageNumber); }
+
     newPage() {
         return new PageBuilder(this);
     }
 
     text(): TextClient {
-        return new TextClient(this);
+        return this.createTextClient();
     }
 
-    async editText(
+    private createTextClient(pageNumber?: number): TextClient {
+        return new TextClient((operation, request) => this.editTextInternal(operation, request), pageNumber);
+    }
+
+    private async editTextInternal(
         operation: TextOperation,
         request: TextReplaceRequest | TextDeleteRequest | TextInsertRequest | TextStyleRequest
     ): Promise<TextEditResponse> {
@@ -2139,8 +2168,8 @@ export class PDFDancer {
         return fields.length > 0 ? fields[0] : null;
     }
 
-    async selectFieldByName(fieldName: string) {
-        const fields = await this.selectFieldsByName(fieldName);
+    async selectFormFieldByName(fieldName: string) {
+        const fields = await this.selectFormFieldsByName(fieldName);
         return fields.length > 0 ? fields[0] : null;
     }
 

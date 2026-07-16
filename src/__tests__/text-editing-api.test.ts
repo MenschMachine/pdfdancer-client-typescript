@@ -1,4 +1,5 @@
 import {PDFDancer} from '../pdfdancer_v1';
+/* global RequestInit */
 import {
     PdfColorRequest,
     TextDeleteRequest,

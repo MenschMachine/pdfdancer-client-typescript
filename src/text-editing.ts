@@ -652,16 +652,17 @@ export interface TextEditResponse {
 
 export type TextOperation = 'replace' | 'delete' | 'insert' | 'style';
 
-export interface TextEditingTransport {
-    editText(operation: TextOperation, request: TextReplaceRequest | TextDeleteRequest | TextInsertRequest | TextStyleRequest): Promise<TextEditResponse>;
-}
+type TextEditingFunction = (
+    operation: TextOperation,
+    request: TextReplaceRequest | TextDeleteRequest | TextInsertRequest | TextStyleRequest
+) => Promise<TextEditResponse>;
 
 export class TextClient {
-    constructor(private readonly transport: TextEditingTransport, private readonly pageNumber?: number) {}
-    replace(request: TextReplaceRequest): Promise<TextEditResponse> { return this.transport.editText('replace', this.scoped(request)); }
-    delete(request: TextDeleteRequest): Promise<TextEditResponse> { return this.transport.editText('delete', this.scoped(request)); }
-    insert(request: TextInsertRequest): Promise<TextEditResponse> { return this.transport.editText('insert', this.scoped(request)); }
-    style(request: TextStyleRequest): Promise<TextEditResponse> { return this.transport.editText('style', this.scoped(request)); }
+    constructor(private readonly edit: TextEditingFunction, private readonly pageNumber?: number) {}
+    replace(request: TextReplaceRequest): Promise<TextEditResponse> { return this.edit('replace', this.scoped(request)); }
+    delete(request: TextDeleteRequest): Promise<TextEditResponse> { return this.edit('delete', this.scoped(request)); }
+    insert(request: TextInsertRequest): Promise<TextEditResponse> { return this.edit('insert', this.scoped(request)); }
+    style(request: TextStyleRequest): Promise<TextEditResponse> { return this.edit('style', this.scoped(request)); }
     private scoped<T extends {withPages(pages: number[]): T}>(request: T): T {
         return this.pageNumber === undefined ? request : request.withPages([this.pageNumber]);
     }
