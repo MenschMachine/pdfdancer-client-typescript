@@ -3,6 +3,7 @@
  */
 
 import {requireEnvAndFixture} from './test-helpers';
+import {PDFAssertions} from './pdf-assertions';
 import {Color, PDFDancer} from "../../index";
 
 describe('PathBuilder E2E Tests (New API)', () => {
@@ -21,6 +22,8 @@ describe('PathBuilder E2E Tests (New API)', () => {
             .fillColor(new Color(255, 220, 200)).dashPattern([4, 2], 2).add();
 
         expect(await pdf.selectPaths()).toHaveLength(6);
+        const persisted = await PDFAssertions.create(pdf);
+        await persisted.assertNumberOfPaths(6, 1);
     });
 
     test('path conveniences create closed, rectangular, circular, dashed, and solid paths', async () => {
