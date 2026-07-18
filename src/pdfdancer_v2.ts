@@ -48,7 +48,6 @@ import {
     PathGroupTransformType
 } from './models';
 import {PageBuilder} from './page-builder';
-import {loadEnv} from './env-loader';
 import {
     FormFieldObject,
     FormXObject,
@@ -693,8 +692,6 @@ export class PDFDancer {
         timeout?: number,
         retryConfig?: RetryConfig
     ): Promise<PDFDancer> {
-        loadEnv();
-
         const resolvedBaseUrl =
             baseUrl ??
             process.env.PDFDANCER_BASE_URL ??
@@ -733,8 +730,6 @@ export class PDFDancer {
         timeout?: number,
         retryConfig?: RetryConfig
     ): Promise<PDFDancer> {
-        loadEnv();
-
         const resolvedBaseUrl =
             baseUrl ??
             process.env.PDFDANCER_BASE_URL ??

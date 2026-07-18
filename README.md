@@ -208,6 +208,8 @@ The exported `ObjectType` enum covers every object type returned by the v2 snaps
 
 ## Configuration
 
+- The SDK reads `process.env` but does not load `.env` files. Applications that use `.env` files must load them before
+  calling the SDK.
 - `PDFDANCER_API_TOKEN` is the preferred authentication variable; `PDFDANCER_TOKEN` is also supported.
 - `PDFDANCER_BASE_URL` overrides the API host. The default is `https://api.pdfdancer.com`.
 - The fourth `PDFDancer.open(...)` or `PDFDancer.new(...)` argument sets the request timeout in milliseconds. The default

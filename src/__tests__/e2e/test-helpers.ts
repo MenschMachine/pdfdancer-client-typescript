@@ -5,7 +5,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import os from "os";
-import {loadEnv} from '../../env-loader';
 
 /**
  * Get the base URL from environment variable or default
@@ -18,7 +17,6 @@ export function getBaseUrl(): string {
  * Read authentication token from environment or token files
  */
 export function readToken(): string | null {
-    loadEnv();
     // Check PDFDANCER_API_TOKEN first (preferred), then PDFDANCER_TOKEN (legacy)
     const token = process.env.PDFDANCER_API_TOKEN || process.env.PDFDANCER_TOKEN;
     if (token) {

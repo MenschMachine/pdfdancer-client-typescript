@@ -53,8 +53,5 @@
     "pdfjs-dist": "^4.10.38",
     "ts-jest": "^29.1.0",
     "typescript": "^5.0.0"
-  },
-  "dependencies": {
-    "dotenv": "^17.2.3"
   }
 }
