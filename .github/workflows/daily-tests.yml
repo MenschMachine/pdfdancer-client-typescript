@@ -8,6 +8,8 @@ on:
 
 jobs:
   daily-test:
+    permissions:
+      contents: read
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -18,12 +20,12 @@ jobs:
         node-version: [ 20.x, 22.x, 24.x ]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: true
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
@@ -39,27 +41,38 @@ jobs:
 
       - name: Run tests (Unix)
         if: runner.os != 'Windows'
-        run: |
-          PDFDANCER_BASE_URL=https://api-staging.pdfdancer.com \
-          PDFDANCER_API_TOKEN=42 \
-          npm run test
+        run: npm run test
+        env:
+          PDFDANCER_BASE_URL: https://api-staging.pdfdancer.com
+          PDFDANCER_API_TOKEN: 42
 
       - name: Run tests (Windows)
         if: runner.os == 'Windows'
         shell: cmd
-        run: |
-          set PDFDANCER_BASE_URL=https://api-staging.pdfdancer.com
-          set PDFDANCER_API_TOKEN=42
-          npm run test
+        run: npm run test
+        env:
+          PDFDANCER_BASE_URL: https://api-staging.pdfdancer.com
+          PDFDANCER_API_TOKEN: 42
 
       - name: Upload test results
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: test-results-${{ matrix.os }}-node-${{ matrix.node-version }}
           path: test-results/
+          if-no-files-found: ignore
           retention-days: 7
 
-      - name: Report failure
-        if: failure()
-        run: echo "Daily test run failed. Please check the logs for details."
+  notify:
+    needs: daily-test
+    runs-on: ubuntu-latest
+    if: always() && needs.daily-test.result == 'failure'
+    permissions:
+      contents: read
+    steps:
+      - name: Summarize failure
+        run: |
+          echo "## Daily Tests Failed" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "TypeScript SDK daily tests failed on $(date -u +%F)." >> "$GITHUB_STEP_SUMMARY"
+          echo "[Open workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> "$GITHUB_STEP_SUMMARY"
