@@ -131,7 +131,7 @@ describe('Page E2E Tests (Showcase)', () => {
 
         const assertions = await PDFAssertions.create(pdf);
         const a5 = STANDARD_PAGE_SIZES.A5;
-        await assertions.assertPageDimension(a5.width, a5.height, Orientation.LANDSCAPE, 5);
+        await assertions.assertPageDimension(a5.height, a5.width, Orientation.LANDSCAPE, 5);
         await assertions.assertTotalNumberOfElements(0, 5);
     });
 
@@ -146,7 +146,7 @@ describe('Page E2E Tests (Showcase)', () => {
         expect((await pdf.pages()).length).toBe(8);
 
         const assertions = await PDFAssertions.create(pdf);
-        await assertions.assertPageDimension(400, 600, Orientation.LANDSCAPE, 8);
+        await assertions.assertPageDimension(600, 400, Orientation.LANDSCAPE, 8);
     });
 
     test('add page with builder all options', async () => {

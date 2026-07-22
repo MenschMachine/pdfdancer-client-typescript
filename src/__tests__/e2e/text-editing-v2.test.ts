@@ -185,7 +185,7 @@ describe('v2 selector-based text editing', () => {
         await assertions.assertPdfTextContains('Obviously Awesome');
     });
 
-    test('anchor insertion persists and preserves selected text', async () => {
+    test('implicit-layout insertion persists and preserves selected text', async () => {
         const pdf = await open();
         const response = await pdf.text().insert(
             TextInsertRequest.before('B2B', 'Modern ').wholeWords(true).build());
@@ -194,8 +194,50 @@ describe('v2 selector-based text editing', () => {
         expect(response.changed).toBe(1);
 
         const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertPdfTextOccurrenceCount('Modern', 1);
+        await assertions.assertPdfTextOccurrenceCount('B2B', 1);
+        await assertions.assertPdfTextContains('consumer products');
+    });
+
+    test('source-anchored insertion persists and preserves selected text', async () => {
+        const pdf = await open();
+        const response = await pdf.text().insert(
+            TextInsertRequest.before('B2B', 'Modern ').wholeWords(true).sourceAnchored().build());
+
+        expect(response.matched).toBe(1);
+        expect(response.changed).toBe(1);
+        expect(response.change?.[0]).toMatchObject({
+            requestedLayoutMode: 'sourceAnchored',
+            appliedLayoutMode: 'SOURCE_ANCHORED'
+        });
+
+        const assertions = await PDFAssertions.create(pdf);
         // PDF text extraction orders positioned drawing operations independently;
         // the response diagnostics establish the BEFORE anchor relationship.
+        await assertions.assertPdfTextOccurrenceCount('Modern', 1);
+        await assertions.assertPdfTextOccurrenceCount('B2B', 1);
+        await assertions.assertPdfTextContains('consumer products');
+    });
+
+    test('reflow-when-supported insertion persists and preserves selected text', async () => {
+        const pdf = await open();
+        const response = await pdf.text().insert(
+            TextInsertRequest.before('B2B', 'Modern ')
+                .wholeWords(true)
+                .reflowWhenSupported(TextLayoutProfile.DEFAULT)
+                .build());
+
+        expect(response.matched).toBe(1);
+        expect(response.changed).toBe(1);
+        expect(response.change).toHaveLength(1);
+        expect(response.change?.[0]).toMatchObject({
+            requestedLayoutMode: 'reflowWhenSupported',
+            requestedLayoutProfile: 'default',
+            appliedLayoutMode: 'REFLOWED'
+        });
+        expect(response.errors ?? []).toHaveLength(0);
+
+        const assertions = await PDFAssertions.create(pdf);
         await assertions.assertPdfTextOccurrenceCount('Modern', 1);
         await assertions.assertPdfTextOccurrenceCount('B2B', 1);
         await assertions.assertPdfTextContains('consumer products');

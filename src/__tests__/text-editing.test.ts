@@ -65,7 +65,8 @@ describe('v2 text editing requests', () => {
 
         expect(json(request)).toEqual({
             select: {literal: '{{logo}}'},
-            replaceWithImage: {data: 'AQID', transformationMatrix: [20, 0, 0, 10, 3, -2]}
+            replaceWithImage: {data: 'AQID', transformationMatrix: [20, 0, 0, 10, 3, -2]},
+            layout: {mode: 'sourceAnchored'}
         });
     });
 

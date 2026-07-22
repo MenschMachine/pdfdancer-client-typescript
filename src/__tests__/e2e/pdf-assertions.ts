@@ -5,6 +5,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import {randomUUID} from 'crypto';
 import zlib from 'zlib';
 import {Worker} from 'worker_threads';
 import {Color, Orientation, PDFDancer} from '../../index';
@@ -56,7 +57,7 @@ export class PDFAssertions {
         const baseUrl = (sourcePdf as any)._baseUrl;
 
         // Create a temporary file
-        const tempFile = path.join(os.tmpdir(), `test-${Date.now()}.pdf`);
+        const tempFile = path.join(os.tmpdir(), `pdfdancer-test-${randomUUID()}.pdf`);
         await sourcePdf.save(tempFile);
 
         // Reopen the PDF with the same token and baseUrl

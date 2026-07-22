@@ -406,7 +406,10 @@ export class TextReplaceRequestBuilder extends SelectorLayoutBuilder<TextReplace
     resetSpacingOverrides(): this { this.styles().resetSpacingOverrides(); return this; }
     build(): TextReplaceRequest {
         const style = this.styleBuilder ? this.styleBuilder.build() : this.styleValue;
-        return new TextReplaceRequest(this.pageValues, this.builtSelector(), this.replacement, this.image, style, this.builtLayout()).validated();
+        const layout = this.image && !this.layoutValue && this.pendingHyphenation === undefined
+            ? TextLayoutRequest.sourceAnchored()
+            : this.builtLayout();
+        return new TextReplaceRequest(this.pageValues, this.builtSelector(), this.replacement, this.image, style, layout).validated();
     }
 }
 
