@@ -4,27 +4,36 @@
  * A TypeScript client library for the PDFDancer PDF manipulation API.
  */
 
-export { PDFDancer } from './pdfdancer_v1';
-export { ParagraphBuilder } from './paragraph-builder';
-export { ReplacementBuilder } from './replacement-builder';
+export { PDFDancer, PageClient } from './pdfdancer_v2';
+export type { RetryConfig } from './pdfdancer_v2';
 export { PageBuilder } from './page-builder';
-export { PathBuilder } from './path-builder';
+export { PathBuilder, LineBuilder, BezierBuilder, RectangleBuilder } from './path-builder';
 
 export {
   PdfDancerException,
   FontNotFoundException,
   ValidationException,
   HttpClientException,
+  RateLimitException,
   SessionException,
   SessionNotFoundException
 } from './exceptions';
+
+export {
+  BaseObject,
+  PathObject,
+  PathGroupObject,
+  ImageObject,
+  FormXObject,
+  FormFieldObject,
+  PathEditSession
+} from './types';
 
 export {
   ObjectRef,
   FormFieldRef,
   PageRef,
   PageSize,
-  TextObjectRef,
   PathObjectRef,
   Position,
   ObjectType,
@@ -32,8 +41,6 @@ export {
   Color,
   Image,
   BoundingRect,
-  Paragraph,
-  TextLine,
   Path,
   PathSegment,
   Line,
@@ -44,26 +51,51 @@ export {
   Point,
   StandardFonts,
   STANDARD_PAGE_SIZES,
+  pageSizeFromDimensions,
   Orientation,
   CommandResult,
-  TextStatus,
   DocumentFontInfo,
   FontType,
   DocumentSnapshot,
   PageSnapshot,
-  RedactTarget,
-  RedactOptions,
-  RedactResponse,
   ImageTransformType,
   FlipDirection,
   Size,
-  Word,
-  ReflowPreset,
-  TemplateReplacement,
-  TemplateReplaceRequest,
   ModifyPathRequest
 } from './models';
 
 export { DocumentFontInfo as FontRecommendation } from './models';
 
 export { VERSION } from './version';
+
+export {
+  PdfAffineTransform,
+  PdfAffineTransformBuilder,
+  PdfColorRequest,
+  PdfColorSpace,
+  TextClient,
+  TextDeleteRequest,
+  TextDeleteRequestBuilder,
+  TextEditChangeDiagnostic,
+  TextEditResponse,
+  TextInsertCaret,
+  TextInsertRequest,
+  TextInsertRequestBuilder,
+  TextLayoutMode,
+  TextLayoutProfile,
+  TextLayoutRequest,
+  TextOperationDiagnostic,
+  TextReplaceRequest,
+  TextReplaceRequestBuilder,
+  TextReplacementImageRequest,
+  TextSelectorRequest,
+  TextStyleNumericFilterRequest,
+  TextStyleRunFilterRequest,
+  TextStyleSelectorRequest,
+  TextStylePatchBuilder,
+  TextStylePatchRequest,
+  TextStyleRequest,
+  TextStyleRequestBuilder,
+  TextStyleSetBuilder,
+  TextStyleSetRequest
+} from './text-editing';

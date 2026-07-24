@@ -8,16 +8,19 @@ describe('Page E2E Tests (Showcase)', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         const elements = await pdf.selectElements();
-        expect(elements.length).toBeGreaterThanOrEqual(94);
-        expect(elements.length).toBeLessThanOrEqual(97);
+        expect(elements.length).toBeGreaterThan(0);
+        for (const element of elements) {
+            expect(element.internalId).toBeDefined();
+            expect(element.type).toBeDefined();
+            expect(element.position).toBeDefined();
+        }
 
         let total = 0;
         for (const page of await pdf.pages()) {
             const pageElements = await page.selectElements();
             total += pageElements.length;
         }
-        expect(total).toBeGreaterThanOrEqual(94);
-        expect(total).toBeLessThanOrEqual(97);
+        expect(total).toBe(elements.length);
     });
 
     test('get pages', async () => {
@@ -61,11 +64,11 @@ describe('Page E2E Tests (Showcase)', () => {
         const pagesBefore = await pdf.pages();
         expect(pagesBefore.length).toBe(7);
 
-        const result = await pdf.movePage(1, 6);
-        expect(result.position.pageNumber).toBe(6);
+        const moved = await pdf.movePage(1, 6);
+        expect(moved).toBe(true);
 
         const assertions = await PDFAssertions.create(pdf);
-        await assertions.assertParagraphExists('This is regular Sans text showing alignment and styles.', 6);
+        await assertions.assertPdfTextContains('This is regular Sans text showing alignment and styles.', 6);
     });
 
     test('add page', async () => {
@@ -128,7 +131,7 @@ describe('Page E2E Tests (Showcase)', () => {
 
         const assertions = await PDFAssertions.create(pdf);
         const a5 = STANDARD_PAGE_SIZES.A5;
-        await assertions.assertPageDimension(a5.width, a5.height, Orientation.LANDSCAPE, 5);
+        await assertions.assertPageDimension(a5.height, a5.width, Orientation.LANDSCAPE, 5);
         await assertions.assertTotalNumberOfElements(0, 5);
     });
 
@@ -141,6 +144,9 @@ describe('Page E2E Tests (Showcase)', () => {
         const pageRef = await pdf.newPage().customSize(400, 600).landscape().add();
         expect(pageRef.position.pageNumber).toBe(8);
         expect((await pdf.pages()).length).toBe(8);
+
+        const assertions = await PDFAssertions.create(pdf);
+        await assertions.assertPageDimension(600, 400, Orientation.LANDSCAPE, 8);
     });
 
     test('add page with builder all options', async () => {

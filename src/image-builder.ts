@@ -1,4 +1,4 @@
-import {PDFDancer} from "./pdfdancer_v1";
+import {PDFDancer} from "./pdfdancer_v2";
 import fs from "fs";
 import {Image, Position} from "./models";
 
@@ -43,11 +43,6 @@ export class ImageBuilder {
             this._position = Position.atPageCoordinates(pageNumberOrX, xOrY, maybeY);
         }
         return this;
-    }
-
-    // noinspection JSUnusedGlobalSymbols
-    async apply(): Promise<boolean> {
-        return await this.add();
     }
 
     async add() {

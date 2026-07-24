@@ -40,8 +40,8 @@ include
   - `PDFDancer.clearPathGroupClipping(pageIndex, groupId)` calling `PUT /pdf/path-group/clipping/clear`.
   - Both client calls invalidate local snapshot caches after mutation.
 - Added server endpoints in both controllers:
-  - `PDFController` and `PDFControllerV1` expose `PUT /pdf/clipping/clear` and `PUT /pdf/path-group/clipping/clear`.
-  - V1 uses `ClearClippingRequestV1` and `ClearPathGroupClippingRequestV1`, converting both to internal requests via `toInternal()`.
+  - `PDFController` and `PDFControllerV2` expose `PUT /pdf/clipping/clear` and `PUT /pdf/path-group/clipping/clear`.
+  - V2 uses `ClearClippingRequestV2` and `ClearPathGroupClippingRequestV2`, converting both to internal requests via `toInternal()`.
 - Added controller orchestration in `ControllerOps`:
   - `clearClipping(...)` validates `objectRef`, executes `ClearObjectClippingCommand`, and publishes `PDF_OBJECT_MODIFIED` metric with operation `clear_clipping`.
   - `clearPathGroupClipping(...)` validates `groupId` and `pageIndex`, executes `ClearPathGroupClippingCommand`, and publishes `VECTOR_MANIPULATION` metric with operation `clear_path_group_clipping`.
@@ -60,7 +60,7 @@ include
   - Added `clearPathGroupClipping(pageNumber: number, groupId: string): Promise<boolean>` to path-group internals.
   - Added `BaseObject.clearClipping()` to clear clipping on any selected object and `BaseObject.objectRef()` as an explicit alias for `ref()`.
   - Added `PathGroupObject.groupId` getter and `PathGroupObject.clearClipping()` for path-group clipping removal.
-- Implemented API wiring in `src/pdfdancer_v1.ts`:
+- Implemented API wiring in `src/pdfdancer_v2.ts`:
   - Added `PDFDancer.clearClipping(objectRef)` with validation and `PUT /pdf/clipping/clear` using `{ objectRef: objectRef.toDict() }`.
   - Added `PDFDancer.clearPathGroupClipping(pageNumber, groupId)` with validation and `PUT /pdf/path-group/clipping/clear` using `{ pageNumber, groupId }`.
   - Both operations call `_invalidateCache()` after successful mutations so subsequent reads reflect unclipped content.

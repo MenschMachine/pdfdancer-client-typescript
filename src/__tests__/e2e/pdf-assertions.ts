@@ -5,9 +5,16 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import {randomUUID} from 'crypto';
 import zlib from 'zlib';
+import {Worker} from 'worker_threads';
 import {Color, Orientation, PDFDancer} from '../../index';
 import {expectWithin} from '../assertions';
+
+interface PersistedPdfInspection {
+    pages: string[];
+    fonts: string[];
+}
 
 type Matrix = [number, number, number, number, number, number];
 type BBox = [number, number, number, number];
@@ -35,6 +42,7 @@ export class PDFAssertions {
     private pdf: PDFDancer;
     private savedPdfPath: string | null;
     private drawEventsCache: Map<number, DrawEvents>;
+    private persistedPdfInspection?: Promise<PersistedPdfInspection>;
 
     private constructor(pdf: PDFDancer, savedPdfPath?: string) {
         this.pdf = pdf;
@@ -49,7 +57,7 @@ export class PDFAssertions {
         const baseUrl = (sourcePdf as any)._baseUrl;
 
         // Create a temporary file
-        const tempFile = path.join(os.tmpdir(), `test-${Date.now()}.pdf`);
+        const tempFile = path.join(os.tmpdir(), `pdfdancer-test-${randomUUID()}.pdf`);
         await sourcePdf.save(tempFile);
 
         // Reopen the PDF with the same token and baseUrl
@@ -61,12 +69,7 @@ export class PDFAssertions {
     }
 
     private async aggregateCounts(pageNumber?: number) {
-        const paragraphs = await this.pdf.selectParagraphs();
-        const textLines = await this.pdf.selectLines();
-        const images = await this.pdf.selectImages();
-        const paths = await this.pdf.selectPaths();
-        const forms = await this.pdf.selectForms();
-        const fields = await this.pdf.selectFormFields();
+        const elements = await this.pdf.selectElements();
 
         const filter = <T extends { position: { pageNumber?: number } }>(items: T[]): T[] => {
             if (pageNumber === undefined) {
@@ -76,12 +79,7 @@ export class PDFAssertions {
         };
 
         return {
-            paragraphs: filter(paragraphs).length,
-            textLines: filter(textLines).length,
-            images: filter(images).length,
-            paths: filter(paths).length,
-            forms: filter(forms).length,
-            fields: filter(fields).length
+            elements: filter(elements).length
         };
     }
 
@@ -116,78 +114,6 @@ export class PDFAssertions {
         return this;
     }
 
-    async assertParagraphIsAt(text: string, x: number, y: number, page = 1, epsilon = 4): Promise<this> { // adjust epsilon for baseline vs bounding box differences
-        const paragraphs = await this.pdf.page(page).selectParagraphsMatching(`.*${text}.*`);
-        expect(paragraphs.length).toBeGreaterThan(0);
-        const reference = paragraphs[0].objectRef();
-        expectWithin(reference.position.getX()!, x, epsilon);
-        expectWithin(reference.position.getY()!, y, epsilon);
-
-        const byPosition = await this.pdf.page(page).selectParagraphsAt(x, y, epsilon);
-        expect(byPosition.length).toBeGreaterThan(0);
-        return this;
-    }
-
-    async assertTextHasFont(text: string, fontName: string, fontSize: number, page = 1): Promise<this> {
-        await this.assertTextlineHasFont(text, fontName, fontSize, page);
-
-        const paragraphs = await this.pdf.page(page).selectParagraphsMatching(`.*${text}.*`);
-        expect(paragraphs.length).toBeGreaterThan(0);
-        const reference = paragraphs[0].objectRef();
-        expect(reference.fontName).toBe(fontName);
-        expectWithin(reference.fontSize!, fontSize, 1e-6);
-        return this;
-    }
-
-    async assertTextHasFontMatching(text: string, fontName: string, fontSize: number, page = 1): Promise<this> {
-        await this.assertTextlineHasFontMatching(text, fontName, fontSize, page);
-        return this;
-    }
-
-    async assertTextHasColor(text: string, color: Color, page = 1): Promise<this> {
-        await this.assertTextlineHasColor(text, color, page);
-        return this;
-    }
-
-    async assertTextlineHasColor(text: string, color: Color, page = 1): Promise<this> {
-        const lines = await this.pdf.page(page).selectTextLinesMatching(text);
-        expect(lines.length).toBe(1);
-        const reference = lines[0].objectRef();
-        const refColor = reference.color;
-        expect(refColor).toEqual(color);
-        expect(reference.text).toContain(text);
-        return this;
-    }
-
-    async assertTextlineHasFont(text: string, fontName: string, fontSize: number, page = 1): Promise<this> {
-        const lines = await this.pdf.page(page).selectTextLinesStartingWith(text);
-        expect(lines.length).toBe(1);
-        const reference = lines[0].objectRef();
-        expect(reference.fontName).toBe(fontName);
-        expectWithin(reference.fontSize!, fontSize, 1e-6);
-        return this;
-    }
-
-    async assertTextlineHasFontMatching(text: string, fontName: string, fontSize: number, page = 1): Promise<this> {
-        const lines = await this.pdf.page(page).selectTextLinesStartingWith(text);
-        expect(lines.length).toBe(1);
-        const reference = lines[0].objectRef();
-        expect((reference.fontName ?? '').includes(fontName)).toBe(true);
-        expectWithin(reference.fontSize!, fontSize, 1e-6);
-        return this;
-    }
-
-    async assertTextlineIsAt(text: string, x: number, y: number, page = 1, epsilon = 1e-4): Promise<this> {
-        const lines = await this.pdf.page(page).selectTextLinesStartingWith(text);
-        expect(lines.length).toBe(1);
-        const reference = lines[0].objectRef();
-        expectWithin(reference.position.getX()!, x, epsilon);
-        expectWithin(reference.position.getY()!, y, epsilon);
-        const byPosition = await this.pdf.page(page).selectTextLinesAt(x, y, epsilon);
-        expect(byPosition.length).toBeGreaterThan(0);
-        return this;
-    }
-
     async assertPathIsAt(internalId: string, x: number, y: number, page = 1, epsilon = 1e-4): Promise<this> {
         const paths = await this.pdf.page(page).selectPathsAt(x, y);
         expect(paths.length).toBe(1);
@@ -206,6 +132,69 @@ export class PDFAssertions {
 
     getPdf(): PDFDancer {
         return this.pdf;
+    }
+
+    private async inspectPersistedPdf(): Promise<PersistedPdfInspection> {
+        if (!this.savedPdfPath) {
+            throw new Error('PDFAssertions must be created with PDFAssertions.create() before inspecting persisted text');
+        }
+
+        if (!this.persistedPdfInspection) {
+            const inspectorPath = path.join(__dirname, 'pdfjs-inspector.mjs');
+            this.persistedPdfInspection = new Promise((resolve, reject) => {
+                const worker = new Worker(inspectorPath, {workerData: {pdfPath: this.savedPdfPath}});
+                worker.once('message', (message: {result?: PersistedPdfInspection; error?: string}) => {
+                    if (message.error) reject(new Error(`PDF.js inspection failed: ${message.error}`));
+                    else if (message.result) resolve(message.result);
+                    else reject(new Error('PDF.js inspection worker returned no result'));
+                });
+                worker.once('error', reject);
+                worker.once('exit', code => {
+                    if (code !== 0) reject(new Error(`PDF.js inspection worker exited with code ${code}`));
+                });
+            });
+        }
+        return this.persistedPdfInspection;
+    }
+
+    private async persistedText(page?: number): Promise<string> {
+        const inspection = await this.inspectPersistedPdf();
+        if (page !== undefined && (!Number.isInteger(page) || page < 1 || page > inspection.pages.length)) {
+            throw new Error(`Page ${page} is outside the saved PDF page range 1..${inspection.pages.length}`);
+        }
+        return page === undefined ? inspection.pages.join('\n') : inspection.pages[page - 1];
+    }
+
+    private async normalizedPersistedText(page?: number): Promise<string> {
+        return (await this.persistedText(page)).replace(/\s+/g, ' ').trim();
+    }
+
+    async assertPdfTextContains(text: string, page?: number): Promise<this> {
+        expect(await this.normalizedPersistedText(page)).toContain(text.replace(/\s+/g, ' ').trim());
+        return this;
+    }
+
+    async assertPdfTextDoesNotContain(text: string, page?: number): Promise<this> {
+        expect(await this.normalizedPersistedText(page)).not.toContain(text.replace(/\s+/g, ' ').trim());
+        return this;
+    }
+
+    async assertPdfTextOccurrenceCount(text: string, expected: number, page?: number): Promise<this> {
+        const persisted = await this.normalizedPersistedText(page);
+        const normalizedText = text.replace(/\s+/g, ' ').trim();
+        let count = 0;
+        let cursor = 0;
+        while ((cursor = persisted.indexOf(normalizedText, cursor)) !== -1) {
+            count++;
+            cursor += Math.max(normalizedText.length, 1);
+        }
+        expect(count).toBe(expected);
+        return this;
+    }
+
+    async assertPdfUsesFont(fontName: string): Promise<this> {
+        expect((await this.inspectPersistedPdf()).fonts).toContain(fontName);
+        return this;
     }
 
     private static matrixMultiply(left: Matrix, right: Matrix): Matrix {
@@ -471,7 +460,7 @@ export class PDFAssertions {
                 continue;
             }
 
-            if ('[]<>{}'.includes(ch)) {
+            if ('[]<>(){}'.includes(ch)) {
                 i += 1;
                 continue;
             }
@@ -910,26 +899,6 @@ export class PDFAssertions {
         return Boolean(best.clipped);
     }
 
-    private async findTextlineClippingState(text: string, page: number): Promise<boolean> {
-        const lines = await this.pdf.page(page).selectTextLinesStartingWith(text);
-        expect(lines.length).toBeGreaterThan(0);
-
-        const x = lines[0].position.getX();
-        const y = lines[0].position.getY();
-        expect(x).toBeDefined();
-        expect(y).toBeDefined();
-
-        const events = this.extractPageDrawEvents(page).texts;
-        const matches = events.filter(event => PDFAssertions.bboxContainsPoint(event.bbox, x!, y!, 2.0));
-        expect(matches.length).toBeGreaterThan(0);
-        const best = matches.reduce((previous, current) =>
-            PDFAssertions.bboxCenterDistance(current.bbox, x!, y!) <
-            PDFAssertions.bboxCenterDistance(previous.bbox, x!, y!) ? current : previous
-        );
-
-        return Boolean(best.clipped);
-    }
-
     async assertPathHasClipping(internalId: string, page = 1): Promise<this> {
         const clipped = await this.findPathClippingState(internalId, page);
         expect(clipped).toBe(true);
@@ -950,18 +919,6 @@ export class PDFAssertions {
 
     async assertImageHasNoClipping(internalId: string, page = 1): Promise<this> {
         const clipped = await this.findImageClippingState(internalId, page);
-        expect(clipped).toBe(false);
-        return this;
-    }
-
-    async assertTextlineHasClipping(text: string, page = 1): Promise<this> {
-        const clipped = await this.findTextlineClippingState(text, page);
-        expect(clipped).toBe(true);
-        return this;
-    }
-
-    async assertTextlineHasNoClipping(text: string, page = 1): Promise<this> {
-        const clipped = await this.findTextlineClippingState(text, page);
         expect(clipped).toBe(false);
         return this;
     }
@@ -1125,31 +1082,4 @@ export class PDFAssertions {
         return this;
     }
 
-    async assertParagraphExists(text: string, page = 1): Promise<this> {
-        let params = await this.pdf.page(page).selectParagraphs();
-        for (const param of params) {
-            console.log(param.getText());
-        }
-        const paragraphs = await this.pdf.page(page).selectParagraphsMatching(".*" + text + ".*");
-        expect(paragraphs.length).toBeGreaterThan(0);
-        return this;
-    }
-
-    async assertParagraphDoesNotExist(text: string, page = 1): Promise<this> {
-        const paragraphs = await this.pdf.page(page).selectParagraphsMatching(".*" + text + ".*");
-        expect(paragraphs.length).toBe(0);
-        return this;
-    }
-
-    async assertTextlineExists(text: string, page = 1): Promise<this> {
-        const lines = await this.pdf.page(page).selectTextLinesStartingWith(text);
-        expect(lines.length).toBeGreaterThan(0);
-        return this;
-    }
-
-    async assertTextlineDoesNotExist(text: string, page = 1): Promise<this> {
-        const lines = await this.pdf.page(page).selectTextLinesStartingWith(text);
-        expect(lines.length).toBe(0);
-        return this;
-    }
 }

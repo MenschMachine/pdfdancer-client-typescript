@@ -1,5 +1,5 @@
 import {requireEnvAndFixture} from './test-helpers';
-import {PDFDancer} from "../../pdfdancer_v1";
+import {PDFDancer} from "../../pdfdancer_v2";
 import {BoundingRect} from "../../models";
 import {PDFAssertions} from './pdf-assertions';
 import {PathGroupObject} from "../../types";

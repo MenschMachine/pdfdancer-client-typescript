@@ -1,5 +1,5 @@
 /**
- * PDFDancer TypeScript Client V1
+ * PDFDancer TypeScript client for the v2 API
  *
  * A TypeScript client that provides session-based PDF manipulation operations with strict validation.
  */
@@ -8,6 +8,7 @@ import {
     FontNotFoundException,
     HttpClientException,
     PdfDancerException,
+    RateLimitException,
     SessionException,
     SessionNotFoundException,
     ValidationException
@@ -25,13 +26,10 @@ import {
     DocumentSnapshot,
     FindRequest,
     Font,
-    FontType,
     FormFieldRef,
     Image,
     ImageTransformRequest,
     ModifyPathRequest,
-    ModifyRequest,
-    ModifyTextRequest,
     MovePageRequest,
     MoveRequest,
     ObjectRef,
@@ -41,52 +39,46 @@ import {
     PageSize,
     PageSizeInput,
     PageSnapshot,
-    Paragraph,
     Path,
     PathObjectRef,
     Position,
     PositionMode,
-    RedactOptions,
-    RedactResponse,
-    RedactTarget,
     ShapeType,
-    TemplateReplaceRequest,
-    TextObjectRef,
-    TextStatus,
     PathGroupInfo,
     PathGroupTransformType
 } from './models';
-import {ParagraphBuilder} from './paragraph-builder';
-import {ReplacementBuilder} from './replacement-builder';
 import {PageBuilder} from './page-builder';
-import {loadEnv} from './env-loader';
 import {
-    BaseObject,
     FormFieldObject,
     FormXObject,
     ImageObject,
-    ParagraphObject,
     PathObject,
-    PathGroupObject,
-    TextLineObject
+    PathGroupObject
 } from "./types";
 import {ImageBuilder} from "./image-builder";
-import {PathBuilder} from "./path-builder";
+import {BezierBuilder, LineBuilder, PathBuilder, RectangleBuilder} from "./path-builder";
 import {generateFingerprint} from "./fingerprint";
 import {VERSION} from "./version";
+import {
+    TextClient,
+    TextDeleteRequest,
+    TextEditResponse,
+    TextInsertRequest,
+    TextOperation,
+    TextReplaceRequest,
+    TextStyleRequest
+} from './text-editing';
 import fs from "fs";
 import path from "node:path";
-
-const DEFAULT_TOLERANCE = 0.01;
 
 /**
  * Configuration for retry mechanism on REST API calls.
  */
 export interface RetryConfig {
     /**
-     * Maximum number of retry attempts (default: 3)
+     * Total number of attempts, including the initial request (default: 3)
      */
-    maxRetries?: number;
+    maxAttempts?: number;
 
     /**
      * Initial delay in milliseconds before first retry (default: 1000)
@@ -95,7 +87,7 @@ export interface RetryConfig {
     initialDelay?: number;
 
     /**
-     * Maximum delay in milliseconds between retries (default: 10000)
+     * Maximum delay in milliseconds between retries (default: 5000)
      */
     maxDelay?: number;
 
@@ -115,11 +107,6 @@ export interface RetryConfig {
     backoffMultiplier?: number;
 
     /**
-     * Whether to add random jitter to retry delays to prevent thundering herd (default: true)
-     */
-    useJitter?: boolean;
-
-    /**
      * Whether to respect Retry-After headers from server responses (default: true)
      * When enabled, the client will use the server-specified delay instead of exponential backoff
      * for responses that include a Retry-After header (typically 429 or 503 responses)
@@ -131,15 +118,42 @@ export interface RetryConfig {
  * Default retry configuration
  */
 const DEFAULT_RETRY_CONFIG: Required<RetryConfig> = {
-    maxRetries: 3,
+    maxAttempts: 3,
     initialDelay: 1000,
-    maxDelay: 10000,
-    retryableStatusCodes: [429, 502, 503, 504],
+    maxDelay: 5000,
+    retryableStatusCodes: [408, 429, 500, 502, 503, 504, 520],
     retryOnNetworkError: true,
     backoffMultiplier: 2,
-    useJitter: true,
     respectRetryAfter: true
 };
+
+function resolveRetryConfig(config?: RetryConfig): Required<RetryConfig> {
+    const resolved = {...DEFAULT_RETRY_CONFIG, ...config};
+    if (!Number.isInteger(resolved.maxAttempts) || resolved.maxAttempts < 1) {
+        throw new ValidationException('Retry maxAttempts must be an integer of at least 1');
+    }
+    if (![resolved.initialDelay, resolved.maxDelay].every(value => Number.isFinite(value) && value >= 0)) {
+        throw new ValidationException('Retry delays must be finite nonnegative numbers');
+    }
+    if (!Number.isFinite(resolved.backoffMultiplier) || resolved.backoffMultiplier < 1) {
+        throw new ValidationException('Retry backoffMultiplier must be at least 1');
+    }
+    return resolved;
+}
+
+const API_VERSION_PATH = 'v2';
+
+function buildVersionedUrl(baseUrl: string, path: string): string {
+    const base = baseUrl.replace(/\/+$/, '');
+    const endpoint = path.replace(/^\/+/, '');
+    const versionPrefix = `/${API_VERSION_PATH}`;
+
+    if (base.endsWith(versionPrefix)) {
+        return `${base}/${endpoint}`;
+    }
+
+    return `${base}${versionPrefix}/${endpoint}`;
+}
 
 /**
  * Static helper function for retry logic with exponential backoff.
@@ -155,7 +169,7 @@ async function fetchWithRetry(
     let lastError: Error | null = null;
     let lastResponse: Response | null = null;
 
-    for (let attempt = 0; attempt <= retryConfig.maxRetries; attempt++) {
+    for (let attempt = 0; attempt < retryConfig.maxAttempts; attempt++) {
         try {
             const attemptOptions = {
                 ...options,
@@ -168,11 +182,11 @@ async function fetchWithRetry(
                 lastResponse = response;
 
                 // If this is not the last attempt, wait and retry
-                if (attempt < retryConfig.maxRetries) {
+                if (attempt < retryConfig.maxAttempts - 1) {
                     let delay: number;
 
                     // Check for Retry-After header if configured
-                    if (retryConfig.respectRetryAfter) {
+                    if (retryConfig.respectRetryAfter && response.status === 429) {
                         const retryAfterDelay = parseRetryAfter(response);
                         if (retryAfterDelay !== null) {
                             // Use Retry-After header value, but cap at maxDelay
@@ -197,7 +211,7 @@ async function fetchWithRetry(
             lastError = error as Error;
 
             // Check if this is a network error and we should retry
-            if (retryConfig.retryOnNetworkError && attempt < retryConfig.maxRetries) {
+            if (retryConfig.retryOnNetworkError && attempt < retryConfig.maxAttempts - 1) {
                 const delay = calculateRetryDelay(attempt, retryConfig);
                 await sleep(delay);
                 continue;
@@ -228,31 +242,126 @@ async function fetchWithRetry(
  * Returns the delay in milliseconds, or null if the header is invalid or missing.
  */
 function parseRetryAfter(response: Response): number | null {
-    const retryAfter = response.headers.get('Retry-After');
+    const retryAfter = response.headers.get('Retry-After')?.trim();
     if (!retryAfter) {
         return null;
     }
 
-    // Try parsing as delay-seconds (integer)
-    const delaySeconds = parseInt(retryAfter, 10);
-    if (!isNaN(delaySeconds) && delaySeconds >= 0) {
-        return delaySeconds * 1000; // Convert to milliseconds
+    // RFC 9110 defines delay-seconds as one or more decimal digits.
+    if (/^[0-9]+$/.test(retryAfter)) {
+        const delaySeconds = Number(retryAfter);
+        const largestSafeDelay = Math.floor(Number.MAX_SAFE_INTEGER / 1000);
+        return delaySeconds > largestSafeDelay
+            ? Number.MAX_SAFE_INTEGER
+            : delaySeconds * 1000;
     }
 
-    // Try parsing as HTTP-date
-    try {
-        const retryDate = new Date(retryAfter);
-        if (!isNaN(retryDate.getTime())) {
-            const now = Date.now();
-            const delay = retryDate.getTime() - now;
-            // Only return positive delays
-            return delay > 0 ? delay : 0;
+    const retryTimestamp = parseHttpDate(retryAfter);
+    if (retryTimestamp === null) {
+        return null;
+    }
+
+    return Math.max(0, retryTimestamp - Date.now());
+}
+
+const HTTP_MONTHS: Record<string, number> = {
+    Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
+    Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11
+};
+
+const HTTP_WEEKDAYS: Record<string, number> = {
+    Sun: 0, Sunday: 0,
+    Mon: 1, Monday: 1,
+    Tue: 2, Tuesday: 2,
+    Wed: 3, Wednesday: 3,
+    Thu: 4, Thursday: 4,
+    Fri: 5, Friday: 5,
+    Sat: 6, Saturday: 6
+};
+
+interface HttpDateParts {
+    weekday: number;
+    day: number;
+    month: number;
+    year: number;
+    hour: number;
+    minute: number;
+    second: number;
+}
+
+/** Parses the three HTTP-date formats required by RFC 9110 section 5.6.7. */
+function parseHttpDate(value: string): number | null {
+    const imfFixdate = /^(Sun|Mon|Tue|Wed|Thu|Fri|Sat), ([0-9]{2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) ([0-9]{4}) ([0-9]{2}):([0-9]{2}):([0-9]{2}) GMT$/.exec(value);
+    if (imfFixdate) {
+        return httpDateTimestamp({
+            weekday: HTTP_WEEKDAYS[imfFixdate[1]],
+            day: Number(imfFixdate[2]),
+            month: HTTP_MONTHS[imfFixdate[3]],
+            year: Number(imfFixdate[4]),
+            hour: Number(imfFixdate[5]),
+            minute: Number(imfFixdate[6]),
+            second: Number(imfFixdate[7])
+        });
+    }
+
+    const rfc850Date = /^(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday), ([0-9]{2})-(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2}) GMT$/.exec(value);
+    if (rfc850Date) {
+        const currentYear = new Date().getUTCFullYear();
+        let year = Math.floor(currentYear / 100) * 100 + Number(rfc850Date[4]);
+        if (year > currentYear + 50) {
+            year -= 100;
         }
-    } catch {
-        // Invalid date format
+        return httpDateTimestamp({
+            weekday: HTTP_WEEKDAYS[rfc850Date[1]],
+            day: Number(rfc850Date[2]),
+            month: HTTP_MONTHS[rfc850Date[3]],
+            year,
+            hour: Number(rfc850Date[5]),
+            minute: Number(rfc850Date[6]),
+            second: Number(rfc850Date[7])
+        });
+    }
+
+    const asctimeDate = /^(Sun|Mon|Tue|Wed|Thu|Fri|Sat) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) ( [1-9]|[0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2}) ([0-9]{4})$/.exec(value);
+    if (asctimeDate) {
+        return httpDateTimestamp({
+            weekday: HTTP_WEEKDAYS[asctimeDate[1]],
+            day: Number(asctimeDate[3].trim()),
+            month: HTTP_MONTHS[asctimeDate[2]],
+            year: Number(asctimeDate[7]),
+            hour: Number(asctimeDate[4]),
+            minute: Number(asctimeDate[5]),
+            second: Number(asctimeDate[6])
+        });
     }
 
     return null;
+}
+
+function httpDateTimestamp(parts: HttpDateParts): number | null {
+    if (parts.year < 1900 || parts.day < 1 || parts.day > 31 ||
+        parts.hour > 23 || parts.minute > 59 || parts.second > 60) {
+        return null;
+    }
+
+    const ordinarySecond = Math.min(parts.second, 59);
+    const timestamp = Date.UTC(
+        parts.year, parts.month, parts.day,
+        parts.hour, parts.minute, ordinarySecond
+    );
+    const date = new Date(timestamp);
+
+    if (date.getUTCFullYear() !== parts.year ||
+        date.getUTCMonth() !== parts.month ||
+        date.getUTCDate() !== parts.day ||
+        date.getUTCHours() !== parts.hour ||
+        date.getUTCMinutes() !== parts.minute ||
+        date.getUTCSeconds() !== ordinarySecond ||
+        date.getUTCDay() !== parts.weekday) {
+        return null;
+    }
+
+    return timestamp + (parts.second === 60 ? 1000 : 0);
 }
 
 /**
@@ -264,11 +373,6 @@ function calculateRetryDelay(attemptNumber: number, retryConfig: Required<RetryC
 
     // Cap at maxDelay
     delay = Math.min(delay, retryConfig.maxDelay);
-
-    // Add jitter if enabled (randomize between 50% and 100% of calculated delay)
-    if (retryConfig.useJitter) {
-        delay = delay * (0.5 + Math.random() * 0.5);
-    }
 
     return Math.floor(delay);
 }
@@ -308,11 +412,7 @@ interface PDFDancerInternals {
 
     toFormXObjects(objectRefs: ObjectRef[]): FormXObject[];
 
-    toTextLineObjects(objectRefs: ObjectRef[]): TextLineObject[];
-
     toFormFields(formFieldRefs: FormFieldRef[]): FormFieldObject[];
-
-    toParagraphObjects(objectRefs: ObjectRef[]): ParagraphObject[];
 
     findFormFields(position?: Position): Promise<FormFieldRef[]>;
 
@@ -320,19 +420,17 @@ interface PDFDancerInternals {
 
     findFormXObjects(position?: Position): Promise<ObjectRef[]>;
 
-    findParagraphs(position?: Position): Promise<ObjectRef[]>;
-
-    findTextLines(pos?: Position): Promise<ObjectRef[]>;
-
     _findImages(position?: Position): Promise<ObjectRef[]>;
 
     createPathGroup(pageIndex: number, pathIds: string[]): Promise<PathGroupObject>;
     createPathGroupInRegion(pageIndex: number, region: BoundingRect): Promise<PathGroupObject>;
     listPathGroups(pageIndex: number): Promise<PathGroupObject[]>;
     clearPathGroupClipping(pageNumber: number, groupId: string): Promise<boolean>;
+    createTextClient(pageNumber?: number): TextClient;
 }
 
-class PageClient {
+/** Provides page-scoped selection, creation, and text-editing operations. */
+export class PageClient {
 
     private _pageNumber: number;
     private _client: PDFDancer;
@@ -354,7 +452,7 @@ class PageClient {
         this._internals = this._client as unknown as PDFDancerInternals;
     }
 
-    async selectPathsAt(x: number, y: number, tolerance: number = 0) {
+    async selectPathsAt(x: number, y: number, tolerance: number = 0.01) {
         return this._internals.toPathObjects(await this._internals.findPaths(Position.atPageCoordinates(this._pageNumber, x, y, tolerance)));
     }
 
@@ -381,7 +479,7 @@ class PageClient {
         return this._internals.toImageObjects(await this._internals._findImages(Position.atPage(this._pageNumber)));
     }
 
-    async selectImagesAt(x: number, y: number, tolerance: number = 0) {
+    async selectImagesAt(x: number, y: number, tolerance: number = 0.01) {
         return this._internals.toImageObjects(await this._internals._findImages(Position.atPageCoordinates(this._pageNumber, x, y, tolerance)));
     }
 
@@ -389,14 +487,13 @@ class PageClient {
         return this._client.deletePage(this._pageNumber);
     }
 
-    async moveTo(targetPageNumber: number): Promise<PageRef> {
-        const pageRef = await this._client.movePage(this._pageNumber, targetPageNumber);
-        this._pageNumber = pageRef.position.pageNumber !== undefined ? pageRef.position.pageNumber + 1 : targetPageNumber;
-        this.position = pageRef.position;
-        this.internalId = pageRef.internalId;
-        this.pageSize = pageRef.pageSize;
-        this.orientation = pageRef.orientation;
-        return pageRef;
+    async moveTo(targetPageNumber: number): Promise<boolean> {
+        const moved = await this._client.movePage(this._pageNumber, targetPageNumber);
+        if (moved) {
+            this._pageNumber = targetPageNumber;
+            this.position = Position.atPage(targetPageNumber);
+        }
+        return moved;
     }
 
     // noinspection JSUnusedGlobalSymbols
@@ -404,7 +501,7 @@ class PageClient {
         return this._internals.toFormXObjects(await this._internals.findFormXObjects(Position.atPage(this._pageNumber)));
     }
 
-    async selectFormsAt(x: number, y: number, tolerance: number = 0) {
+    async selectFormsAt(x: number, y: number, tolerance: number = 0.01) {
         return this._internals.toFormXObjects(await this._internals.findFormXObjects(Position.atPageCoordinates(this._pageNumber, x, y, tolerance)));
     }
 
@@ -412,7 +509,7 @@ class PageClient {
         return this._internals.toFormFields(await this._internals.findFormFields(Position.atPage(this._pageNumber)));
     }
 
-    async selectFormFieldsAt(x: number, y: number, tolerance: number = 0) {
+    async selectFormFieldsAt(x: number, y: number, tolerance: number = 0.01) {
         return this._internals.toFormFields(await this._internals.findFormFields(Position.atPageCoordinates(this._pageNumber, x, y, tolerance)));
     }
 
@@ -423,74 +520,25 @@ class PageClient {
         return this._internals.toFormFields(await this._internals.findFormFields(pos));
     }
 
-    async selectParagraphs() {
-        return this._internals.toParagraphObjects(await this._internals.findParagraphs(Position.atPage(this._pageNumber)));
-    }
 
     async selectElements(types?: ObjectType[]) {
         const snapshot = await this._client.getPageSnapshot(this._pageNumber, types);
         return snapshot.elements;
     }
 
-    async selectParagraphsStartingWith(text: string) {
-        let pos = Position.atPage(this._pageNumber);
-        pos.textStartsWith = text;
-        return this._internals.toParagraphObjects(await this._internals.findParagraphs(pos));
+
+    newImage() {
+        return new ImageBuilder(this._client, this._pageNumber);
     }
 
-    async selectParagraphsMatching(pattern: string) {
-        let pos = Position.atPage(this._pageNumber);
-        pos.textPattern = pattern;
-        return this._internals.toParagraphObjects(await this._internals.findParagraphs(pos));
+    newPath() {
+        return new PathBuilder(this._client, this._pageNumber);
     }
 
-    async selectParagraphsAt(x: number, y: number, tolerance: number = DEFAULT_TOLERANCE) {
-        return this._internals.toParagraphObjects(
-            await this._internals.findParagraphs(Position.atPageCoordinates(this._pageNumber, x, y, tolerance))
-        );
-    }
+    newLine() { return new LineBuilder(this._client, this._pageNumber); }
+    newBezier() { return new BezierBuilder(this._client, this._pageNumber); }
+    newRectangle() { return new RectangleBuilder(this._client, this._pageNumber); }
 
-    async selectTextLinesStartingWith(text: string) {
-        let pos = Position.atPage(this._pageNumber);
-        pos.textStartsWith = text;
-        return this._internals.toTextLineObjects(await this._internals.findTextLines(pos));
-    }
-
-    /**
-     * Creates a new ParagraphBuilder for fluent paragraph construction.
-     */
-    newParagraph(pageNumber?: number): ParagraphBuilder {
-        const targetIndex = pageNumber ?? this.position.pageNumber;
-        return new ParagraphBuilder(this._client, targetIndex);
-    }
-
-    newImage(pageNumber?: number) {
-        const targetIndex = pageNumber ?? this.position.pageNumber;
-        return new ImageBuilder(this._client, targetIndex);
-    }
-
-    newPath(pageNumber?: number) {
-        const targetIndex = pageNumber ?? this.position.pageNumber;
-        return new PathBuilder(this._client, targetIndex);
-    }
-
-    async selectTextLines() {
-        return this._internals.toTextLineObjects(await this._internals.findTextLines(Position.atPage(this._pageNumber)));
-    }
-
-    // noinspection JSUnusedGlobalSymbols
-    async selectTextLinesMatching(pattern: string) {
-        let pos = Position.atPage(this._pageNumber);
-        pos.textPattern = pattern;
-        return this._internals.toTextLineObjects(await this._internals.findTextLines(pos));
-    }
-
-    // noinspection JSUnusedGlobalSymbols
-    async selectTextLinesAt(x: number, y: number, tolerance: number = DEFAULT_TOLERANCE) {
-        return this._internals.toTextLineObjects(
-            await this._internals.findTextLines(Position.atPageCoordinates(this._pageNumber, x, y, tolerance))
-        );
-    }
 
     /**
      * Gets a snapshot of this page, including all elements.
@@ -500,6 +548,10 @@ class PageClient {
         return this._client.getPageSnapshot(this._pageNumber, types);
     }
 
+    text(): TextClient {
+        return this._internals.createTextClient(this._pageNumber);
+    }
+
     // Singular convenience methods - return the first element or null
 
     async selectPath() {
@@ -507,7 +559,7 @@ class PageClient {
         return paths.length > 0 ? paths[0] : null;
     }
 
-    async selectPathAt(x: number, y: number, tolerance: number = 0) {
+    async selectPathAt(x: number, y: number, tolerance: number = 0.01) {
         const paths = await this.selectPathsAt(x, y, tolerance);
         return paths.length > 0 ? paths[0] : null;
     }
@@ -517,7 +569,7 @@ class PageClient {
         return images.length > 0 ? images[0] : null;
     }
 
-    async selectImageAt(x: number, y: number, tolerance: number = 0) {
+    async selectImageAt(x: number, y: number, tolerance: number = 0.01) {
         const images = await this.selectImagesAt(x, y, tolerance);
         return images.length > 0 ? images[0] : null;
     }
@@ -527,17 +579,12 @@ class PageClient {
         return forms.length > 0 ? forms[0] : null;
     }
 
-    async selectFormAt(x: number, y: number, tolerance: number = 0) {
+    async selectFormAt(x: number, y: number, tolerance: number = 0.01) {
         const forms = await this.selectFormsAt(x, y, tolerance);
         return forms.length > 0 ? forms[0] : null;
     }
 
-    async selectFormField() {
-        const fields = await this.selectFormFields();
-        return fields.length > 0 ? fields[0] : null;
-    }
-
-    async selectFormFieldAt(x: number, y: number, tolerance: number = 0) {
+    async selectFormFieldAt(x: number, y: number, tolerance: number = 0.01) {
         const fields = await this.selectFormFieldsAt(x, y, tolerance);
         return fields.length > 0 ? fields[0] : null;
     }
@@ -547,45 +594,6 @@ class PageClient {
         return fields.length > 0 ? fields[0] : null;
     }
 
-    async selectParagraph() {
-        const paragraphs = await this.selectParagraphs();
-        return paragraphs.length > 0 ? paragraphs[0] : null;
-    }
-
-    async selectParagraphStartingWith(text: string) {
-        const paragraphs = await this.selectParagraphsStartingWith(text);
-        return paragraphs.length > 0 ? paragraphs[0] : null;
-    }
-
-    async selectParagraphMatching(pattern: string) {
-        const paragraphs = await this.selectParagraphsMatching(pattern);
-        return paragraphs.length > 0 ? paragraphs[0] : null;
-    }
-
-    async selectParagraphAt(x: number, y: number, tolerance: number = DEFAULT_TOLERANCE) {
-        const paragraphs = await this.selectParagraphsAt(x, y, tolerance);
-        return paragraphs.length > 0 ? paragraphs[0] : null;
-    }
-
-    async selectTextLine() {
-        const lines = await this.selectTextLines();
-        return lines.length > 0 ? lines[0] : null;
-    }
-
-    async selectTextLineStartingWith(text: string) {
-        const lines = await this.selectTextLinesStartingWith(text);
-        return lines.length > 0 ? lines[0] : null;
-    }
-
-    async selectTextLineMatching(pattern: string) {
-        const lines = await this.selectTextLinesMatching(pattern);
-        return lines.length > 0 ? lines[0] : null;
-    }
-
-    async selectTextLineAt(x: number, y: number, tolerance: number = DEFAULT_TOLERANCE) {
-        const lines = await this.selectTextLinesAt(x, y, tolerance);
-        return lines.length > 0 ? lines[0] : null;
-    }
 }
 
 // noinspection ExceptionCaughtLocallyJS,JSUnusedLocalSymbols
@@ -618,9 +626,9 @@ export class PDFDancer {
      */
     private constructor(
         token: string,
-        pdfData: Uint8Array | File | ArrayBuffer | string,
+        pdfData: Uint8Array | ArrayBuffer | string,
         baseUrl: string | null = null,
-        readTimeout: number = 60000,
+        readTimeout: number = 30000,
         retryConfig?: RetryConfig
     ) {
 
@@ -647,10 +655,7 @@ export class PDFDancer {
         this._readTimeout = readTimeout;
 
         // Merge retry config with defaults
-        this._retryConfig = {
-            ...DEFAULT_RETRY_CONFIG,
-            ...retryConfig
-        };
+        this._retryConfig = resolveRetryConfig(retryConfig);
 
         // Process PDF data with validation
         this._pdfBytes = this._processPdfData(pdfData);
@@ -676,28 +681,26 @@ export class PDFDancer {
      * @param pdfData PDF data as Uint8Array (raw bytes) or string (filepath)
      * @param token Authentication token (optional, falls back to PDFDANCER_API_TOKEN or PDFDANCER_TOKEN env var)
      * @param baseUrl Base URL for the PDFDancer API (optional)
-     * @param timeout Request timeout in milliseconds (default: 60000)
+     * @param timeout Request timeout in milliseconds (default: 30000)
      * @param retryConfig Retry configuration (optional, uses defaults if not specified)
      * @returns A PDFDancer client instance
      */
     static async open(
-        pdfData: Uint8Array | string | File | ArrayBuffer,
+        pdfData: Uint8Array | string | ArrayBuffer,
         token?: string,
         baseUrl?: string,
         timeout?: number,
         retryConfig?: RetryConfig
     ): Promise<PDFDancer> {
-        loadEnv();
-
         const resolvedBaseUrl =
             baseUrl ??
             process.env.PDFDANCER_BASE_URL ??
             "https://api.pdfdancer.com";
-        const resolvedTimeout = timeout ?? 60000;
+        const resolvedTimeout = timeout ?? 30000;
 
         let resolvedToken = token?.trim() ?? process.env.PDFDANCER_API_TOKEN?.trim() ?? process.env.PDFDANCER_TOKEN?.trim() ?? null;
         if (!resolvedToken) {
-            resolvedToken = await PDFDancer._obtainAnonymousToken(resolvedBaseUrl, resolvedTimeout);
+            resolvedToken = await PDFDancer._obtainAnonymousToken(resolvedBaseUrl, resolvedTimeout, retryConfig);
         }
 
         const client = new PDFDancer(resolvedToken, pdfData, resolvedBaseUrl, resolvedTimeout, retryConfig);
@@ -713,7 +716,7 @@ export class PDFDancer {
      * @param options.initialPageCount Number of initial pages (default: 1)
      * @param token Authentication token (optional, falls back to PDFDANCER_API_TOKEN or PDFDANCER_TOKEN env var)
      * @param baseUrl Base URL for the PDFDancer API (optional)
-     * @param timeout Request timeout in milliseconds (default: 60000)
+     * @param timeout Request timeout in milliseconds (default: 30000)
      * @param retryConfig Retry configuration (optional, uses defaults if not specified)
      */
     static async new(
@@ -727,17 +730,15 @@ export class PDFDancer {
         timeout?: number,
         retryConfig?: RetryConfig
     ): Promise<PDFDancer> {
-        loadEnv();
-
         const resolvedBaseUrl =
             baseUrl ??
             process.env.PDFDANCER_BASE_URL ??
             "https://api.pdfdancer.com";
-        const resolvedTimeout = timeout ?? 60000;
+        const resolvedTimeout = timeout ?? 30000;
 
         let resolvedToken = token?.trim() ?? process.env.PDFDANCER_API_TOKEN?.trim() ?? process.env.PDFDANCER_TOKEN?.trim() ?? null;
         if (!resolvedToken) {
-            resolvedToken = await PDFDancer._obtainAnonymousToken(resolvedBaseUrl, resolvedTimeout);
+            resolvedToken = await PDFDancer._obtainAnonymousToken(resolvedBaseUrl, resolvedTimeout, retryConfig);
         }
 
         let createRequest: CreatePdfRequest;
@@ -753,10 +754,7 @@ export class PDFDancer {
         }
 
         try {
-            // Build URL ensuring no double slashes
-            const base = resolvedBaseUrl.replace(/\/+$/, '');
-            const endpoint = '/session/new'.replace(/^\/+/, '');
-            const url = `${base}/${endpoint}`;
+            const url = buildVersionedUrl(resolvedBaseUrl, '/session/new');
 
             // Generate fingerprint for this request
             const fingerprint = await generateFingerprint();
@@ -771,16 +769,25 @@ export class PDFDancer {
                         'Content-Type': 'application/json',
                         'X-Generated-At': generateTimestamp(),
                         'X-Fingerprint': fingerprint,
+                        'X-API-VERSION': '2',
                         'X-PDFDancer-Client': `typescript/${VERSION}`
                     },
                     body: JSON.stringify(createRequest.toDict()),
                 },
-                DEFAULT_RETRY_CONFIG,
+                resolveRetryConfig(retryConfig),
                 resolvedTimeout
             );
 
             if (!response.ok) {
                 const errorText = await response.text();
+                if (response.status === 429) {
+                    const delay = parseRetryAfter(response);
+                    throw new RateLimitException(
+                        `API rate limit exceeded while creating PDF: ${errorText}`,
+                        response,
+                        delay === null ? undefined : Math.ceil(delay / 1000)
+                    );
+                }
                 throw new HttpClientException(`Failed to create new PDF: ${errorText}`, response);
             }
 
@@ -797,10 +804,7 @@ export class PDFDancer {
             client._pdfBytes = new Uint8Array();
             client._sessionId = sessionId;
             // Initialize retry config
-            client._retryConfig = {
-                ...DEFAULT_RETRY_CONFIG,
-                ...retryConfig
-            };
+            client._retryConfig = resolveRetryConfig(retryConfig);
             // Initialize caches
             client._documentSnapshotCache = null;
             client._pageSnapshotCache = new Map();
@@ -815,9 +819,12 @@ export class PDFDancer {
         }
     }
 
-    private static async _obtainAnonymousToken(baseUrl: string, timeout: number = 60000): Promise<string> {
-        const normalizedBaseUrl = (baseUrl || "https://api.pdfdancer.com").replace(/\/+$/, '');
-        const url = `${normalizedBaseUrl}/keys/anon`;
+    private static async _obtainAnonymousToken(
+        baseUrl: string,
+        timeout: number = 30000,
+        retryConfig?: RetryConfig
+    ): Promise<string> {
+        const url = buildVersionedUrl(baseUrl || "https://api.pdfdancer.com", '/keys/anon');
 
         try {
             const fingerprint = await generateFingerprint();
@@ -829,15 +836,24 @@ export class PDFDancer {
                         'Content-Type': 'application/json',
                         'X-Fingerprint': fingerprint,
                         'X-Generated-At': generateTimestamp(),
+                        'X-API-VERSION': '2',
                         'X-PDFDancer-Client': `typescript/${VERSION}`
                     }
                 },
-                DEFAULT_RETRY_CONFIG,
+                resolveRetryConfig(retryConfig),
                 timeout
             );
 
             if (!response.ok) {
                 const errorText = await response.text().catch(() => '');
+                if (response.status === 429) {
+                    const delay = parseRetryAfter(response);
+                    throw new RateLimitException(
+                        'API rate limit exceeded while obtaining anonymous token',
+                        response,
+                        delay === null ? undefined : Math.ceil(delay / 1000)
+                    );
+                }
                 throw new HttpClientException(
                     `Failed to obtain anonymous token: ${errorText || `HTTP ${response.status}`}`,
                     response
@@ -864,7 +880,7 @@ export class PDFDancer {
     /**
      * Process PDF data from various input types with strict validation.
      */
-    private _processPdfData(pdfData: Uint8Array | File | ArrayBuffer | string): Uint8Array {
+    private _processPdfData(pdfData: Uint8Array | ArrayBuffer | string): Uint8Array {
         if (!pdfData) {
             throw new ValidationException("PDF data cannot be null");
         }
@@ -881,11 +897,7 @@ export class PDFDancer {
                     throw new ValidationException("PDF data cannot be empty");
                 }
                 return uint8Array;
-            } else if (pdfData instanceof File) {
-                // Note: File reading will be handled asynchronously in the session creation
-                return new Uint8Array(); // Placeholder, will be replaced in _createSession
             } else if (typeof pdfData === 'string') {
-                // TODO why is this different to `instanceof File`?
                 // Handle string as filepath
                 if (!fs.existsSync(pdfData)) {
                     throw new ValidationException(`PDF file not found: ${pdfData}`);
@@ -911,9 +923,7 @@ export class PDFDancer {
      * Combines baseUrl and path while handling trailing/leading slashes.
      */
     private _buildUrl(path: string): string {
-        const base = this._baseUrl.replace(/\/+$/, '');
-        const endpoint = path.replace(/^\/+/, '');
-        return `${base}/${endpoint}`;
+        return buildVersionedUrl(this._baseUrl, path);
     }
 
     /**
@@ -966,13 +976,8 @@ export class PDFDancer {
         try {
             const formData = new FormData();
 
-            // Handle File objects by reading their content
-            if (this._pdfBytes instanceof File) {
-                formData.append('pdf', this._pdfBytes, 'document.pdf');
-            } else {
-                const blob = new Blob([this._pdfBytes.buffer as ArrayBuffer], {type: 'application/pdf'});
-                formData.append('pdf', blob, 'document.pdf');
-            }
+            const blob = new Blob([this._pdfBytes.buffer as ArrayBuffer], {type: 'application/pdf'});
+            formData.append('pdf', blob, 'document.pdf');
 
             const fingerprint = await this._getFingerprint();
 
@@ -984,6 +989,7 @@ export class PDFDancer {
                         'Authorization': `Bearer ${this._token}`,
                         'X-Generated-At': generateTimestamp(),
                         'X-Fingerprint': fingerprint,
+                        'X-API-VERSION': '2',
                         'X-PDFDancer-Client': `typescript/${VERSION}`
                     },
                     body: formData
@@ -1001,6 +1007,15 @@ export class PDFDancer {
                         ? normalized
                         : defaultMessage;
                     throw new ValidationException(message);
+                }
+
+                if (response.status === 429) {
+                    const delay = parseRetryAfter(response);
+                    throw new RateLimitException(
+                        `API rate limit exceeded while creating session: ${errorMessage}`,
+                        response,
+                        delay === null ? undefined : Math.ceil(delay / 1000)
+                    );
                 }
 
                 throw new HttpClientException(`Failed to create session: ${errorMessage}`, response);
@@ -1069,7 +1084,7 @@ export class PDFDancer {
             'Content-Type': 'application/json',
             'X-Generated-At': generateTimestamp(),
             'X-Fingerprint': fingerprint,
-            'X-API-VERSION': '1',
+            'X-API-VERSION': '2',
             'X-PDFDancer-Client': `typescript/${VERSION}`
         };
 
@@ -1104,6 +1119,14 @@ export class PDFDancer {
 
             if (!response.ok) {
                 const errorMessage = await this._extractErrorMessage(response);
+                if (response.status === 429) {
+                    const delay = parseRetryAfter(response);
+                    throw new RateLimitException(
+                        `API rate limit exceeded: ${errorMessage}`,
+                        response,
+                        delay === null ? undefined : Math.ceil(delay / 1000)
+                    );
+                }
                 throw new HttpClientException(`API request failed: ${errorMessage}`, response);
             }
 
@@ -1163,12 +1186,6 @@ export class PDFDancer {
         return this._filterByPosition(elements, position);
     }
 
-    /**
-     * Searches for paragraph objects at the specified position.
-     */
-    private async findParagraphs(position?: Position): Promise<TextObjectRef[]> {
-        return this.find(ObjectType.PARAGRAPH, position) as Promise<TextObjectRef[]>;
-    }
 
     /**
      * Searches for image objects at the specified position.
@@ -1207,16 +1224,10 @@ export class PDFDancer {
         return this.toFormFields(await this.findFormFields());
     }
 
-    async selectFieldsByName(fieldName: string) {
+    async selectFormFieldsByName(fieldName: string) {
         return this.toFormFields(await this.findFormFields(Position.byName(fieldName)));
     }
 
-    /**
-     * Searches for text line objects at the specified position.
-     */
-    private async findTextLines(position?: Position): Promise<TextObjectRef[]> {
-        return this.find(ObjectType.TEXT_LINE, position) as Promise<TextObjectRef[]>;
-    }
 
     /**
      * Searches for form fields at the specified position.
@@ -1313,7 +1324,7 @@ export class PDFDancer {
      * @returns The page reference at the new position
      * @throws ValidationException if fromPage or toPage is less than 1
      */
-    async movePage(fromPage: number, toPage: number): Promise<PageRef> {
+    async movePage(fromPage: number, toPage: number): Promise<boolean> {
         this._validatePageNumber(fromPage, 'fromPage');
         this._validatePageNumber(toPage, 'toPage');
 
@@ -1331,8 +1342,7 @@ export class PDFDancer {
         // Invalidate cache after mutation
         this._invalidateCache();
 
-        // Fetch the page again at its new position for up-to-date metadata
-        return await this._requirePageRef(toPage);
+        return true;
     }
 
     /**
@@ -1512,25 +1522,6 @@ export class PDFDancer {
             });
         }
 
-        // Filter by text starts with
-        if (position.textStartsWith && filtered.length > 0) {
-
-            const textLower = position.textStartsWith.toLowerCase();
-            filtered = filtered.filter(el => {
-                const textObj = el as TextObjectRef;
-                return textObj.text && textObj.text.toLowerCase().startsWith(textLower);
-            });
-        }
-
-        // Filter by text pattern (regex)
-        if (position.textPattern && filtered.length > 0) {
-
-            const regex = this._compileTextPattern(position.textPattern);
-            filtered = filtered.filter(el => {
-                const textObj = el as TextObjectRef;
-                return textObj.text && regex.test(textObj.text);
-            });
-        }
 
         // Filter by name (for form fields)
         if (position.name && filtered.length > 0) {
@@ -1552,29 +1543,6 @@ export class PDFDancer {
         return this._filterByPosition(elements as ObjectRef[], position) as FormFieldRef[];
     }
 
-    private _compileTextPattern(pattern: string): RegExp {
-        try {
-            return new RegExp(pattern);
-        } catch {
-            const inlineMatch = pattern.match(/^\(\?([a-z]+)\)/i);
-            if (inlineMatch) {
-                const supportedFlags = inlineMatch[1]
-                    .toLowerCase()
-                    .split('')
-                    .filter(flag => 'gimsuy'.includes(flag));
-                const flags = Array.from(new Set(supportedFlags)).join('');
-                const source = pattern.slice(inlineMatch[0].length);
-                try {
-                    return new RegExp(source, flags);
-                } catch {
-                    // fall through to literal fallback
-                }
-            }
-
-            const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            return new RegExp(escaped);
-        }
-    }
 
     // Manipulation Operations
 
@@ -1596,62 +1564,11 @@ export class PDFDancer {
         return result;
     }
 
-    /**
-     * Redacts multiple objects from the PDF document in a single batch operation.
-     * Text is replaced with the replacement string.
-     * Images/paths are replaced with solid color placeholders.
-     * @param objects Array of objects to redact (paragraphs, text lines, images, paths)
-     * @param options Redaction options including default replacement text and placeholder color
-     */
-    async redact(objects: BaseObject[], options?: RedactOptions): Promise<RedactResponse> {
-        if (!objects || objects.length === 0) {
-            return {count: 0, success: true, warnings: []};
-        }
-
-        const targets: RedactTarget[] = objects.map(obj => ({
-            id: obj.internalId,
-            replacement: options?.defaultReplacement ?? '[REDACTED]'
-        }));
-
-        return this._redactTargets(targets, options);
-    }
 
     async clearClipping(objectRef: ObjectRef): Promise<boolean> {
         return this._clearClipping(objectRef);
     }
 
-    /**
-     * Internal method to redact by targets (used by BaseObject.redact())
-     */
-    private async _redactTargets(targets: RedactTarget[], options?: RedactOptions): Promise<RedactResponse> {
-        if (!targets || targets.length === 0) {
-            return {count: 0, success: true, warnings: []};
-        }
-
-        const request = {
-            targets: targets.map(t => ({
-                id: t.id,
-                replacement: t.replacement
-            })),
-            defaultReplacement: options?.defaultReplacement ?? '[REDACTED]',
-            placeholderColor: options?.placeholderColor
-                ? {
-                    red: options.placeholderColor.r,
-                    green: options.placeholderColor.g,
-                    blue: options.placeholderColor.b,
-                    alpha: options.placeholderColor.a
-                }
-                : {red: 0, green: 0, blue: 0, alpha: 255}
-        };
-
-        const response = await this._makeRequest('POST', '/pdf/redact', request);
-        const result = await response.json() as RedactResponse;
-
-        // Invalidate cache after mutation
-        this._invalidateCache();
-
-        return result;
-    }
 
     private async _clearClipping(objectRef: ObjectRef): Promise<boolean> {
         if (!objectRef) {
@@ -1667,26 +1584,6 @@ export class PDFDancer {
         return result;
     }
 
-    /**
-     * Performs batch template placeholder replacements in the PDF document.
-     * Finds exact text matches for placeholders and replaces them with specified content.
-     * All placeholders must be found or the operation fails atomically.
-     * @param request The template replacement request containing placeholders and new text
-     * @returns true if successful, false otherwise
-     */
-    async applyReplacements(request: TemplateReplaceRequest): Promise<boolean> {
-        if (!request.replacements || request.replacements.length === 0) {
-            return true;
-        }
-
-        const response = await this._makeRequest('POST', '/template/replace', request.toDict());
-        const result = await response.json() as boolean;
-
-        // Invalidate cache after mutation
-        this._invalidateCache();
-
-        return result;
-    }
 
     /**
      * Transforms an image in the PDF document.
@@ -1765,7 +1662,8 @@ export class PDFDancer {
     }
 
     private async listPathGroups(pageIndex: number): Promise<PathGroupObject[]> {
-        const response = await this._makeRequest('GET', `/pdf/page/${pageIndex}/path-groups`);
+        const pageNumber = pageIndex + 1;
+        const response = await this._makeRequest('GET', `/pdf/page/${pageNumber}/path-groups`);
         const infos = (await response.json() as any[]).map((d: any) => PathGroupInfo.fromDict(d));
         return infos.map(info => new PathGroupObject(this, pageIndex, info));
     }
@@ -1847,25 +1745,6 @@ export class PDFDancer {
         return this._addObject(image);
     }
 
-    /**
-     * Adds a paragraph to the PDF document.
-     */
-    private async addParagraph(paragraph: Paragraph): Promise<boolean> {
-        if (!paragraph) {
-            throw new ValidationException("Paragraph cannot be null");
-        }
-        if (!paragraph.getPosition()) {
-            throw new ValidationException("Paragraph position is null, you need to specify a position for the new paragraph, using .at(x,y)");
-        }
-        if (paragraph.getPosition()!.pageNumber === undefined) {
-            throw new ValidationException("Paragraph position page number is null");
-        }
-        if (paragraph.getPosition()!.pageNumber! < 1) {
-            throw new ValidationException("Paragraph position page number is less than 1");
-        }
-
-        return this._addObject(paragraph);
-    }
 
     /**
      * Adds a path to the PDF document.
@@ -1905,7 +1784,7 @@ export class PDFDancer {
     /**
      * Internal method to add any PDF object.
      */
-    private async _addObject(pdfObject: Image | Paragraph | Path): Promise<boolean> {
+    private async _addObject(pdfObject: Image | Path): Promise<boolean> {
         const requestData = new AddRequest(pdfObject).toDict();
         const response = await this._makeRequest('POST', '/pdf/add', requestData);
         const result = await response.json() as boolean;
@@ -1918,93 +1797,6 @@ export class PDFDancer {
 
     // Modify Operations
 
-    /**
-     * Modifies a paragraph object or its text content.
-     */
-    private async modifyParagraph(objectRef: ObjectRef, newParagraph: Paragraph | string | null): Promise<CommandResult> {
-        if (!objectRef) {
-            throw new ValidationException("Object reference cannot be null");
-        }
-        if (newParagraph === null || newParagraph === undefined) {
-            return CommandResult.empty("ModifyParagraph", objectRef.internalId);
-        }
-
-        let result: CommandResult;
-        if (typeof newParagraph === 'string') {
-            // Text modification - returns CommandResult
-            const requestData = new ModifyTextRequest(objectRef, newParagraph).toDict();
-            const response = await this._makeRequest('PUT', '/pdf/text/paragraph', requestData);
-            result = CommandResult.fromDict(await response.json());
-        } else {
-            // Object modification
-            const requestData = new ModifyRequest(objectRef, newParagraph).toDict();
-            const response = await this._makeRequest('PUT', '/pdf/modify', requestData);
-            result = CommandResult.fromDict(await response.json());
-        }
-
-        // Invalidate cache after mutation
-        this._invalidateCache();
-
-        return result;
-    }
-
-    /**
-     * Modifies a text line object.
-     */
-    private async modifyTextLine(objectRef: ObjectRef, newText: string): Promise<CommandResult> {
-        if (!objectRef) {
-            throw new ValidationException("Object reference cannot be null");
-        }
-        if (newText === null || newText === undefined) {
-            throw new ValidationException("New text cannot be null");
-        }
-
-        const requestData = new ModifyTextRequest(objectRef, newText).toDict();
-        const response = await this._makeRequest('PUT', '/pdf/text/line', requestData);
-        const result = CommandResult.fromDict(await response.json());
-
-        // Invalidate cache after mutation
-        this._invalidateCache();
-
-        return result;
-    }
-
-    /**
-     * Modifies a text line object with full property support (font, color, position).
-     */
-    private async modifyTextLineObject(
-        objectRef: TextObjectRef,
-        options: { text?: string; fontName?: string; fontSize?: number; color?: Color; position?: Position }
-    ): Promise<CommandResult> {
-        const text = options.text ?? objectRef.text ?? '';
-        const fontName = options.fontName ?? objectRef.fontName;
-        const fontSize = options.fontSize ?? objectRef.fontSize;
-        const color = options.color ?? objectRef.color;
-        const pos = options.position ?? objectRef.position;
-
-        const fontDict = fontName && fontSize ? {name: fontName, size: fontSize} : null;
-        const colorDict = color ? {red: color.r, green: color.g, blue: color.b, alpha: color.a} : null;
-        const posDict = pos ? this._positionToDict(pos) : null;
-
-        const newObject: Record<string, any> = {
-            type: "TEXT_LINE",
-            position: posDict,
-            textElements: [{text, font: fontDict, color: colorDict, position: posDict}]
-        };
-        if (fontName) newObject.fontName = fontName;
-        if (fontSize) newObject.fontSize = fontSize;
-        if (colorDict) newObject.color = colorDict;
-
-        const requestData = {
-            ref: {internalId: objectRef.internalId, position: this._positionToDict(objectRef.position), type: objectRef.type},
-            newObject
-        };
-
-        const response = await this._makeRequest('PUT', '/pdf/modify', requestData);
-        const result = CommandResult.fromDict(await response.json());
-        this._invalidateCache();
-        return result;
-    }
 
     /**
      * Modifies a path object's stroke and fill colors.
@@ -2025,8 +1817,6 @@ export class PDFDancer {
     private _positionToDict(position: Position): Record<string, any> {
         const result: Record<string, any> = {
             pageNumber: position.pageNumber,
-            textStartsWith: position.textStartsWith,
-            textPattern: position.textPattern,
             name: position.name
         };
         if (position.shape) result.shape = position.shape;
@@ -2065,7 +1855,7 @@ export class PDFDancer {
     /**
      * Registers a custom font for use in PDF operations.
      */
-    async registerFont(ttfFile: Uint8Array | File | string): Promise<string> {
+    async registerFont(ttfFile: Uint8Array | string): Promise<string> {
         if (!ttfFile) {
             throw new ValidationException("TTF file cannot be null");
         }
@@ -2080,12 +1870,6 @@ export class PDFDancer {
                 }
                 fontData = ttfFile;
                 filename = 'font.ttf';
-            } else if (ttfFile instanceof File) {
-                if (ttfFile.size === 0) {
-                    throw new ValidationException("Font file is empty");
-                }
-                fontData = new Uint8Array(await ttfFile.arrayBuffer());
-                filename = ttfFile.name;
             } else if (typeof ttfFile === 'string') {
                 if (!fs.existsSync(ttfFile)) {
                     throw new Error(`Font file not found: ${ttfFile}`);
@@ -2112,11 +1896,12 @@ export class PDFDancer {
                         'X-Session-Id': this._sessionId,
                         'X-Generated-At': generateTimestamp(),
                         'X-Fingerprint': fingerprint,
+                        'X-API-VERSION': '2',
                         'X-PDFDancer-Client': `typescript/${VERSION}`
                     },
                     body: formData
                 },
-                60000
+                this._readTimeout
             );
 
             if (!response.ok) {
@@ -2178,9 +1963,6 @@ export class PDFDancer {
             return this._parsePageRef(objData);
         }
 
-        if (this._isTextObjectData(objData, objectType)) {
-            return this._parseTextObjectRef(objData);
-        }
 
         // Check if this is a form field type
         const formFieldTypes = [
@@ -2216,148 +1998,43 @@ export class PDFDancer {
         );
     }
 
-    private _isTextObjectData(objData: any, objectType: ObjectType): boolean {
-        return objectType === ObjectType.PARAGRAPH ||
-            objectType === ObjectType.TEXT_LINE ||
-            objectType === ObjectType.TEXT_ELEMENT ||
-            typeof objData.text === 'string' ||
-            typeof objData.fontName === 'string' ||
-            Array.isArray(objData.children);
-    }
-
-    private _parseTextObjectRef(objData: any, fallbackId?: string): TextObjectRef {
-        const positionData = objData.position || {};
-        const position = positionData ? this._parsePosition(positionData) : new Position();
-
-        const objectType = (objData.type as ObjectType) ?? ObjectType.TEXT_LINE;
-        const lineSpacings = Array.isArray(objData.lineSpacings) ? objData.lineSpacings : null;
-        const internalId = objData.internalId ?? fallbackId ?? '';
-
-        // Parse status if present
-        let status: TextStatus | undefined;
-        const statusData = objData.status;
-        if (statusData && typeof statusData === 'object') {
-            const fontInfoSource = statusData.fontInfoDto ?? statusData.fontRecommendation;
-            let fontInfo: DocumentFontInfo | undefined;
-            if (fontInfoSource && typeof fontInfoSource === 'object') {
-                const documentFontName = typeof fontInfoSource.documentFontName === 'string'
-                    ? fontInfoSource.documentFontName
-                    : (typeof fontInfoSource.fontName === 'string' ? fontInfoSource.fontName : '');
-                const systemFontName = typeof fontInfoSource.systemFontName === 'string'
-                    ? fontInfoSource.systemFontName
-                    : (typeof fontInfoSource.fontName === 'string' ? fontInfoSource.fontName : '');
-                fontInfo = new DocumentFontInfo(documentFontName, systemFontName);
-            }
-
-            const modified = statusData.modified !== undefined ? Boolean(statusData.modified) : false;
-            const encodable = statusData.encodable !== undefined ? Boolean(statusData.encodable) : true;
-            const fontTypeValue = typeof statusData.fontType === 'string'
-            && (Object.values(FontType) as string[]).includes(statusData.fontType)
-                ? statusData.fontType as FontType
-                : FontType.SYSTEM;
-
-            status = new TextStatus(
-                modified,
-                encodable,
-                fontTypeValue,
-                fontInfo
-            );
-        }
-
-        const textObject = new TextObjectRef(
-            internalId,
-            position,
-            objectType,
-            typeof objData.text === 'string' ? objData.text : undefined,
-            typeof objData.fontName === 'string' ? objData.fontName : undefined,
-            typeof objData.fontSize === 'number' ? objData.fontSize : undefined,
-            lineSpacings,
-            undefined,
-            this._parseColor(objData.color),
-            status
-        );
-
-        if (Array.isArray(objData.children) && objData.children.length > 0) {
-            try {
-                textObject.children = objData.children.map((childData: any, index: number) => {
-                    const childFallbackId = `${internalId || 'child'}-${index}`;
-                    return this._parseTextObjectRef(childData, childFallbackId);
-                });
-            } catch (error) {
-                const message = error instanceof Error ? error.message : String(error);
-                console.error(`Failed to parse children of ${internalId}: ${message}`);
-            }
-        }
-
-        return textObject;
-    }
-
     private _parsePageRef(objData: any): PageRef {
-        const positionData = objData.position || {};
-        const position = positionData ? this._parsePosition(positionData) : new Position();
-
-        const pageSize = this._parsePageSize(objData.pageSize);
-        const orientation = this._parseOrientation(objData.orientation);
-
         return new PageRef(
             objData.internalId,
-            position,
+            this._parsePosition(objData.position || {}),
             ObjectType.PAGE,
-            pageSize,
-            orientation
+            this._parsePageSize(objData.pageSize),
+            this._parseOrientation(objData.orientation)
         );
     }
 
-    private _parsePageSize(pageSizeData: any): PageSize | undefined {
-        if (!pageSizeData || typeof pageSizeData !== 'object') {
-            return undefined;
-        }
-
-        const name = typeof pageSizeData.name === 'string' ? pageSizeData.name : undefined;
-        const width = typeof pageSizeData.width === 'number' ? pageSizeData.width : undefined;
-        const height = typeof pageSizeData.height === 'number' ? pageSizeData.height : undefined;
-
-        if (name === undefined && width === undefined && height === undefined) {
-            return undefined;
-        }
-
-        return {name, width, height};
+    private _parsePageSize(data: any): PageSize | undefined {
+        if (!data || typeof data !== 'object') return undefined;
+        const pageSize: PageSize = {
+            name: typeof data.name === 'string' ? data.name : undefined,
+            width: typeof data.width === 'number' ? data.width : undefined,
+            height: typeof data.height === 'number' ? data.height : undefined
+        };
+        return pageSize.name === undefined && pageSize.width === undefined && pageSize.height === undefined
+            ? undefined
+            : pageSize;
     }
 
-    private _parseOrientation(orientationData: any): Orientation | undefined {
-        if (typeof orientationData !== 'string') {
-            return undefined;
-        }
-
-        if (orientationData === Orientation.PORTRAIT || orientationData === Orientation.LANDSCAPE) {
-            return orientationData;
-        }
-
-        const normalized = orientationData.trim().toUpperCase();
-        if (normalized === Orientation.PORTRAIT || normalized === Orientation.LANDSCAPE) {
-            return normalized as Orientation;
-        }
-
-        return undefined;
+    private _parseOrientation(data: any): Orientation | undefined {
+        if (typeof data !== 'string') return undefined;
+        const normalized = data.trim().toUpperCase();
+        return normalized === Orientation.PORTRAIT || normalized === Orientation.LANDSCAPE
+            ? normalized as Orientation
+            : undefined;
     }
 
-    private _parseColor(colorData: any): Color | undefined {
-        if (!colorData || typeof colorData !== 'object') {
-            return undefined;
-        }
-
-        // The API returns color as {red, green, blue, alpha}
-        const {red, green, blue, alpha} = colorData;
-
-        if (typeof red !== 'number' || typeof green !== 'number' || typeof blue !== 'number') {
-            return undefined;
-        }
-
-        const resolvedAlpha = typeof alpha === 'number' ? alpha : 255;
-
+    private _parseColor(data: any): Color | undefined {
+        if (!data || typeof data !== 'object') return undefined;
+        const {red, green, blue, alpha} = data;
+        if (![red, green, blue].every(value => typeof value === 'number')) return undefined;
         try {
-            return new Color(red, green, blue, resolvedAlpha);
-        } catch (_error) {
+            return new Color(red, green, blue, typeof alpha === 'number' ? alpha : 255);
+        } catch {
             return undefined;
         }
     }
@@ -2384,9 +2061,6 @@ export class PDFDancer {
 
         const position = new Position();
         position.pageNumber = posData.pageNumber;
-        position.textStartsWith = posData.textStartsWith;
-
-
         if (posData.shape) {
             position.shape = ShapeType[posData.shape as keyof typeof ShapeType];
         }
@@ -2485,35 +2159,44 @@ export class PDFDancer {
         return new ImageBuilder(this, pageNumber);
     }
 
-    newParagraph(pageNumber?: number) {
-        return new ParagraphBuilder(this, pageNumber);
-    }
 
     newPath(pageNumber?: number) {
         return new PathBuilder(this, pageNumber);
     }
 
+    newLine(pageNumber: number) { return new LineBuilder(this, pageNumber); }
+    newBezier(pageNumber: number) { return new BezierBuilder(this, pageNumber); }
+    newRectangle(pageNumber: number) { return new RectangleBuilder(this, pageNumber); }
+
     newPage() {
         return new PageBuilder(this);
     }
 
-    /**
-     * Starts a fluent template replacement chain.
-     *
-     * @example
-     * await pdf.replace('{{name}}', 'John Doe').apply();
-     * await pdf.replace('{{name}}', 'John').and('{{date}}', '2024').apply();
-     * await pdf.replace().replaceWithImage('{{logo}}', 'logo.png').apply();
-     */
-    replace(): ReplacementBuilder;
-    replace(placeholder: string, text: string): ReplacementBuilder;
-    replace(placeholder?: string, text?: string): ReplacementBuilder {
-        const builder = new ReplacementBuilder(this);
-        if (placeholder !== undefined && text !== undefined) {
-            return builder.replace(placeholder, text);
-        }
-        return builder;
+    text(): TextClient {
+        return this.createTextClient();
     }
+
+    private createTextClient(pageNumber?: number): TextClient {
+        return new TextClient((operation, request) => this.editTextInternal(operation, request), pageNumber);
+    }
+
+    private async editTextInternal(
+        operation: TextOperation,
+        request: TextReplaceRequest | TextDeleteRequest | TextInsertRequest | TextStyleRequest
+    ): Promise<TextEditResponse> {
+        request.validated();
+        const response = await this._makeRequest('POST', `/pdf/text/${operation}`, request);
+        const result = await response.json() as TextEditResponse;
+        if (result.change) {
+            result.change = result.change.map(change => ({
+                ...change,
+                effectiveHyphenationEnabled: Boolean(change.effectiveHyphenationEnabled)
+            }));
+        }
+        this._invalidateCache();
+        return result;
+    }
+
 
     /**
      * Creates a client for working with a specific page.
@@ -2548,34 +2231,6 @@ export class PDFDancer {
         return elements;
     }
 
-    async selectParagraphs() {
-        return this.toParagraphObjects(await this.findParagraphs());
-    }
-
-    async selectParagraphsMatching(pattern: string) {
-        if (!pattern) {
-            throw new ValidationException('Pattern cannot be empty');
-        }
-        const position = new Position();
-        position.textPattern = pattern;
-        return this.toParagraphObjects(await this.findParagraphs(position));
-    }
-
-    private toParagraphObjects(objectRefs: TextObjectRef[]) {
-        return objectRefs.map(ref => ParagraphObject.fromRef(this, ref));
-    }
-
-    private toTextLineObjects(objectRefs: TextObjectRef[]) {
-        return objectRefs.map(ref => TextLineObject.fromRef(this, ref));
-    }
-
-    async selectTextLines() {
-        return this.toTextLineObjects(await this.findTextLines());
-    }
-
-    async selectLines() {
-        return this.selectTextLines();
-    }
 
     // Singular convenience methods - return the first element or null
 
@@ -2594,32 +2249,9 @@ export class PDFDancer {
         return forms.length > 0 ? forms[0] : null;
     }
 
-    async selectFormField() {
-        const fields = await this.selectFormFields();
+    async selectFormFieldByName(fieldName: string) {
+        const fields = await this.selectFormFieldsByName(fieldName);
         return fields.length > 0 ? fields[0] : null;
     }
 
-    async selectFieldByName(fieldName: string) {
-        const fields = await this.selectFieldsByName(fieldName);
-        return fields.length > 0 ? fields[0] : null;
-    }
-
-    async selectParagraph() {
-        const paragraphs = await this.selectParagraphs();
-        return paragraphs.length > 0 ? paragraphs[0] : null;
-    }
-
-    async selectParagraphMatching(pattern: string) {
-        const paragraphs = await this.selectParagraphsMatching(pattern);
-        return paragraphs.length > 0 ? paragraphs[0] : null;
-    }
-
-    async selectTextLine() {
-        const lines = await this.selectTextLines();
-        return lines.length > 0 ? lines[0] : null;
-    }
-
-    async selectLine() {
-        return this.selectTextLine();
-    }
 }

@@ -86,7 +86,7 @@ describe('AcroForm Fields E2E Tests (v2 API)', () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('mixed-form-types.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        let fields = await pdf.selectFieldsByName('firstName');
+        let fields = await pdf.selectFormFieldsByName('firstName');
         expect(fields).toHaveLength(1);
 
         let field = fields[0];
@@ -95,34 +95,21 @@ describe('AcroForm Fields E2E Tests (v2 API)', () => {
         expect(field.type).toBe('TEXT_FIELD');
         expect(field.internalId).toBe('FORM_FIELD_0_000001');
 
-        await field.fill('Donald Duck');
+        await field.setValue('Donald Duck');
 
-        fields = await pdf.selectFieldsByName('firstName');
+        fields = await pdf.selectFormFieldsByName('firstName');
         field = fields[0];
         expect(field.name).toBe('firstName');
         expect(field.value).toBe('Donald Duck');
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertNumberOfFormFields(10);
+        const persisted = await assertions.getPdf().selectFormFieldByName('firstName');
+        expect(persisted).not.toBeNull();
+        expect(persisted!.value).toBe('Donald Duck');
     });
 
-    // Tests for singular select methods
-    test('selectFormField returns first field or null', async () => {
-        const [baseUrl, token, pdfData] = await requireEnvAndFixture('mixed-form-types.pdf');
-        const pdf = await PDFDancer.open(pdfData, token, baseUrl);
-
-        // Test with results
-        const field = await pdf.page(1).selectFormField();
-        expect(field).not.toBeNull();
-        expect(field!.internalId).toBe('FORM_FIELD_0_000001');
-
-        // Test with PDFDancer class
-        const fieldFromPdf = await pdf.selectFormField();
-        expect(fieldFromPdf).not.toBeNull();
-        expect(fieldFromPdf!.internalId).toBe('FORM_FIELD_0_000001');
-    });
-
-    test('selectFormFieldByName returns first field by name or null', async () => {
+    test('page selectFormFieldByName returns a matching field or null', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('mixed-form-types.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
@@ -136,17 +123,17 @@ describe('AcroForm Fields E2E Tests (v2 API)', () => {
         expect(noMatch).toBeNull();
     });
 
-    test('selectFieldByName returns first field by name or null', async () => {
+    test('document selectFormFieldByName returns a matching field or null', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('mixed-form-types.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const field = await pdf.selectFieldByName('firstName');
+        const field = await pdf.selectFormFieldByName('firstName');
         expect(field).not.toBeNull();
         expect(field!.name).toBe('firstName');
         expect(field!.internalId).toBe('FORM_FIELD_0_000001');
 
         // Test with no match
-        const noMatch = await pdf.selectFieldByName('nonExistent');
+        const noMatch = await pdf.selectFormFieldByName('nonExistent');
         expect(noMatch).toBeNull();
     });
 

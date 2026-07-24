@@ -11,10 +11,13 @@ on:
         required: true
         type: string
       sdk_token:
-        description: 'API token for testing'
+        description: 'Non-secret test token; never enter production credentials'
         required: true
         type: string
         default: '42'
+
+permissions:
+  contents: read
 
 jobs:
   get-tags:
@@ -47,14 +50,15 @@ jobs:
 
     steps:
       - name: Checkout SDK at ${{ matrix.tag }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           repository: MenschMachine/pdfdancer-client-typescript
           ref: ${{ matrix.tag }}
           path: sdk
+          submodules: true
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '20'
 
@@ -64,9 +68,16 @@ jobs:
 
       - name: Run e2e tests
         working-directory: sdk
-        run: |
-          PDFDANCER_BASE_URL=${{ github.event.client_payload.api_url || inputs.api_url }} \
-          PDFDANCER_TOKEN=${{ github.event.client_payload.sdk_token || inputs.sdk_token }} \
-          npm test -- --testPathIgnorePatterns="dotenv_loading"
+        run: npm test
         env:
-          NODE_TLS_REJECT_UNAUTHORIZED: '0'
+          PDFDANCER_BASE_URL: ${{ github.event.client_payload.api_url || inputs.api_url }}
+          PDFDANCER_API_TOKEN: ${{ github.event.client_payload.sdk_token || inputs.sdk_token }}
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: test-results-${{ matrix.tag }}
+          path: sdk/test-results/
+          if-no-files-found: ignore
+          retention-days: 7

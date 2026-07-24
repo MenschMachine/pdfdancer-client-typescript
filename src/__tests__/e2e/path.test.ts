@@ -3,7 +3,7 @@
  */
 
 import {requireEnvAndFixture} from './test-helpers';
-import {PDFDancer} from "../../pdfdancer_v1";
+import {PDFDancer} from "../../pdfdancer_v2";
 import {PDFAssertions} from './pdf-assertions';
 
 describe('Path E2E Tests (New API)', () => {

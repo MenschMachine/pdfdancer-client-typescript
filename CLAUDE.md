@@ -42,7 +42,7 @@ Test timeout is 120s per test. E2E helpers are in `src/__tests__/e2e/test-helper
 ## Architecture
 
 ### Core Files
-- `src/pdfdancer_v1.ts` — Main client class (`PDFDancer`). Session-based: opens a PDF, performs operations, saves/downloads.
+- `src/pdfdancer_v2.ts` — Main client class (`PDFDancer`). Session-based: opens a PDF, performs operations, saves/downloads.
 - `src/types.ts` — Object classes returned by selectors (`ParagraphObject`, `TextLineObject`, `ImageObject`, etc.)
 - `src/models.ts` — Data models (`Position`, `Color`, `Font`, `BoundingRect`, `ObjectRef`, `TextObjectRef`, enums)
 - `src/exceptions.ts` — Exception hierarchy: `PdfDancerException` → `HttpClientException`, `SessionException`, `ValidationException`, `FontNotFoundException`
@@ -69,7 +69,7 @@ Test timeout is 120s per test. E2E helpers are in `src/__tests__/e2e/test-helper
 
 ### Version Management
 - `src/version.ts` is auto-generated from `package.json` version during `npm run build`
-- Release via tag push: `git tag v1.2.3 && git push origin v1.2.3`
+- Release via tag push: `git tag v2.0.0 && git push origin v2.0.0`
 - GitHub Actions handles lint, test, build, and npm publish automatically
 - Uses npm Trusted Publishing (OIDC) — no NPM_TOKEN needed, configure trusted publisher on npmjs.com
 - Requires `PDFDANCER_BASE_URL` and `PDFDANCER_API_TOKEN` secrets in repo settings for E2E tests

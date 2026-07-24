@@ -1,4 +1,4 @@
-import {PDFDancer} from './pdfdancer_v1';
+import {PDFDancer} from './pdfdancer_v2';
 import {AddPageRequest, Orientation, PageRef, PageSize, STANDARD_PAGE_SIZES} from './models';
 import {ValidationException} from './exceptions';
 
@@ -42,6 +42,7 @@ const normalizePageSize = (value: PageSize | string): PageSize => {
     };
 };
 
+/** Builds and inserts a page into the current PDFDancer session. */
 export class PageBuilder {
     private readonly _client: PDFDancer;
     private readonly _internals: PDFDancerInternals;

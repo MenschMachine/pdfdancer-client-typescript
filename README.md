@@ -1,34 +1,16 @@
-<div align="center">
-
 # PDFDancer TypeScript client
 
-<img src="media/logo-silver-512h.webp" alt="PDFDancer logo" width="120">
+## Overview
 
-</div>
-
-## PDF used to be read-only. We fixed that.
-
-PDFDancer gives you pixel-perfect programmatic control over real-world PDF documents from TypeScript. Locate existing elements by coordinates or text, adjust them precisely, add brand-new content, and ship the modified PDF in memory or on disk. This package is the official TypeScript SDK for the PDFDancer API, and the same object model is also available for Python and Java.
-
-> Need the raw API schema? The latest OpenAPI description is published at https://bucket.pdfdancer.com/api-doc/development-0.0.yml.
+PDFDancer gives Node.js applications pixel-perfect programmatic control over real-world PDFs. The client uses 1-based
+page numbers and the same editing model as the Java and Python SDKs.
 
 ## Highlights
 
-- Locate paragraphs, text lines, images, vector paths, form fields, and pages by index, coordinates, or text prefixes.
-- Edit existing content in place with fluent editors that apply changes safely.
-- Programmatically control third-party PDFs—modify invoices, contracts, and reports you did not author.
-- Add content with precise XY positioning using paragraph and image builders, custom fonts, and color helpers.
-- Export results as bytes for downstream processing or save directly to disk with one call.
-- Works in both Node.js and browser environments.
-
-## What Makes PDFDancer Different
-
-- **Edit text in real-world PDFs you didn’t create**: Work with documents from customers, governments, or vendors—not just ones you generated.
-- **Pixel-perfect positioning**: Move or add elements at exact coordinates and keep the original layout intact.
-- **Surgical text replacement**: Swap or rewrite paragraphs without reflowing the rest of the page.
-- **Form manipulation**: Inspect, fill, and update AcroForm fields programmatically.
-- **Coordinate-based selection**: Select objects by position, bounding box, or text patterns.
-- **Real PDF editing**: Modify the underlying PDF structure instead of merely stamping overlays.
+- Replace, insert, delete, and style text through selector-based operations.
+- Select and mutate images, vector paths, form XObjects, form fields, and pages.
+- Add images, paths, lines, Bezier curves, and rectangles from document or page scope.
+- Save the result to a filesystem path or retrieve it as bytes.
 
 ## Installation
 
@@ -36,440 +18,239 @@ PDFDancer gives you pixel-perfect programmatic control over real-world PDF docum
 npm install pdfdancer-client-typescript
 ```
 
-Requires Node.js 20+ (or a modern browser) and a PDFDancer API token.
+## Requirements
 
-## Quick Start — Edit an Existing PDF
+- Node.js 20 or newer.
+- A PDFDancer API token, supplied explicitly or through `PDFDANCER_API_TOKEN` or `PDFDANCER_TOKEN`.
+- This SDK targets Node.js and accepts a filesystem path, `Uint8Array`, or `ArrayBuffer` as PDF input.
 
-```typescript
-import { PDFDancer, Color, StandardFonts } from 'pdfdancer-client-typescript';
-import { promises as fs } from 'node:fs';
+## Quick Start
 
-async function run() {
-  const pdfBytes = await fs.readFile('input.pdf');
+### Open and Save a PDF
 
-  // Token defaults to PDFDANCER_API_TOKEN (or PDFDANCER_TOKEN) environment variable when omitted
-  const pdf = await PDFDancer.open(
-    pdfBytes,
-    'your-api-token',              // optional when PDFDANCER_API_TOKEN/PDFDANCER_TOKEN is set
-    'https://api.pdfdancer.com'    // optional base URL
-  );
+```ts
+import fs from 'node:fs';
+import {PDFDancer} from 'pdfdancer-client-typescript';
 
-  // Locate and update an existing paragraph
-  const heading = (await pdf.page(0).selectParagraphsStartingWith('Executive Summary'))[0];
-  await heading.moveTo(72, 680);
+const bytes = new Uint8Array(fs.readFileSync('input.pdf'));
+const pdf = await PDFDancer.open(bytes, process.env.PDFDANCER_TOKEN);
 
-  const result = await heading.edit()
-    .replace('Overview')
-    .apply();
+// Mutate the document here.
 
-  // Add a new paragraph with precise placement
-  await pdf.page(0).newParagraph()
-    .text('Generated with PDFDancer')
-    .font(StandardFonts.HELVETICA, 12)
-    .color(new Color(70, 70, 70))
-    .lineSpacing(1.4)
-    .at(72, 520)
-    .apply();
+await pdf.save('output.pdf');
+```
 
-  // Persist the modified document
-  await pdf.save('output.pdf');
-  // or keep it in memory
-  const updatedBytes = await pdf.getBytes();
-}
+For local development, pass the v2 service URL as the third argument:
 
-run().catch(console.error);
+```ts
+const pdf = await PDFDancer.open(bytes, token, 'http://localhost:8080');
 ```
 
 ## Create a Blank PDF
 
-```typescript
-import { PDFDancer, Color, StandardFonts } from 'pdfdancer-client-typescript';
+```ts
+import {Orientation, PDFDancer} from 'pdfdancer-client-typescript';
 
-async function createNew() {
-  const pdf = await PDFDancer.new('your-api-token');
+const pdf = await PDFDancer.new({
+  pageSize: 'A4',
+  orientation: Orientation.PORTRAIT,
+  initialPageCount: 1
+});
 
-  await pdf.page(0).newParagraph()
-    .text('Quarterly Summary')
-    .font(StandardFonts.TIMES_BOLD, 18)
-    .color(new Color(10, 10, 80))
-    .lineSpacing(1.2)
-    .at(72, 730)
-    .apply();
-
-  await pdf.newImage()
-    .fromFile('logo.png')
-    .at(0, 420, 710)
-    .add();
-
-  await pdf.save('summary.pdf');
-}
-
-createNew().catch(console.error);
+await pdf.page(1).newImage().fromFile('logo.png').at(420, 710).add();
+await pdf.save('summary.pdf');
 ```
 
-## Work with Forms and Layout
+## Page API
 
-```typescript
-import { PDFDancer } from 'pdfdancer-client-typescript';
+Page numbers are 1-based. `pdf.page(1)` returns a page-scoped client, while `await pdf.pages()` returns page clients for
+the document. Use `getSnapshot()` on a page client for a read-only page snapshot.
 
-async function workWithForms() {
-  const pdf = await PDFDancer.open('contract.pdf');
-
-  // Inspect global document structure
-  const pages = await pdf.pages();
-  console.log('Total pages:', pages.length);
-
-  // Update form fields
-  const signature = (await pdf.selectFieldsByName('signature'))[0];
-  await signature.fill('Signed by Jane Doe');
-
-  // Trim or move content at specific coordinates
-  const images = await pdf.page(1).selectImages();
-  for (const image of images) {
-    const x = image.position.boundingRect?.x;
-    if (x !== undefined && x < 100) {
-      await image.delete();
-    }
-  }
-
-  await pdf.save('contract-updated.pdf');
-}
+```ts
+const firstPage = pdf.page(1);
+const pages = await pdf.pages();
+const snapshot = await firstPage.getSnapshot();
 ```
 
-Selectors return typed objects (`ParagraphObject`, `TextLineObject`, `ImageObject`, `FormFieldObject`, `PageRef`, …) with helpers such as `delete()`, `moveTo(x, y)`, `clearClipping()`, or `edit()` depending on the object type.
+Page-scoped selectors, text editing, and builders automatically restrict the operation to that page.
 
-## Configuration
+## Selection
 
-```typescript
-const pdf = await PDFDancer.open(
-  pdfData,     // Uint8Array, File, or ArrayBuffer
-  token,       // Optional: defaults to process.env.PDFDANCER_API_TOKEN or PDFDANCER_TOKEN
-  baseUrl,     // Optional: defaults to process.env.PDFDANCER_BASE_URL or https://api.pdfdancer.com
-  timeout,     // Optional request timeout in ms (default: 60000)
-  retryConfig  // Optional retry configuration
-);
+Document- and page-scoped selectors return typed objects for images, paths, form XObjects, and form fields. Position
+selectors use PDF coordinates and a default tolerance of `0.01` point. Singular selectors return the first match or
+`null`; plural selectors return arrays.
+
+```ts
+const documentImages = await pdf.selectImages();
+const logo = await pdf.page(1).selectImageAt(72, 680);
+const pagePaths = await pdf.page(1).selectPaths();
 ```
 
-- Set `PDFDANCER_API_TOKEN` (or `PDFDANCER_TOKEN`) for authentication (preferred for local development and CI).
-- Override the API host with `PDFDANCER_BASE_URL` (e.g., sandbox environments).
-- Tune HTTP read timeouts via the `timeout` argument on `PDFDancer.open()` and `PDFDancer.new()`.
-- Page numbers start at `1` throughout the API.
+Use document or page snapshots when you need read-only inspection of the complete object vocabulary, including text-line
+data.
 
-### Retry Configuration
+## Builders and Vector Paths
 
-The client includes a configurable retry mechanism for handling transient failures. By default, it retries on specific HTTP status codes (429, 500, 502, 503, 504) and network errors with exponential backoff. It also respects `Retry-After` headers from the server when available.
+All five dedicated builders are available at document and page scope: image, path, line, Bezier, and rectangle.
 
-```typescript
-import { PDFDancer, RetryConfig } from 'pdfdancer-client-typescript';
+```ts
+import {Color} from 'pdfdancer-client-typescript';
 
-// Use default retry configuration (3 retries, exponential backoff, Retry-After support)
-const pdf = await PDFDancer.open(pdfData);
-
-// Customize retry behavior
-const customRetryConfig: RetryConfig = {
-  maxRetries: 5,              // Maximum number of retry attempts (default: 3)
-  initialDelay: 1000,         // Initial delay in ms before first retry (default: 1000)
-  maxDelay: 10000,            // Maximum delay in ms between retries (default: 10000)
-  backoffMultiplier: 2,       // Exponential backoff multiplier (default: 2)
-  retryableStatusCodes: [429, 500, 502, 503, 504], // HTTP status codes to retry (default)
-  retryOnNetworkError: true,  // Retry on network errors (default: true)
-  useJitter: true,            // Add random jitter to delays (default: true)
-  respectRetryAfter: true     // Respect Retry-After headers from server (default: true)
-};
-
-const pdf = await PDFDancer.open(pdfData, token, baseUrl, timeout, customRetryConfig);
-```
-
-**Default Retry Behavior:**
-- Retries up to 3 times on transient errors
-- Uses exponential backoff with jitter (1s, 2s, 4s base delays)
-- Respects `Retry-After` headers (supports both seconds and HTTP-date formats)
-- Falls back to exponential backoff if `Retry-After` is missing or invalid
-- Retries on HTTP 429 (rate limit), 500, 502, 503, 504 (server errors)
-- Retries on network errors (connection failures, timeouts)
-- Does NOT retry on client errors (4xx except 429)
-
-**Disable Retries:**
-```typescript
-const noRetryConfig: RetryConfig = { maxRetries: 0 };
-const pdf = await PDFDancer.open(pdfData, token, baseUrl, timeout, noRetryConfig);
-```
-
-The retry mechanism applies to all REST API calls including session creation, document operations, and font registration.
-
-## Working with Pages
-
-```typescript
-const page = pdf.page(0);
-const allPages = await pdf.pages(); // Array<PageClient>
-
-await page.delete(); // Remove the page from the document
-```
-
-`PageClient` exposes page-scoped helpers like `selectParagraphs`, `selectTextLinesStartingWith`, `selectImagesAt`, and `newParagraph()`.
-
-## Finding Objects
-
-```typescript
-const paragraphs = await pdf.selectParagraphs();
-const header = await pdf.page(0).selectParagraphsStartingWith('Invoice #');
-const imagesAtPoint = await pdf.page(2).selectImagesAt(120, 300);
-const fieldsByName = await pdf.selectFieldsByName('firstName');
-const textLines = await pdf.selectLines(); // All text lines across the document
-```
-
-Use `Position` helpers when you need explicit coordinates:
-
-```typescript
-import { Position } from 'pdfdancer-client-typescript';
-
-const point = Position.atPageCoordinates(1, 250, 400);
-const paragraphsAtPoint = await pdf.page(1).selectParagraphsAt(point.getX()!, point.getY()!);
-```
-
-## Creating and Editing Paragraphs
-
-### Add a Paragraph
-
-```typescript
-await pdf.page(0).newParagraph()
-  .text('Awesomely\nObvious!')
-  .font('Roboto-Regular', 14)
-  .lineSpacing(0.8)
-  .color(new Color(0, 0, 0))
-  .at(300, 500)
-  .apply();
-```
-
-### Edit an Existing Paragraph
-
-```typescript
-const [para] = await pdf.page(0).selectParagraphsStartingWith('The Complete');
-
-if (para) {
-  const result = await para.edit()
-    .replace('Awesomely\nObvious!')
-    .font('Helvetica', 12)
-    .color(new Color(0, 0, 0))
-    .moveTo(280, 460)
-    .apply();
-
-  // Check for warnings (e.g., embedded font modifications)
-  if (typeof result === 'object' && result.warning) {
-    console.warn('Operation warning:', result.warning);
-  }
-}
-```
-
-**Note:** When modifying text with embedded fonts, you may receive warnings. Embedded fonts have limited character sets, and modifying text may result in unrenderable characters. Consider using standard fonts when possible.
-
-`ParagraphBuilder` also supports `.fontFile(ttfBytes, size)` to register a custom font before applying.
-
-### Text Object Status
-
-Text objects (paragraphs and lines) include status information about their font and modification state:
-
-```typescript
-const lines = await pdf.page(0).selectTextLines();
-const line = lines[0];
-
-// Check text object status
-const status = line.objectRef().status;
-if (status) {
-  console.log('Font type:', status.getFontType());        // SYSTEM, STANDARD, or EMBEDDED
-  console.log('Is modified:', status.isModified());       // true if text was changed
-  console.log('Is encodable:', status.isEncodable());     // true if text can be rendered
-
-  // Get font mapping information if available
-  const fontInfo = status.getFontInfo();
-  if (fontInfo) {
-    console.log('Document font:', fontInfo.getDocumentFontName());
-    console.log('System font:', fontInfo.getSystemFontName());
-  }
-}
-```
-
-## Working with Images
-
-```typescript
-await pdf.newImage()
-  .fromFile('fixtures/logo-80.png')
-  .at(0, 420, 200)
+await pdf.page(1).newRectangle()
+  .at(72, 500)
+  .size(220, 80)
+  .strokeColor(Color.BLACK)
+  .fillColor(new Color(255, 255, 200))
   .add();
 
-const images = await pdf.selectImages();
-await images[0].moveTo(200, 350);
-await images[1].delete();
+await pdf.page(1).newPath()
+  .moveTo(72, 450)
+  .lineTo(200, 450)
+  .bezierTo(230, 450, 230, 390, 260, 390)
+  .dashPattern([6, 3])
+  .add();
 ```
 
-Use `.fromBytes()` when image data already exists in memory.
+`PathBuilder` also provides `closePath()`, `rectangle(...)`, `circle(...)`, and `solid()` conveniences. A circle is a
+`PathBuilder` convenience, not a separate builder type.
+
+## Images
+
+Create images at document scope with an explicit page or directly from a page client:
+
+```ts
+await pdf.newImage().fromFile('logo.png').at(1, 72, 700).add();
+await pdf.page(1).newImage().fromFile('stamp.png').at(300, 700).add();
+```
+
+`ImageObject` exposes `width`, `height`, and `aspectRatio`. It supports replacement from a filesystem path or `Image`,
+proportional or explicit scaling, cropping, opacity, horizontal and vertical flips, region filling, and rotation.
+Positive rotation angles are clockwise. Image transformations return `CommandResult`, which exposes `success`,
+`message`, `warning`, and `elementId`.
 
 ## Form Fields
 
-```typescript
-const fields = await pdf.selectFormFields();
+Form-field selection uses the same names at document and page scope. Mutate a selected field directly with
+`setValue(...)`:
 
-for (const field of fields) {
-  if (field.name === 'firstName') {
-    await field.fill('Ada');
-  }
-}
-
-const zipFields = await pdf.selectFieldsByName('zip');
-await zipFields[0]?.delete();
+```ts
+const signature = (await pdf.selectFormFieldsByName('signature'))[0];
+const changed = await signature?.setValue('Signed by Jane Doe');
 ```
 
-## Document Operations
+## Text Editing
 
-```typescript
-const pdfBytes = await pdf.getBytes();
-await pdf.save('output.pdf'); // Node.js helper that writes the file
-```
+### Selector-Based Operations
 
-`pdf.save` wraps `fs.writeFile` for convenience. In browsers, use the bytes returned by `getBytes()` with your own download logic.
+Use the replace, delete, insert, and style builders through `pdf.text()` or a page-scoped text client.
 
-## Error Handling
-
-Operations raise subclasses of `PdfDancerException`:
-
-- `ValidationException`: input validation problems (missing token, invalid coordinates, etc.).
-- `FontNotFoundException`: requested font unavailable on the service.
-- `HttpClientException`: transport or server errors with detailed context.
-- `SessionException`: session creation and lifecycle failures.
-
-Wrap automated workflows in `try/catch` blocks to surface actionable errors to your users:
-
-```typescript
+```ts
 import {
-  ValidationException,
-  HttpClientException,
-  SessionException,
-  FontNotFoundException,
-  PdfDancerException
+  PdfColorRequest,
+  TextDeleteRequest,
+  TextInsertRequest,
+  TextLayoutProfile,
+  TextReplaceRequest,
+  TextStyleRequest
 } from 'pdfdancer-client-typescript';
 
-try {
-  await pdf.page(0).newParagraph()
-    .text('Hello')
-    .font('Unknown-Font', 12)
-    .at(100, 100)
-    .apply();
-} catch (error) {
-  if (error instanceof FontNotFoundException) {
-    console.error('Font not found:', error.message);
-  } else if (error instanceof ValidationException) {
-    console.error('Invalid input:', error.message);
-  } else if (error instanceof HttpClientException) {
-    console.error('API error:', error.message);
-  } else if (error instanceof SessionException) {
-    console.error('Session error:', error.message);
-  } else if (error instanceof PdfDancerException) {
-    console.error('Unexpected failure:', error.message);
-  }
-}
+await pdf.text().replace(
+  TextReplaceRequest.literal('Old product', 'New product')
+    .wholeWords(true)
+    .maxMatches(5)
+    .requireReflow(TextLayoutProfile.BODY_TEXT)
+    .build()
+);
+
+await pdf.page(2).text().delete(
+  TextDeleteRequest.regex('Confidential\\s+draft')
+    .caseSensitive(false)
+    .build()
+);
+
+await pdf.text().insert(
+  TextInsertRequest.before('Terms', 'Updated ')
+    .wholeWords(true)
+    .build()
+);
+
+await pdf.page(1).text().insert(
+  TextInsertRequest.at(1, 72, 720, 'Coordinate text')
+    .font('Helvetica-Bold')
+    .size(12)
+    .fillColor(PdfColorRequest.rgb(0.8, 0.1, 0.1))
+    .build()
+);
+
+await pdf.text().style(
+  TextStyleRequest.literal('Important')
+    .font('Helvetica-Bold')
+    .size(12)
+    .fillColor(PdfColorRequest.rgb(1, 0, 0))
+    .build()
+);
 ```
 
-## Types and Enums
+Document-scoped `pdf.text()` honors pages supplied by the request builder. Page-scoped `pdf.page(pageNumber).text()` restricts the request to that page.
 
-### ObjectType
+Each mutation returns a `TextEditResponse` containing match and change counts, changed page numbers, per-change diagnostics, warnings, and errors.
 
-- `IMAGE` - Image objects
-- `FORM_X_OBJECT` - Form XObjects
-- `PATH` - Vector path objects
-- `PARAGRAPH` - Paragraph objects
-- `TEXT_LINE` - Text line objects
-- `PAGE` - Page objects
-- `FORM_FIELD` - Generic form field references
-- `TEXT_FIELD` - Text input fields
-- `CHECKBOX` - Checkbox form fields
-- `RADIO_BUTTON` - Radio button form fields
+## Shared Models
 
-### PositionMode
+`Color` requires integral RGBA components in the inclusive range 0–255. Alpha defaults to 255; `BLACK`, `WHITE`, and
+`RED` are provided as constants.
 
-- `INTERSECT` - Objects that intersect with the specified area
-- `CONTAINS` - Objects completely contained within the specified area
+Standard page sizes are A0–A6, B4–B5, Letter, Legal, Tabloid, Executive, Postcard, and 3×5 Index.
+`pageSizeFromDimensions(...)` recognizes both portrait and rotated standard dimensions; custom dimensions must be finite
+and positive.
 
-### ShapeType
+The exported `ObjectType` enum covers every object type returned by the v2 snapshot and selection APIs.
 
-- `POINT` - Single point coordinate
-- `LINE` - Linear shape between two points
-- `CIRCLE` - Circular area with radius
-- `RECT` - Rectangular area with width and height
+## Configuration
 
-### FontType
+- The SDK reads `process.env` but does not load `.env` files. Applications that use `.env` files must load them before
+  calling the SDK.
+- `PDFDANCER_API_TOKEN` is the preferred authentication variable; `PDFDANCER_TOKEN` is also supported.
+- `PDFDANCER_BASE_URL` overrides the API host. The default is `https://api.pdfdancer.com`.
+- The fourth `PDFDancer.open(...)` or `PDFDancer.new(...)` argument sets the request timeout in milliseconds. The default
+  is 30,000 ms.
+- The fifth argument accepts `RetryConfig`.
 
-- `SYSTEM` - System fonts available on the local machine
-- `STANDARD` - Standard PDF fonts (14 built-in fonts)
-- `EMBEDDED` - Fonts embedded in the PDF document
+## Retry and Error Handling
 
-### Text Modification Results
+The default HTTP policy makes three total attempts, including the initial request. It uses exponential backoff starting
+at 1,000 ms, a multiplier of two, and a 5,000 ms delay cap. Statuses 408, 429, 500, 502, 503, 504, and 520 are retryable,
+as are configured network and timeout failures. `Retry-After` is honored only for HTTP 429; retry delays do not use
+jitter. Configure the policy with `maxAttempts`, `initialDelay`, `backoffMultiplier`, `maxDelay`,
+`retryableStatusCodes`, `retryOnNetworkError`, and `respectRetryAfter`.
 
-When modifying text objects (paragraphs or lines), the operation returns a `CommandResult`:
+Failures use the `PdfDancerException` hierarchy: `ValidationException`, `HttpClientException`, `SessionException`,
+`SessionNotFoundException`, `FontNotFoundException`, and `RateLimitException`. A rate-limit exception retains a parsed
+`retryAfter` value when the response supplies one.
 
-```typescript
-interface CommandResult {
-  commandName: string;    // Name of the operation
-  elementId: string | null;  // ID of the affected element
-  message: string | null;    // Optional status message
-  success: boolean;          // Operation success status
-  warning: string | null;    // Warning message (e.g., embedded font issues)
-}
-```
-
-### Text Status
-
-Text objects include status information via `TextStatus`:
-
-```typescript
-interface TextStatus {
-  modified: boolean;           // Whether text has been modified
-  encodable: boolean;          // Whether text is encodable with current font
-  fontType: FontType;         // Type of font being used
-  fontInfo?: DocumentFontInfo; // Mapping between document font and available system font
-}
-```
-
-The legacy `TextStatus.getFontRecommendation()` method is still available and returns the same `DocumentFontInfo` instance.
-
-## Development
+## Development and Testing
 
 ```bash
-# Install dependencies
-npm install
-
-# Build the project
 npm run build
-
-# Run all tests
-npm test
-
-# Run only unit tests
-npm run test:unit
-
-# Run e2e tests (requires fixtures and a running server)
-npm run test:e2e
-
-# Run linter
-npm run lint
+npm run test:unit -- --runInBand
+npm run test:e2e -- --runInBand
 ```
 
-### E2E Tests
+E2E tests expect the API at `http://localhost:8080` unless configured otherwise. The text-editing E2E suite saves and reopens mutated PDFs and uses the test-only `pdfjs-dist` dependency through `PDFAssertions` to validate persisted text and fonts.
 
-The project includes comprehensive end-to-end tests. To run them:
+## Troubleshooting
 
-1. **Start the PDFDancer server** at `http://localhost:8080` or set `PDFDANCER_BASE_URL`.
-2. **Provide an authentication token** via `export PDFDANCER_API_TOKEN=your-token` (or `PDFDANCER_TOKEN`) or a `jwt-token-*.txt` file in the project root.
-3. **Populate fixtures** in the `fixtures/` directory:
-   - `ObviouslyAwesome.pdf`
-   - `mixed-form-types.pdf`
-   - `basic-paths.pdf`
-   - `logo-80.png`
-   - `DancingScript-Regular.ttf`
-4. **Run the suite**: `npm run test:e2e`
+- For empty selections, inspect `await pdf.getDocumentSnapshot()` or `await pdf.page(n).getSnapshot()` and verify the
+  1-based page number and PDF coordinates.
+- For E2E failures, verify the API URL, token, and fixture files before changing the client.
+- For request failures, inspect the specific `PdfDancerException` subclass and any attached HTTP response.
 
-The e2e suite covers paragraphs, pages, text lines, images, form fields, and path manipulation scenarios.
+## Contributing
 
-## Helpful links
+Contributions are welcome through pull requests. Add tests for behavioral changes, run `npm run build` and the relevant
+test suites, and update the relevant API documentation with the implementation.
+
+## Helpful Links
 
 - [API documentation](https://docs.pdfdancer.com?utm_source=github&utm_medium=readme&utm_campaign=pdfdancer-typescript)
 - [Product overview](https://www.pdfdancer.com?utm_source=github&utm_medium=readme&utm_campaign=pdfdancer-typescript)
@@ -480,21 +261,9 @@ The e2e suite covers paragraphs, pages, text lines, images, form fields, and pat
 
 ## Related SDKs
 
-- Python client: https://github.com/MenschMachine/pdfdancer-client-python
 - Java client: https://github.com/MenschMachine/pdfdancer-client-java
+- Python client: https://github.com/MenschMachine/pdfdancer-client-python
 
 ## License
 
-Copyright 2025 The Famous Cat Ltd.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+Apache-2.0

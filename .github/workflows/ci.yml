@@ -9,8 +9,8 @@ on:
 
 jobs:
   test:
-    # Run minimal config on non-main branches
-    if: github.ref != 'refs/heads/main'
+    # Run the minimal matrix for automatic non-main events.
+    if: github.event_name != 'workflow_dispatch' && github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -24,15 +24,15 @@ jobs:
         node-version: [ 20.x ]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: true
 
       - name: Resolve API base URL
         id: resolve-api-base-url
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
-          github-token: ${{ secrets.PROPAGATE_TOKEN }}
+          github-token: ${{ secrets.PROPAGATE_TOKEN || github.token }}
           script: |
             const fallbackUrl = 'https://api-staging.pdfdancer.com';
             const pr = context.payload.pull_request;
@@ -75,7 +75,7 @@ jobs:
             core.setOutput('base_url', urlMatch[1]);
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
@@ -90,22 +90,23 @@ jobs:
         run: npm run build
 
       - name: Run tests
-        run: |
-          PDFDANCER_BASE_URL=${{ steps.resolve-api-base-url.outputs.base_url }} \
-          PDFDANCER_API_TOKEN=42 \
-          npm run test
+        run: npm run test
+        env:
+          PDFDANCER_BASE_URL: ${{ steps.resolve-api-base-url.outputs.base_url }}
+          PDFDANCER_API_TOKEN: 42
 
       - name: Upload test results
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: test-results-node-${{ matrix.node-version }}
           path: test-results/
+          if-no-files-found: ignore
           retention-days: 7
 
   test-full-matrix:
-    # Run full OS + Node version matrix only on main
-    if: github.ref == 'refs/heads/main'
+    # Run the full matrix on main and for every manual dispatch.
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
@@ -120,20 +121,12 @@ jobs:
         node-version: [ 20.x, 22.x, 24.x ]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: true
 
-      - name: Resolve API base URL
-        id: resolve-api-base-url
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.PROPAGATE_TOKEN }}
-          script: |
-            core.setOutput('base_url', 'https://api-staging.pdfdancer.com');
-
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
@@ -149,23 +142,24 @@ jobs:
 
       - name: Run tests (Unix)
         if: runner.os != 'Windows'
-        run: |
-          PDFDANCER_BASE_URL=${{ steps.resolve-api-base-url.outputs.base_url }} \
-          PDFDANCER_API_TOKEN=42 \
-          npm run test
+        run: npm run test
+        env:
+          PDFDANCER_BASE_URL: https://api-staging.pdfdancer.com
+          PDFDANCER_API_TOKEN: 42
 
       - name: Run tests (Windows)
         if: runner.os == 'Windows'
         shell: cmd
-        run: |
-          set PDFDANCER_BASE_URL=${{ steps.resolve-api-base-url.outputs.base_url }}
-          set PDFDANCER_API_TOKEN=42
-          npm run test
+        run: npm run test
+        env:
+          PDFDANCER_BASE_URL: https://api-staging.pdfdancer.com
+          PDFDANCER_API_TOKEN: 42
 
       - name: Upload test results
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: test-results-${{ matrix.os }}-node-${{ matrix.node-version }}
           path: test-results/
+          if-no-files-found: ignore
           retention-days: 7

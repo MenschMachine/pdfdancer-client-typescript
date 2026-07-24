@@ -1,7 +1,6 @@
 import {requireEnvAndFixture} from "./test-helpers";
-import {PDFDancer} from "../../pdfdancer_v1";
+import {PDFDancer} from "../../pdfdancer_v2";
 import {HttpClientException, ValidationException} from "../../exceptions";
-import {resetEnvLoader} from "../../env-loader";
 
 describe('Env Token E2E Tests', () => {
     let originalToken: string | undefined;
@@ -41,7 +40,6 @@ describe('Env Token E2E Tests', () => {
 
     afterAll(() => {
         restoreEnv();
-        resetEnvLoader();
     });
 
     test('opens with token from env', async () => {
@@ -66,7 +64,7 @@ describe('Env Token E2E Tests', () => {
 
     test('fails with invalid token', async () => {
         process.env.PDFDANCER_API_TOKEN = "invalid-token";
-        process.env.PDFDANCER_BASE_URL = "https://api.pdfdancer.com";
+        process.env.PDFDANCER_BASE_URL = baseUrl;
 
         await expect(async () => {
             try {
