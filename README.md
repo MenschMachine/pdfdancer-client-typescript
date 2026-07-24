@@ -1,5 +1,7 @@
 # PDFDancer TypeScript client
 
+This README documents `pdfdancer-client-typescript` version `3.0.0`.
+
 ## Overview
 
 PDFDancer gives Node.js applications pixel-perfect programmatic control over real-world PDFs. The client uses 1-based
@@ -15,7 +17,7 @@ page numbers and the same editing model as the Java and Python SDKs.
 ## Installation
 
 ```bash
-npm install pdfdancer-client-typescript
+npm install pdfdancer-client-typescript@3.0.0
 ```
 
 ## Requirements
@@ -40,7 +42,7 @@ const pdf = await PDFDancer.open(bytes, process.env.PDFDANCER_TOKEN);
 await pdf.save('output.pdf');
 ```
 
-For local development, pass the v2 service URL as the third argument:
+For local development, pass the service URL as the third argument:
 
 ```ts
 const pdf = await PDFDancer.open(bytes, token, 'http://localhost:8080');
