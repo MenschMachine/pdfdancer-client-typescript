@@ -76,6 +76,22 @@ const snapshot = await firstPage.getSnapshot();
 
 Page-scoped selectors, text editing, and builders automatically restrict the operation to that page.
 
+## Reading Units
+
+Reading-unit analysis returns semantically classified text blocks with reading order, source provenance, bounds, and
+relationships. Each call analyzes the current session state and makes a fresh request.
+
+```ts
+const documentAnalysis = await pdf.analyzeReadingUnits();
+const pageAnalysis = await pdf.page(1).analyzeReadingUnits();
+
+for (const page of documentAnalysis.pages) {
+  for (const unit of page.units) {
+    console.log(unit.role, unit.text);
+  }
+}
+```
+
 ## Selection
 
 Document- and page-scoped selectors return typed objects for images, paths, form XObjects, and form fields. Position

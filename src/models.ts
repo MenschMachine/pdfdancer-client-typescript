@@ -23,6 +23,76 @@ export enum ObjectType {
     CHECKBOX = "CHECKBOX"
 }
 
+export enum ReadingUnitRole {
+    HEADING = "HEADING", PARAGRAPH = "PARAGRAPH", LIST = "LIST", TABLE = "TABLE",
+    CAPTION = "CAPTION", CALLOUT = "CALLOUT", PREFORMATTED_TEXT = "PREFORMATTED_TEXT",
+    PAGE_HEADER = "PAGE_HEADER", PAGE_FOOTER = "PAGE_FOOTER", PAGE_NUMBER = "PAGE_NUMBER",
+    FOOTNOTE = "FOOTNOTE", WATERMARK = "WATERMARK", UNKNOWN = "UNKNOWN"
+}
+
+export enum ReadingUnitRelationshipType {
+    CAPTION_FOR = "CAPTION_FOR", HEADING_PARENT_OF = "HEADING_PARENT_OF", UNKNOWN = "UNKNOWN"
+}
+
+export enum ReadingUnitMode { PRIMARY = "PRIMARY", UNKNOWN = "UNKNOWN" }
+
+function enumWithRaw<T extends string>(value: unknown, values: readonly T[], fallback: T): { value: T; raw: string } {
+    const raw = typeof value === "string" ? value : "UNKNOWN";
+    return {value: (values.includes(raw as T) ? raw as T : fallback), raw};
+}
+
+export class ReadingUnitBounds {
+    constructor(public x: number, public y: number, public width: number, public height: number) {}
+}
+
+export class ReadingUnitProvenance {
+    constructor(public pageNumber: number, public sourceElementIds: string[], public bounds: ReadingUnitBounds) {}
+}
+
+export class ReadingUnitStreamMembership {
+    constructor(public included: boolean, public order: number | null) {}
+}
+
+export class ReadingUnitRelationship {
+    public readonly type: ReadingUnitRelationshipType;
+    public readonly rawType: string;
+    constructor(type: unknown, public targetUnitId: string) {
+        const parsed = enumWithRaw(type, Object.values(ReadingUnitRelationshipType), ReadingUnitRelationshipType.UNKNOWN);
+        this.type = parsed.value; this.rawType = parsed.raw;
+    }
+}
+
+export class ReadingUnit {
+    public readonly role: ReadingUnitRole;
+    public readonly rawRole: string;
+    constructor(
+        public id: string, role: unknown, public text: string,
+        public stream: Record<string, ReadingUnitStreamMembership>,
+        public provenance: ReadingUnitProvenance,
+        public relationships: ReadingUnitRelationship[]) {
+        const parsed = enumWithRaw(role, Object.values(ReadingUnitRole), ReadingUnitRole.UNKNOWN);
+        this.role = parsed.value; this.rawRole = parsed.raw;
+    }
+}
+
+export class ReadingUnitPageAnalysis {
+    public readonly mode: ReadingUnitMode;
+    public readonly rawMode: string;
+    constructor(public pageNumber: number, mode: unknown, public units: ReadingUnit[]) {
+        const parsed = enumWithRaw(mode, Object.values(ReadingUnitMode), ReadingUnitMode.UNKNOWN);
+        this.mode = parsed.value; this.rawMode = parsed.raw;
+    }
+}
+
+export class ReadingUnitDocumentAnalysis {
+    public readonly mode: ReadingUnitMode;
+    public readonly rawMode: string;
+    constructor(public pageCount: number, mode: unknown, public pages: ReadingUnitPageAnalysis[]) {
+        const parsed = enumWithRaw(mode, Object.values(ReadingUnitMode), ReadingUnitMode.UNKNOWN);
+        this.mode = parsed.value; this.rawMode = parsed.raw;
+    }
+}
+
 /**
  * Defines how position matching should be performed when searching for objects.
  */

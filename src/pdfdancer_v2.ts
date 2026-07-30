@@ -39,6 +39,13 @@ import {
     PageSize,
     PageSizeInput,
     PageSnapshot,
+    ReadingUnit,
+    ReadingUnitBounds,
+    ReadingUnitDocumentAnalysis,
+    ReadingUnitPageAnalysis,
+    ReadingUnitProvenance,
+    ReadingUnitRelationship,
+    ReadingUnitStreamMembership,
     Path,
     PathObjectRef,
     Position,
@@ -550,6 +557,10 @@ export class PageClient {
 
     text(): TextClient {
         return this._internals.createTextClient(this._pageNumber);
+    }
+
+    async analyzeReadingUnits(): Promise<ReadingUnitPageAnalysis> {
+        return this._client.analyzeReadingUnits(this._pageNumber) as Promise<ReadingUnitPageAnalysis>;
     }
 
     // Singular convenience methods - return the first element or null
@@ -1437,6 +1448,18 @@ export class PDFDancer {
         return this._parsePageSnapshot(data);
     }
 
+    async analyzeReadingUnits(): Promise<ReadingUnitDocumentAnalysis>;
+    async analyzeReadingUnits(pageNumber: number): Promise<ReadingUnitPageAnalysis>;
+    async analyzeReadingUnits(pageNumber?: number): Promise<ReadingUnitDocumentAnalysis | ReadingUnitPageAnalysis> {
+        if (pageNumber !== undefined) {
+            this._validatePageNumber(pageNumber, 'pageNumber');
+            const response = await this._makeRequest('GET', `/pdf/page/${pageNumber}/reading-units`);
+            return this._parseReadingUnitPageAnalysis(await response.json() as any);
+        }
+        const response = await this._makeRequest('GET', '/pdf/document/reading-units');
+        return this._parseReadingUnitDocumentAnalysis(await response.json() as any);
+    }
+
     // Cache Management
 
     /**
@@ -2138,6 +2161,36 @@ export class PDFDancer {
         }
 
         return new PageSnapshot(pageRef, elements);
+    }
+
+    private _parseReadingUnitBounds(data: any): ReadingUnitBounds {
+        return new ReadingUnitBounds(data.x, data.y, data.width, data.height);
+    }
+
+    private _parseReadingUnit(data: any): ReadingUnit {
+        const stream: Record<string, ReadingUnitStreamMembership> = {};
+        for (const [mode, membership] of Object.entries(data.stream ?? {})) {
+            const m = membership as any;
+            stream[mode] = new ReadingUnitStreamMembership(Boolean(m.included), m.order ?? null);
+        }
+        const provenance = data.provenance ?? {};
+        return new ReadingUnit(
+            data.id, data.role, data.text,
+            stream,
+            new ReadingUnitProvenance(provenance.pageNumber, provenance.sourceElementIds ?? [],
+                this._parseReadingUnitBounds(provenance.bounds ?? {})),
+            (data.relationships ?? []).map((r: any) => new ReadingUnitRelationship(r.type, r.targetUnitId))
+        );
+    }
+
+    private _parseReadingUnitPageAnalysis(data: any): ReadingUnitPageAnalysis {
+        return new ReadingUnitPageAnalysis(data.pageNumber, data.mode,
+            (data.units ?? []).map((u: any) => this._parseReadingUnit(u)));
+    }
+
+    private _parseReadingUnitDocumentAnalysis(data: any): ReadingUnitDocumentAnalysis {
+        return new ReadingUnitDocumentAnalysis(data.pageCount, data.mode,
+            (data.pages ?? []).map((p: any) => this._parseReadingUnitPageAnalysis(p)));
     }
 
     // Builder Pattern Support
