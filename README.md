@@ -1,6 +1,6 @@
 # PDFDancer TypeScript client
 
-This README documents `pdfdancer-client-typescript` version `3.0.0`.
+This README documents `pdfdancer-client-typescript` version `3.0.1`.
 
 ## Overview
 
@@ -17,7 +17,7 @@ page numbers and the same editing model as the Java and Python SDKs.
 ## Installation
 
 ```bash
-npm install pdfdancer-client-typescript@3.0.0
+npm install pdfdancer-client-typescript@3.0.1
 ```
 
 ## Requirements
