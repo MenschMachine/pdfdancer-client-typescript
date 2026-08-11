@@ -11,6 +11,28 @@ import {Worker} from 'worker_threads';
 import {Color, Orientation, PDFDancer} from '../../index';
 import {expectWithin} from '../assertions';
 
+function writeDiagnosticsEvent(type: string, details: Record<string, unknown> = {}): void {
+    const directory = process.env.PDFDANCER_DIAGNOSTICS_DIR;
+    if (!directory) return;
+
+    try {
+        fs.mkdirSync(directory, {recursive: true});
+        fs.appendFileSync(
+            path.join(directory, `pdfjs-worker-events-${process.pid}.jsonl`),
+            `${JSON.stringify({
+                timestamp: new Date().toISOString(),
+                type,
+                pid: process.pid,
+                jestWorkerId: process.env.JEST_WORKER_ID ?? null,
+                ...details
+            })}\n`,
+            'utf8'
+        );
+    } catch {
+        // Diagnostics must never change test behavior.
+    }
+}
+
 interface PersistedPdfInspection {
     pages: string[];
     fonts: string[];
@@ -143,13 +165,37 @@ export class PDFAssertions {
             const inspectorPath = path.join(__dirname, 'pdfjs-inspector.mjs');
             this.persistedPdfInspection = new Promise((resolve, reject) => {
                 const worker = new Worker(inspectorPath, {workerData: {pdfPath: this.savedPdfPath}});
+                writeDiagnosticsEvent('pdfjs-worker-created', {
+                    threadId: worker.threadId,
+                    pdfPath: this.savedPdfPath
+                });
+                worker.once('online', () => writeDiagnosticsEvent('pdfjs-worker-online', {
+                    threadId: worker.threadId
+                }));
                 worker.once('message', (message: {result?: PersistedPdfInspection; error?: string}) => {
+                    writeDiagnosticsEvent('pdfjs-worker-message', {
+                        threadId: worker.threadId,
+                        hasResult: Boolean(message.result),
+                        error: message.error ?? null
+                    });
                     if (message.error) reject(new Error(`PDF.js inspection failed: ${message.error}`));
                     else if (message.result) resolve(message.result);
                     else reject(new Error('PDF.js inspection worker returned no result'));
                 });
-                worker.once('error', reject);
+                worker.once('error', error => {
+                    writeDiagnosticsEvent('pdfjs-worker-error', {
+                        threadId: worker.threadId,
+                        name: error.name,
+                        message: error.message,
+                        stack: error.stack
+                    });
+                    reject(error);
+                });
                 worker.once('exit', code => {
+                    writeDiagnosticsEvent('pdfjs-worker-exit', {
+                        threadId: worker.threadId,
+                        code
+                    });
                     if (code !== 0) reject(new Error(`PDF.js inspection worker exited with code ${code}`));
                 });
             });
