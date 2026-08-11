@@ -45,18 +45,12 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Prepare CI diagnostics
-        run: node -e "require('node:fs').mkdirSync('ci-diagnostics', {recursive:true})"
-
       - name: Run tests (Unix)
         if: runner.os != 'Windows'
         run: npm run test
         env:
           PDFDANCER_BASE_URL: https://api-staging.pdfdancer.com
           PDFDANCER_API_TOKEN: 42
-          PDFDANCER_DIAGNOSTICS_DIR: ${{ github.workspace }}/ci-diagnostics
-          NODE_OPTIONS: >-
-            --require=${{ github.workspace }}/scripts/ci/diagnostics.js
 
       - name: Run tests (Windows)
         if: runner.os == 'Windows'
@@ -65,13 +59,6 @@ jobs:
         env:
           PDFDANCER_BASE_URL: https://api-staging.pdfdancer.com
           PDFDANCER_API_TOKEN: 42
-          PDFDANCER_DIAGNOSTICS_DIR: ${{ github.workspace }}/ci-diagnostics
-          NODE_OPTIONS: >-
-            --require=${{ github.workspace }}/scripts/ci/diagnostics.js
-
-      - name: Collect CI diagnostics
-        if: failure()
-        run: node scripts/ci/collect-diagnostics.js
 
       - name: Upload test results
         if: failure()
@@ -80,7 +67,6 @@ jobs:
           name: test-results-${{ matrix.os }}-node-${{ matrix.node-version }}
           path: |
             test-results/
-            ci-diagnostics/
           if-no-files-found: ignore
           retention-days: 7
 

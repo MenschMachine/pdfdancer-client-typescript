@@ -11,28 +11,6 @@ import zlib from 'zlib';
 import {Color, Orientation, PDFDancer} from '../../index';
 import {expectWithin} from '../assertions';
 
-function writeDiagnosticsEvent(type: string, details: Record<string, unknown> = {}): void {
-    const directory = process.env.PDFDANCER_DIAGNOSTICS_DIR;
-    if (!directory) return;
-
-    try {
-        fs.mkdirSync(directory, {recursive: true});
-        fs.appendFileSync(
-            path.join(directory, `pdfbox-process-events-${process.pid}.jsonl`),
-            `${JSON.stringify({
-                timestamp: new Date().toISOString(),
-                type,
-                pid: process.pid,
-                jestWorkerId: process.env.JEST_WORKER_ID ?? null,
-                ...details
-            })}\n`,
-            'utf8'
-        );
-    } catch {
-        // Diagnostics must never change test behavior.
-    }
-}
-
 interface PersistedPdfInspection {
     pages: string[];
     fonts: string[];
@@ -180,20 +158,13 @@ export class PDFAssertions {
         const args = ['-cp', jarPath, inspectorPath, pdfPath, outputDirectory];
 
         return new Promise((resolve, reject) => {
-            const child = spawn('java', args, {stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true});
-            const stdout: Buffer[] = [];
-            const stderr: Buffer[] = [];
+            const child = spawn('java', args, {stdio: 'ignore', windowsHide: true});
             let timedOut = false;
             let settled = false;
-
-            child.stdout.on('data', chunk => stdout.push(Buffer.from(chunk)));
-            child.stderr.on('data', chunk => stderr.push(Buffer.from(chunk)));
-            writeDiagnosticsEvent('pdfbox-process-created', {childPid: child.pid ?? null, pdfPath});
 
             const finishWithError = (error: Error): void => {
                 if (settled) return;
                 settled = true;
-                this.writePdfBoxProcessOutput(child.pid, stdout, stderr);
                 reject(error);
             };
 
@@ -204,17 +175,11 @@ export class PDFAssertions {
 
             child.once('error', error => {
                 clearTimeout(timeout);
-                writeDiagnosticsEvent('pdfbox-process-error', {
-                    name: error.name,
-                    message: error.message,
-                    stack: error.stack
-                });
                 finishWithError(new Error(`PDFBox inspection could not start Java: ${error.message}`));
             });
 
             child.once('close', (code, signal) => {
                 clearTimeout(timeout);
-                writeDiagnosticsEvent('pdfbox-process-exit', {childPid: child.pid ?? null, code, signal, timedOut});
                 if (settled) return;
                 if (timedOut) {
                     finishWithError(new Error(
@@ -256,19 +221,6 @@ export class PDFAssertions {
                 }
             });
         });
-    }
-
-    private writePdfBoxProcessOutput(childPid: number | undefined, stdout: Buffer[], stderr: Buffer[]): void {
-        const directory = process.env.PDFDANCER_DIAGNOSTICS_DIR;
-        if (!directory) return;
-        try {
-            fs.mkdirSync(directory, {recursive: true});
-            const processKey = `${process.pid}-${childPid ?? 'unknown'}`;
-            fs.writeFileSync(path.join(directory, `pdfbox-stdout-${processKey}.log`), Buffer.concat(stdout));
-            fs.writeFileSync(path.join(directory, `pdfbox-stderr-${processKey}.log`), Buffer.concat(stderr));
-        } catch {
-            // Diagnostics must never change test behavior.
-        }
     }
 
     private async persistedText(page?: number): Promise<string> {
