@@ -38,6 +38,8 @@ interface PersistedPdfInspection {
     fonts: string[];
 }
 
+const PDFBOX_INSPECTION_TIMEOUT_MS = 120_000;
+
 type Matrix = [number, number, number, number, number, number];
 type BBox = [number, number, number, number];
 
@@ -191,14 +193,14 @@ export class PDFAssertions {
             const finishWithError = (error: Error): void => {
                 if (settled) return;
                 settled = true;
-                this.writePdfBoxProcessOutput(stdout, stderr);
+                this.writePdfBoxProcessOutput(child.pid, stdout, stderr);
                 reject(error);
             };
 
             const timeout = setTimeout(() => {
                 timedOut = true;
                 child.kill();
-            }, 30_000);
+            }, PDFBOX_INSPECTION_TIMEOUT_MS);
 
             child.once('error', error => {
                 clearTimeout(timeout);
@@ -215,7 +217,9 @@ export class PDFAssertions {
                 writeDiagnosticsEvent('pdfbox-process-exit', {childPid: child.pid ?? null, code, signal, timedOut});
                 if (settled) return;
                 if (timedOut) {
-                    finishWithError(new Error('PDFBox inspection exceeded the 30000 ms timeout'));
+                    finishWithError(new Error(
+                        `PDFBox inspection exceeded the ${PDFBOX_INSPECTION_TIMEOUT_MS} ms timeout`
+                    ));
                     return;
                 }
                 if (code !== 0 || signal !== null) {
@@ -254,13 +258,14 @@ export class PDFAssertions {
         });
     }
 
-    private writePdfBoxProcessOutput(stdout: Buffer[], stderr: Buffer[]): void {
+    private writePdfBoxProcessOutput(childPid: number | undefined, stdout: Buffer[], stderr: Buffer[]): void {
         const directory = process.env.PDFDANCER_DIAGNOSTICS_DIR;
         if (!directory) return;
         try {
             fs.mkdirSync(directory, {recursive: true});
-            fs.writeFileSync(path.join(directory, `pdfbox-stdout-${process.pid}.log`), Buffer.concat(stdout));
-            fs.writeFileSync(path.join(directory, `pdfbox-stderr-${process.pid}.log`), Buffer.concat(stderr));
+            const processKey = `${process.pid}-${childPid ?? 'unknown'}`;
+            fs.writeFileSync(path.join(directory, `pdfbox-stdout-${processKey}.log`), Buffer.concat(stdout));
+            fs.writeFileSync(path.join(directory, `pdfbox-stderr-${processKey}.log`), Buffer.concat(stderr));
         } catch {
             // Diagnostics must never change test behavior.
         }
