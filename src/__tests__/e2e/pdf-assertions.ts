@@ -16,7 +16,7 @@ interface PersistedPdfInspection {
     fonts: string[];
 }
 
-const PDFBOX_INSPECTION_TIMEOUT_MS = 120_000;
+const PDFBOX_INSPECTION_TIMEOUT_MS = 30_000;
 
 type Matrix = [number, number, number, number, number, number];
 type BBox = [number, number, number, number];

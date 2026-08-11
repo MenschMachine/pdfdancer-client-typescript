@@ -7,6 +7,7 @@ import java.util.TreeSet;
 
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.font.FontMappers;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.text.TextPosition;
@@ -34,8 +35,13 @@ public final class PdfInspector {
     }
 
     public static void main(String[] args) throws Exception {
+        if (args.length == 1 && "--warm-font-cache".equals(args[0])) {
+            FontMappers.instance().getFontBoxFont("Helvetica", null);
+            return;
+        }
+
         if (args.length != 2) {
-            throw new IllegalArgumentException("Expected input PDF path and output directory");
+            throw new IllegalArgumentException("Expected --warm-font-cache or input PDF path and output directory");
         }
 
         Path input = Path.of(args[0]);
