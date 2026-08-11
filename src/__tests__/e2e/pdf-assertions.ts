@@ -6,8 +6,8 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import {randomUUID} from 'crypto';
+import {spawn} from 'child_process';
 import zlib from 'zlib';
-import {Worker} from 'worker_threads';
 import {Color, Orientation, PDFDancer} from '../../index';
 import {expectWithin} from '../assertions';
 
@@ -18,7 +18,7 @@ function writeDiagnosticsEvent(type: string, details: Record<string, unknown> = 
     try {
         fs.mkdirSync(directory, {recursive: true});
         fs.appendFileSync(
-            path.join(directory, `pdfjs-worker-events-${process.pid}.jsonl`),
+            path.join(directory, `pdfbox-process-events-${process.pid}.jsonl`),
             `${JSON.stringify({
                 timestamp: new Date().toISOString(),
                 type,
@@ -162,45 +162,108 @@ export class PDFAssertions {
         }
 
         if (!this.persistedPdfInspection) {
-            const inspectorPath = path.join(__dirname, 'pdfjs-inspector.mjs');
-            this.persistedPdfInspection = new Promise((resolve, reject) => {
-                const worker = new Worker(inspectorPath, {workerData: {pdfPath: this.savedPdfPath}});
-                writeDiagnosticsEvent('pdfjs-worker-created', {
-                    threadId: worker.threadId,
-                    pdfPath: this.savedPdfPath
-                });
-                worker.once('online', () => writeDiagnosticsEvent('pdfjs-worker-online', {
-                    threadId: worker.threadId
-                }));
-                worker.once('message', (message: {result?: PersistedPdfInspection; error?: string}) => {
-                    writeDiagnosticsEvent('pdfjs-worker-message', {
-                        threadId: worker.threadId,
-                        hasResult: Boolean(message.result),
-                        error: message.error ?? null
-                    });
-                    if (message.error) reject(new Error(`PDF.js inspection failed: ${message.error}`));
-                    else if (message.result) resolve(message.result);
-                    else reject(new Error('PDF.js inspection worker returned no result'));
-                });
-                worker.once('error', error => {
-                    writeDiagnosticsEvent('pdfjs-worker-error', {
-                        threadId: worker.threadId,
-                        name: error.name,
-                        message: error.message,
-                        stack: error.stack
-                    });
-                    reject(error);
-                });
-                worker.once('exit', code => {
-                    writeDiagnosticsEvent('pdfjs-worker-exit', {
-                        threadId: worker.threadId,
-                        code
-                    });
-                    if (code !== 0) reject(new Error(`PDF.js inspection worker exited with code ${code}`));
-                });
-            });
+            this.persistedPdfInspection = this.runPdfBoxInspection(this.savedPdfPath);
         }
         return this.persistedPdfInspection;
+    }
+
+    private async runPdfBoxInspection(pdfPath: string): Promise<PersistedPdfInspection> {
+        const toolDirectory = path.resolve(__dirname, '../../../scripts/test-tools/pdfbox');
+        const jarPath = path.join(toolDirectory, 'pdfbox-app-3.0.8.jar');
+        const inspectorPath = path.join(toolDirectory, 'PdfInspector.java');
+        if (!fs.existsSync(jarPath) || !fs.existsSync(inspectorPath)) {
+            throw new Error(`PDFBox test tools are missing from ${toolDirectory}`);
+        }
+        const outputDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'pdfdancer-pdfbox-'));
+        const args = ['-cp', jarPath, inspectorPath, pdfPath, outputDirectory];
+
+        return new Promise((resolve, reject) => {
+            const child = spawn('java', args, {stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true});
+            const stdout: Buffer[] = [];
+            const stderr: Buffer[] = [];
+            let timedOut = false;
+            let settled = false;
+
+            child.stdout.on('data', chunk => stdout.push(Buffer.from(chunk)));
+            child.stderr.on('data', chunk => stderr.push(Buffer.from(chunk)));
+            writeDiagnosticsEvent('pdfbox-process-created', {childPid: child.pid ?? null, pdfPath});
+
+            const finishWithError = (error: Error): void => {
+                if (settled) return;
+                settled = true;
+                this.writePdfBoxProcessOutput(stdout, stderr);
+                reject(error);
+            };
+
+            const timeout = setTimeout(() => {
+                timedOut = true;
+                child.kill();
+            }, 30_000);
+
+            child.once('error', error => {
+                clearTimeout(timeout);
+                writeDiagnosticsEvent('pdfbox-process-error', {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack
+                });
+                finishWithError(new Error(`PDFBox inspection could not start Java: ${error.message}`));
+            });
+
+            child.once('close', (code, signal) => {
+                clearTimeout(timeout);
+                writeDiagnosticsEvent('pdfbox-process-exit', {childPid: child.pid ?? null, code, signal, timedOut});
+                if (settled) return;
+                if (timedOut) {
+                    finishWithError(new Error('PDFBox inspection exceeded the 30000 ms timeout'));
+                    return;
+                }
+                if (code !== 0 || signal !== null) {
+                    finishWithError(new Error(
+                        `PDFBox inspection failed with exit code ${String(code)} and signal ${String(signal)}`
+                    ));
+                    return;
+                }
+
+                try {
+                    const pageCountText = fs.readFileSync(path.join(outputDirectory, 'page-count.txt'), 'utf8').trim();
+                    const pageCount = Number(pageCountText);
+                    if (!Number.isInteger(pageCount) || pageCount < 0) {
+                        throw new Error(`invalid page count ${JSON.stringify(pageCountText)}`);
+                    }
+                    const pages = Array.from({length: pageCount}, (_, index) => {
+                        const text = fs.readFileSync(
+                            path.join(outputDirectory, `page-${String(index + 1).padStart(4, '0')}.txt`),
+                            'utf8'
+                        );
+                        return text.replace(/(?:\b[\p{L}\p{N}]\s+){2,}[\p{L}\p{N}]\b/gu, match =>
+                            match.replace(/\s+/g, '')
+                        );
+                    });
+                    const fonts = fs.readFileSync(path.join(outputDirectory, 'fonts.txt'), 'utf8')
+                        .split(/\r?\n/)
+                        .filter(Boolean);
+                    fs.rmSync(outputDirectory, {recursive: true, force: true});
+                    settled = true;
+                    resolve({pages, fonts});
+                } catch (error) {
+                    const message = error instanceof Error ? error.message : String(error);
+                    finishWithError(new Error(`PDFBox inspection produced invalid output: ${message}`));
+                }
+            });
+        });
+    }
+
+    private writePdfBoxProcessOutput(stdout: Buffer[], stderr: Buffer[]): void {
+        const directory = process.env.PDFDANCER_DIAGNOSTICS_DIR;
+        if (!directory) return;
+        try {
+            fs.mkdirSync(directory, {recursive: true});
+            fs.writeFileSync(path.join(directory, `pdfbox-stdout-${process.pid}.log`), Buffer.concat(stdout));
+            fs.writeFileSync(path.join(directory, `pdfbox-stderr-${process.pid}.log`), Buffer.concat(stderr));
+        } catch {
+            // Diagnostics must never change test behavior.
+        }
     }
 
     private async persistedText(page?: number): Promise<string> {

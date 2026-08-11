@@ -254,7 +254,7 @@ npm run test:unit -- --runInBand
 npm run test:e2e -- --runInBand
 ```
 
-E2E tests expect the API at `http://localhost:8080` unless configured otherwise. The text-editing E2E suite saves and reopens mutated PDFs and uses the test-only `pdfjs-dist` dependency through `PDFAssertions` to validate persisted text and fonts.
+E2E tests expect the API at `http://localhost:8080` unless configured otherwise. The text-editing E2E suite saves and reopens mutated PDFs and uses the vendored, test-only Apache PDFBox inspector through `PDFAssertions` to validate persisted text and fonts. Java 21 or newer must be available on `PATH`.
 
 ## Troubleshooting
 
