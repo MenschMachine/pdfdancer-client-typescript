@@ -5,15 +5,58 @@ import java.nio.file.Path;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.fontbox.FontBoxFont;
+import org.apache.fontbox.ttf.TTFParser;
+import org.apache.fontbox.ttf.TrueTypeFont;
 import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.io.RandomAccessReadBuffer;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.font.CIDFontMapping;
+import org.apache.pdfbox.pdmodel.font.FontMapper;
+import org.apache.pdfbox.pdmodel.font.FontMapping;
 import org.apache.pdfbox.pdmodel.font.FontMappers;
+import org.apache.pdfbox.pdmodel.font.PDCIDSystemInfo;
 import org.apache.pdfbox.pdmodel.font.PDFont;
+import org.apache.pdfbox.pdmodel.font.PDFontDescriptor;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.text.TextPosition;
 
 public final class PdfInspector {
     private PdfInspector() {
+    }
+
+    private static final class BundledFallbackFontMapper implements FontMapper {
+        private final TrueTypeFont fallback;
+
+        private BundledFallbackFontMapper() throws IOException {
+            String resource = "/org/apache/pdfbox/resources/ttf/LiberationSans-Regular.ttf";
+            var input = FontMapper.class.getResourceAsStream(resource);
+            if (input == null) {
+                throw new IOException("PDFBox fallback font is missing: " + resource);
+            }
+            try (input) {
+                fallback = new TTFParser().parse(RandomAccessReadBuffer.createBufferFromStream(input));
+            }
+        }
+
+        @Override
+        public FontMapping<TrueTypeFont> getTrueTypeFont(String baseFont, PDFontDescriptor descriptor) {
+            return new FontMapping<>(fallback, true);
+        }
+
+        @Override
+        public FontMapping<FontBoxFont> getFontBoxFont(String baseFont, PDFontDescriptor descriptor) {
+            return new FontMapping<>(fallback, true);
+        }
+
+        @Override
+        public CIDFontMapping getCIDFont(
+            String baseFont,
+            PDFontDescriptor descriptor,
+            PDCIDSystemInfo cidSystemInfo
+        ) {
+            return new CIDFontMapping(null, fallback, true);
+        }
     }
 
     private static final class InspectingTextStripper extends PDFTextStripper {
@@ -35,14 +78,13 @@ public final class PdfInspector {
     }
 
     public static void main(String[] args) throws Exception {
-        if (args.length == 1 && "--warm-font-cache".equals(args[0])) {
-            FontMappers.instance().getFontBoxFont("Helvetica", null);
-            return;
-        }
+        System.setProperty("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.NoOpLog");
 
         if (args.length != 2) {
-            throw new IllegalArgumentException("Expected --warm-font-cache or input PDF path and output directory");
+            throw new IllegalArgumentException("Expected input PDF path and output directory");
         }
+
+        FontMappers.set(new BundledFallbackFontMapper());
 
         Path input = Path.of(args[0]);
         Path output = Path.of(args[1]);

@@ -45,11 +45,6 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Warm PDFBox font cache
-        if: runner.os == 'Windows'
-        timeout-minutes: 6
-        run: node scripts/test-tools/pdfbox/warm-font-cache.js
-
       - name: Run tests (Unix)
         if: runner.os != 'Windows'
         run: npm run test
