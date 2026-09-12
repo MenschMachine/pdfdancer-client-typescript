@@ -352,7 +352,7 @@ describe('v2 selector-based text editing', () => {
     test('required reflow exposes applied-layout and hyphenation diagnostics', async () => {
         const pdf = await open();
         const response = await pdf.text().replace(TextReplaceRequest.literal('Assumptions', 'Operating Context')
-            .requireReflow(TextLayoutProfile.BODY_TEXT)
+            .reflowWhenSupported(TextLayoutProfile.BODY_TEXT)
             .hyphenationEnabled(false)
             .build());
 
@@ -360,10 +360,10 @@ describe('v2 selector-based text editing', () => {
         expect(response.changed).toBe(2);
         expect(response.change).toHaveLength(2);
         for (const change of response.change ?? []) {
-            expect(change.requestedLayoutMode).toBe('requireReflow');
+            expect(change.requestedLayoutMode).toBe('reflowWhenSupported');
             expect(change.requestedLayoutProfile).toBe('bodyText');
             expect(change.effectiveHyphenationEnabled).toBe(false);
-            expect(change.appliedLayoutMode).toBe('REFLOWED');
+            expect(change.appliedLayoutMode).toBe('SOURCE_ANCHORED_FALLBACK');
         }
         expect(response.errors ?? []).toHaveLength(0);
 
