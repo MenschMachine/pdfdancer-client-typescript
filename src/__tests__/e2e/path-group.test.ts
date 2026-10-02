@@ -3,6 +3,10 @@ import {PDFDancer} from "../../pdfdancer_v2";
 import {BoundingRect} from "../../models";
 import {PDFAssertions} from './pdf-assertions';
 import {PathGroupObject} from "../../types";
+import {pathIdsWithBounds, pathWithBounds} from './path-test-support';
+
+const HORIZONTAL_PATH_BOUNDS = new BoundingRect(80, 720, 220, 0);
+const RECTANGLE_PATH_BOUNDS = new BoundingRect(80, 580, 220, 160);
 
 describe('Path Group E2E Tests', () => {
 
@@ -18,7 +22,7 @@ describe('Path Group E2E Tests', () => {
 
     async function groupFirstTwo(): Promise<PathGroupObject> {
         const paths = await pdf.page(1).selectPaths();
-        const pathIds = [paths[0].internalId, paths[1].internalId];
+        const pathIds = pathIdsWithBounds(paths, HORIZONTAL_PATH_BOUNDS, RECTANGLE_PATH_BOUNDS);
         return pdf.page(1).groupPaths(pathIds);
     }
 
@@ -26,7 +30,7 @@ describe('Path Group E2E Tests', () => {
         const paths = await pdf.page(1).selectPaths();
         expect(paths.length).toBeGreaterThanOrEqual(2);
 
-        const pathIds = [paths[0].internalId, paths[1].internalId];
+        const pathIds = pathIdsWithBounds(paths, HORIZONTAL_PATH_BOUNDS, RECTANGLE_PATH_BOUNDS);
         const group = await pdf.page(1).groupPaths(pathIds);
 
         expect(group.pathCount).toBe(2);
@@ -34,7 +38,7 @@ describe('Path Group E2E Tests', () => {
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertNumberOfPaths(9, 1);
-        await assertions.assertPathIsAt('PATH_0_000001', 80, 720);
+        expect((await assertions.getPdf().page(1).selectPathsAt(80, 720))).toHaveLength(1);
     });
 
     test('create group by region', async () => {
@@ -57,7 +61,7 @@ describe('Path Group E2E Tests', () => {
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertNumberOfPaths(9, 1);
-        await assertions.assertPathIsAt('PATH_0_000001', 80, 720);
+        expect((await assertions.getPdf().page(1).selectPathsAt(80, 720))).toHaveLength(1);
     });
 
     test('group and move', async () => {
@@ -76,7 +80,7 @@ describe('Path Group E2E Tests', () => {
 
     test('group and remove', async () => {
         const paths = await pdf.page(1).selectPaths();
-        const pathIds = [paths[0].internalId];
+        const pathIds = pathIdsWithBounds(paths, HORIZONTAL_PATH_BOUNDS);
         const group = await pdf.page(1).groupPaths(pathIds);
 
         let groups = await pdf.page(1).getPathGroups();
@@ -94,18 +98,22 @@ describe('Path Group E2E Tests', () => {
 
     test('scale path group', async () => {
         const paths = await pdf.page(1).selectPaths();
-        const pathId = paths[0].internalId;
-        const origBounds = paths[0].position.boundingRect!;
+        const path = pathWithBounds(paths, HORIZONTAL_PATH_BOUNDS);
+        const origBounds = path.position.boundingRect!;
         const origW = origBounds.width;
         const origH = origBounds.height;
 
-        const pathIds = [pathId, paths[1].internalId];
+        const pathIds = pathIdsWithBounds(paths, HORIZONTAL_PATH_BOUNDS, RECTANGLE_PATH_BOUNDS);
         const group = await pdf.page(1).groupPaths(pathIds);
         await group.scale(2.0);
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertNumberOfPaths(9, 1);
-        await assertions.assertPathHasBounds(pathId, origW * 2, origH * 2, 1, 2.0);
+        const resized = (await assertions.getPdf().page(1).selectPaths()).filter(p => {
+            const bounds = p.position.boundingRect;
+            return bounds && Math.abs(bounds.width - origW * 2) <= 2.0 && Math.abs(bounds.height - origH * 2) <= 2.0;
+        });
+        expect(resized).toHaveLength(1);
     });
 
     test('rotate path group', async () => {
@@ -119,12 +127,9 @@ describe('Path Group E2E Tests', () => {
 
     test('resize path group', async () => {
         const paths = await pdf.page(1).selectPaths();
-        const path = paths.find(p => {
-            const br = p.position.boundingRect;
-            return br && br.width > 0 && br.height > 0;
-        }) ?? paths[1];
-        const pathId = path.internalId;
-        const pathIds = [pathId, paths[0].internalId];
+        const path = pathWithBounds(paths, HORIZONTAL_PATH_BOUNDS);
+        const originalBounds = path.position.boundingRect!;
+        const pathIds = pathIdsWithBounds(paths, HORIZONTAL_PATH_BOUNDS, RECTANGLE_PATH_BOUNDS);
 
         const group = await pdf.page(1).groupPaths(pathIds);
         await group.resize(50.0, 50.0);
@@ -133,25 +138,29 @@ describe('Path Group E2E Tests', () => {
         await assertions.assertNumberOfPaths(9, 1);
 
         const reloadedPaths = await assertions.getPdf().page(1).selectPaths();
-        const reloaded = reloadedPaths.find(p => p.internalId === pathId)!;
-        expect(reloaded).toBeDefined();
-        expect(reloaded.position.boundingRect).toBeDefined();
+        const horizontalPaths = reloadedPaths.filter(p => Math.abs(p.position.boundingRect?.height ?? Infinity) < 0.1);
+        expect(horizontalPaths).toHaveLength(1);
+        expect(horizontalPaths[0].position.boundingRect!.width).not.toBeCloseTo(originalBounds.width, 1);
     });
 
     test('scale via reference', async () => {
         const paths = await pdf.page(1).selectPaths();
-        const pathId = paths[0].internalId;
-        const origBounds = paths[0].position.boundingRect!;
+        const path = pathWithBounds(paths, HORIZONTAL_PATH_BOUNDS);
+        const origBounds = path.position.boundingRect!;
         const origW = origBounds.width;
         const origH = origBounds.height;
 
-        const pathIds = [pathId, paths[1].internalId];
+        const pathIds = pathIdsWithBounds(paths, HORIZONTAL_PATH_BOUNDS, RECTANGLE_PATH_BOUNDS);
         const group = await pdf.page(1).groupPaths(pathIds);
         await group.scale(0.5);
 
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertNumberOfPaths(9, 1);
-        await assertions.assertPathHasBounds(pathId, origW * 0.5, origH * 0.5, 1, 2.0);
+        const resized = (await assertions.getPdf().page(1).selectPaths()).filter(p => {
+            const bounds = p.position.boundingRect;
+            return bounds && Math.abs(bounds.width - origW * 0.5) <= 2.0 && Math.abs(bounds.height - origH * 0.5) <= 2.0;
+        });
+        expect(resized).toHaveLength(1);
     });
 
     test('rotate via reference', async () => {

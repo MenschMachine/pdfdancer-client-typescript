@@ -74,7 +74,10 @@ describe('Path E2E Tests (New API)', () => {
         expect(movedPos.getY()).toBeCloseTo(100, 1);
 
         const assertions = await PDFAssertions.create(pdf);
-        await assertions.assertPathIsAt('PATH_0_000001', 50.1, 100);
+        const persistedMovedPath = await assertions.getPdf().page(1).selectPathsAt(50.1, 100);
+        expect(persistedMovedPath).toHaveLength(1);
+        expect(persistedMovedPath[0].position.getX()).toBeCloseTo(50.1, 1);
+        expect(persistedMovedPath[0].position.getY()).toBeCloseTo(100, 1);
     });
 
     // Tests for singular select methods

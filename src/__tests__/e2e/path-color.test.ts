@@ -5,6 +5,7 @@
 import {requireEnvAndFixture} from './test-helpers';
 import {Color, PDFDancer} from "../../index";
 import {PDFAssertions} from './pdf-assertions';
+import {pathWithBounds} from './path-test-support';
 
 describe('Path Color E2E Tests', () => {
 
@@ -19,7 +20,6 @@ describe('Path Color E2E Tests', () => {
         // Find PATH_0_000003 which is a closed rectangle with stroke
         const path = paths.find(p => p.internalId === 'PATH_0_000003');
         expect(path).toBeDefined();
-
         // The path should have stroke color information
         expect(path!.type).toBe('PATH');
         // Path should have strokeColor property (actual value depends on PDF content)
@@ -31,11 +31,11 @@ describe('Path Color E2E Tests', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         // Get a path
-        const paths = await pdf.selectPaths();
-        expect(paths.length).toBeGreaterThan(0);
+        const paths = await pdf.page(1).selectPathsAt(80, 720);
+        expect(paths).toHaveLength(1);
 
-        const path = paths.find(p => p.internalId === 'PATH_0_000003');
-        expect(path).toBeDefined();
+        const path = paths[0];
+        const originalBounds = path.position.boundingRect!;
 
         // Modify the stroke color
         const redColor = new Color(255, 0, 0);
@@ -48,21 +48,23 @@ describe('Path Color E2E Tests', () => {
 
         // Verify by reopening the PDF and checking the actual color value
         const assertions = await PDFAssertions.create(pdf);
-        await assertions.assertPathHasStrokeColor('PATH_0_000003', redColor);
+        const updated = pathWithBounds(await assertions.getPdf().page(1).selectPaths(), originalBounds);
+        expect(updated.strokeColor).toEqual(redColor);
     });
 
     test('modify path fill color', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        // Get a path - PATH_0_000004 is a filled rectangle
-        const paths = await pdf.selectPaths();
-        const path = paths.find(p => p.internalId === 'PATH_0_000004');
-        expect(path).toBeDefined();
+        // Get the fixture path at a stable position
+        const paths = await pdf.page(1).selectPathsAt(80, 720);
+        expect(paths).toHaveLength(1);
+        const path = paths[0];
+        const originalBounds = path.position.boundingRect!;
 
         // Modify the fill color
         const blueColor = new Color(0, 0, 255);
-        const result = await path!.edit()
+        const result = await path.edit()
             .fillColor(blueColor)
             .apply();
 
@@ -71,7 +73,8 @@ describe('Path Color E2E Tests', () => {
 
         // Verify by reopening the PDF and checking the actual color value
         const assertions = await PDFAssertions.create(pdf);
-        await assertions.assertPathHasFillColor('PATH_0_000004', blueColor);
+        const updated = pathWithBounds(await assertions.getPdf().page(1).selectPaths(), originalBounds);
+        expect(updated.fillColor).toEqual(blueColor);
     });
 
     test('modify both stroke and fill color', async () => {
@@ -79,14 +82,15 @@ describe('Path Color E2E Tests', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         // Get a path
-        const paths = await pdf.selectPaths();
-        const path = paths.find(p => p.internalId === 'PATH_0_000003');
-        expect(path).toBeDefined();
+        const paths = await pdf.page(1).selectPathsAt(80, 720);
+        expect(paths).toHaveLength(1);
+        const path = paths[0];
+        const originalBounds = path.position.boundingRect!;
 
         // Modify both colors
         const redColor = new Color(255, 0, 0);
         const blueColor = new Color(0, 0, 255);
-        const result = await path!.edit()
+        const result = await path.edit()
             .strokeColor(redColor)
             .fillColor(blueColor)
             .apply();
@@ -96,16 +100,18 @@ describe('Path Color E2E Tests', () => {
 
         // Verify by reopening the PDF and checking the actual color values
         const assertions = await PDFAssertions.create(pdf);
-        await assertions.assertPathHasColors('PATH_0_000003', redColor, blueColor);
+        const updated = pathWithBounds(await assertions.getPdf().page(1).selectPaths(), originalBounds);
+        expect(updated.strokeColor).toEqual(redColor);
+        expect(updated.fillColor).toEqual(blueColor);
     });
 
     test('path edit without changes returns success', async () => {
         const [baseUrl, token, pdfData] = await requireEnvAndFixture('basic-paths.pdf');
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
-        const paths = await pdf.selectPaths();
-        const path = paths.find(p => p.internalId === 'PATH_0_000003');
-        expect(path).toBeDefined();
+        const paths = await pdf.page(1).selectPathsAt(80, 720);
+        expect(paths).toHaveLength(1);
+        const path = paths[0];
 
         // Apply with no changes
         const result = await path!.edit().apply();
@@ -135,7 +141,6 @@ describe('Path Color E2E Tests', () => {
 
         // Capture the internalId of the path we created
         const newPath = paths[0];
-        const createdPathId = newPath.internalId;
 
         // Modify its color
         const redColor = new Color(255, 0, 0);
@@ -154,10 +159,7 @@ describe('Path Color E2E Tests', () => {
         const reloadedPaths = await reloadedPdf.page(1).selectPathsAt(100, 100, 10);
         expect(reloadedPaths.length).toBe(1);
 
-        // Find the path by internalId to verify it persisted
-        const modifiedPath = reloadedPaths.find(p => p.internalId === createdPathId);
-        expect(modifiedPath).toBeDefined();
-        expect(modifiedPath!.strokeColor).toEqual(redColor);
+        expect(reloadedPaths[0].strokeColor).toEqual(redColor);
     });
 
     test('path colors persist after save and reload', async () => {
@@ -165,13 +167,14 @@ describe('Path Color E2E Tests', () => {
         const pdf = await PDFDancer.open(pdfData, token, baseUrl);
 
         // Get a path
-        const paths = await pdf.selectPaths();
-        const path = paths.find(p => p.internalId === 'PATH_0_000003');
-        expect(path).toBeDefined();
+        const paths = await pdf.page(1).selectPathsAt(80, 720);
+        expect(paths).toHaveLength(1);
+        const path = paths[0];
+        const originalBounds = path.position.boundingRect!;
 
         // Modify the stroke color
         const greenColor = new Color(0, 255, 0);
-        await path!.edit()
+        await path.edit()
             .strokeColor(greenColor)
             .apply();
 
@@ -181,8 +184,7 @@ describe('Path Color E2E Tests', () => {
 
         // Get paths from the reloaded PDF and verify the color persisted
         const reloadedPaths = await reloadedPdf.selectPaths();
-        const reloadedPath = reloadedPaths.find(p => p.internalId === 'PATH_0_000003');
-        expect(reloadedPath).toBeDefined();
-        expect(reloadedPath!.strokeColor).toEqual(greenColor);
+        const reloadedPath = pathWithBounds(reloadedPaths, originalBounds);
+        expect(reloadedPath.strokeColor).toEqual(greenColor);
     });
 });
