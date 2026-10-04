@@ -1,10 +1,30 @@
 import {requireEnvAndFixture} from './test-helpers';
 import {PDFDancer} from '../../pdfdancer_v2';
+import {BoundingRect} from '../../models';
 import {PDFAssertions} from './pdf-assertions';
+import {pathWithBounds as selectPathWithBounds} from './path-test-support';
 
 const CLIPPING_FIXTURE = 'invisible-content-clipping-test.pdf';
-const TARGET_PATH_ID = 'PATH_0_000004';
-const CONTROL_PATH_ID = 'PATH_0_000003';
+// The fixture's blue circle is the target; its red stroked rectangle is the control path.
+const TARGET_PATH_BOUNDS = new BoundingRect(260, 460, 80, 80);
+const CONTROL_PATH_BOUNDS = new BoundingRect(100, 300, 120, 80);
+
+async function findPathWithBounds(pdf: PDFDancer, bounds: BoundingRect) {
+    const paths = await pdf.page(1).selectPaths();
+    return selectPathWithBounds(paths, bounds);
+}
+
+async function assertPathClipping(pdf: PDFDancer, bounds: BoundingRect, clipped: boolean) {
+    const assertions = await PDFAssertions.create(pdf);
+    // PDFAssertions saves and reopens the document, which can regenerate path IDs.
+    const path = await findPathWithBounds(assertions.getPdf(), bounds);
+    if (clipped) {
+        await assertions.assertPathHasClipping(path.internalId);
+    } else {
+        await assertions.assertPathHasNoClipping(path.internalId);
+    }
+}
+
 describe('Clear Clipping E2E Tests', () => {
     let baseUrl: string;
     let token: string;
@@ -17,63 +37,58 @@ describe('Clear Clipping E2E Tests', () => {
     });
 
     test('clear clipping via path reference', async () => {
-        const paths = await pdf.page(1).selectPaths();
-        const path = paths.find(pathObject => pathObject.internalId === TARGET_PATH_ID);
-        expect(path).toBeDefined();
+        const path = await findPathWithBounds(pdf, TARGET_PATH_BOUNDS);
 
+        await assertPathClipping(pdf, TARGET_PATH_BOUNDS, true);
+        await assertPathClipping(pdf, CONTROL_PATH_BOUNDS, true);
         const beforeAssertions = await PDFAssertions.create(pdf);
-        await beforeAssertions.assertPathHasClipping(TARGET_PATH_ID);
-        await beforeAssertions.assertPathHasClipping(CONTROL_PATH_ID);
         await beforeAssertions.assertNumberOfPaths(3, 1);
 
-        expect(await path!.clearClipping()).toBe(true);
+        expect(await path.clearClipping()).toBe(true);
 
+        await assertPathClipping(pdf, TARGET_PATH_BOUNDS, false);
+        await assertPathClipping(pdf, CONTROL_PATH_BOUNDS, true);
         const afterAssertions = await PDFAssertions.create(pdf);
-        await afterAssertions.assertPathHasNoClipping(TARGET_PATH_ID);
-        await afterAssertions.assertPathHasClipping(CONTROL_PATH_ID);
         await afterAssertions.assertNumberOfPaths(3, 1);
     });
 
     test('clear clipping via PDFDancer objectRef API', async () => {
-        const paths = await pdf.page(1).selectPaths();
-        const path = paths.find(pathObject => pathObject.internalId === TARGET_PATH_ID);
-        expect(path).toBeDefined();
+        const path = await findPathWithBounds(pdf, TARGET_PATH_BOUNDS);
 
-        const beforeAssertions = await PDFAssertions.create(pdf);
-        await beforeAssertions.assertPathHasClipping(TARGET_PATH_ID);
+        await assertPathClipping(pdf, TARGET_PATH_BOUNDS, true);
+        await assertPathClipping(pdf, CONTROL_PATH_BOUNDS, true);
 
-        expect(await pdf.clearClipping(path!.objectRef())).toBe(true);
+        expect(await pdf.clearClipping(path.objectRef())).toBe(true);
 
-        const afterAssertions = await PDFAssertions.create(pdf);
-        await afterAssertions.assertPathHasNoClipping(TARGET_PATH_ID);
-        await afterAssertions.assertPathHasClipping(CONTROL_PATH_ID);
+        await assertPathClipping(pdf, TARGET_PATH_BOUNDS, false);
+        await assertPathClipping(pdf, CONTROL_PATH_BOUNDS, true);
     });
 
     test('clear path-group clipping via reference', async () => {
-        const beforeAssertions = await PDFAssertions.create(pdf);
-        await beforeAssertions.assertPathHasClipping(TARGET_PATH_ID);
-        await beforeAssertions.assertPathHasClipping(CONTROL_PATH_ID);
+        await assertPathClipping(pdf, TARGET_PATH_BOUNDS, true);
+        await assertPathClipping(pdf, CONTROL_PATH_BOUNDS, true);
 
-        const group = await pdf.page(1).groupPaths([TARGET_PATH_ID]);
+        const path = await findPathWithBounds(pdf, TARGET_PATH_BOUNDS);
+        const group = await pdf.page(1).groupPaths([path.internalId]);
         expect(await group.clearClipping()).toBe(true);
 
+        await assertPathClipping(pdf, TARGET_PATH_BOUNDS, false);
+        await assertPathClipping(pdf, CONTROL_PATH_BOUNDS, true);
         const afterAssertions = await PDFAssertions.create(pdf);
-        await afterAssertions.assertPathHasNoClipping(TARGET_PATH_ID);
-        await afterAssertions.assertPathHasClipping(CONTROL_PATH_ID);
         await afterAssertions.assertNumberOfPaths(3, 1);
     });
 
     test('clear path-group clipping via PDFDancer API', async () => {
-        const beforeAssertions = await PDFAssertions.create(pdf);
-        await beforeAssertions.assertPathHasClipping(TARGET_PATH_ID);
-        await beforeAssertions.assertPathHasClipping(CONTROL_PATH_ID);
+        await assertPathClipping(pdf, TARGET_PATH_BOUNDS, true);
+        await assertPathClipping(pdf, CONTROL_PATH_BOUNDS, true);
 
-        const group = await pdf.page(1).groupPaths([TARGET_PATH_ID]);
+        const path = await findPathWithBounds(pdf, TARGET_PATH_BOUNDS);
+        const group = await pdf.page(1).groupPaths([path.internalId]);
         expect(await pdf.clearPathGroupClipping(1, group.groupId)).toBe(true);
 
+        await assertPathClipping(pdf, TARGET_PATH_BOUNDS, false);
+        await assertPathClipping(pdf, CONTROL_PATH_BOUNDS, true);
         const afterAssertions = await PDFAssertions.create(pdf);
-        await afterAssertions.assertPathHasNoClipping(TARGET_PATH_ID);
-        await afterAssertions.assertPathHasClipping(CONTROL_PATH_ID);
         await afterAssertions.assertNumberOfPaths(3, 1);
     });
 
@@ -83,13 +98,13 @@ describe('Clear Clipping E2E Tests', () => {
 
         const beforeAssertions = await PDFAssertions.create(pdf);
         await beforeAssertions.assertImageHasClipping(image.internalId);
-        await beforeAssertions.assertPathHasClipping(TARGET_PATH_ID);
+        await assertPathClipping(pdf, TARGET_PATH_BOUNDS, true);
 
         expect(await image.clearClipping()).toBe(true);
 
         const afterAssertions = await PDFAssertions.create(pdf);
         await afterAssertions.assertImageHasNoClipping(image.internalId);
-        await afterAssertions.assertPathHasClipping(TARGET_PATH_ID);
+        await assertPathClipping(pdf, TARGET_PATH_BOUNDS, true);
         await afterAssertions.assertImageWithIdAt(image.internalId, 200, 400);
     });
 
