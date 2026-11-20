@@ -252,10 +252,11 @@ if (response.errors?.some(error => error.code === TextOperationDiagnostic.ALIGNM
 }
 ```
 
-- `alignment()` alone uses `reflowWhenSupported` with the `noReflow` profile. You can combine it with
+- `alignment()` alone uses `reflowWhenSupported` with the `KEEP_LINE_BREAKS` profile. You can combine it with
   `reflowWhenSupported(profile)` or `requireReflow(profile)` in any order. `layout(...)` keeps an alignment that you set
   with `alignment()`, unless the layout that you pass has its own alignment.
-- A layout with no mode and no profile (for example, `hyphenationEnabled(false)` alone) uses the `noReflow` profile.
+- A layout with no mode and no profile (for example, `hyphenationEnabled(false)` alone) uses the `KEEP_LINE_BREAKS`
+  profile. `NO_REFLOW` is a deprecated alias of `KEEP_LINE_BREAKS`.
 - `replaceWithImage(...)` uses a `sourceAnchored` layout. If you do not set a layout, the SDK sets it.
 - `alignment()` is valid only for replace. With `sourceAnchored()` or `replaceWithImage(...)`, `build()` throws
   `ValidationException`. The delete, insert, and style requests reject a layout that has an alignment.

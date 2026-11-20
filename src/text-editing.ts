@@ -151,6 +151,17 @@ export enum TextLayoutMode {
 export enum TextLayoutProfile {
     DEFAULT = 'default',
     BODY_TEXT = 'bodyText',
+    /**
+     * Keeps every existing line break. Each line is still recomposed horizontally: following text shifts along
+     * the line to make room, nothing wraps onto a new line, and a line may grow beyond its original width.
+     * Sent to the API as `noReflow`.
+     */
+    KEEP_LINE_BREAKS = 'noReflow',
+    /**
+     * @deprecated Renamed to {@link TextLayoutProfile.KEEP_LINE_BREAKS}, because "no reflow" contradicted the
+     * `reflowWhenSupported` and `requireReflow` modes it is used with. Behaves identically.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-duplicate-enum-values
     NO_REFLOW = 'noReflow'
 }
 
@@ -176,7 +187,7 @@ function rejectAlignment(layout?: TextLayoutRequest): void {
  * Layout settings attached to a text-editing request.
  *
  * An omitted `mode` means `reflowWhenSupported`, as in the API. That mode needs a `profile`. When `mode` and
- * `profile` are both omitted, the SDK uses the `noReflow` profile.
+ * `profile` are both omitted, the SDK uses the `KEEP_LINE_BREAKS` profile.
  */
 export class TextLayoutRequest {
     constructor(
@@ -207,9 +218,9 @@ export class TextLayoutRequest {
         return new TextLayoutRequest(this.mode, this.profile, this.hyphenationEnabled, alignment);
     }
 
-    /** Returns the profile to send. A layout with no mode and no profile gets `noReflow`. */
+    /** Returns the profile to send. A layout with no mode and no profile gets `KEEP_LINE_BREAKS`. */
     private effectiveProfile(): TextLayoutProfile | undefined {
-        return this.profile === undefined && this.mode === undefined ? TextLayoutProfile.NO_REFLOW : this.profile;
+        return this.profile === undefined && this.mode === undefined ? TextLayoutProfile.KEEP_LINE_BREAKS : this.profile;
     }
 
     validated(): this {
@@ -234,7 +245,7 @@ export class TextLayoutRequest {
             fail('layout.alignment is not valid when layout.mode is sourceAnchored');
         }
         if (mode !== TextLayoutMode.SOURCE_ANCHORED && this.effectiveProfile() === undefined) {
-            fail(`${mode} profile must be one of default, bodyText, noReflow`);
+            fail(`${mode} profile must be one of DEFAULT, BODY_TEXT, KEEP_LINE_BREAKS`);
         }
         return this;
     }
@@ -461,7 +472,7 @@ export class TextReplaceRequestBuilder extends SelectorLayoutBuilder<TextReplace
     /**
      * Aligns each edited line explicitly. Valid only for text replace.
      *
-     * Without a layout, this selects `reflowWhenSupported` with the `noReflow` profile, the API default for an
+     * Without a layout, this selects `reflowWhenSupported` with the `KEEP_LINE_BREAKS` profile, the API default for an
      * omitted layout. It can be combined with `reflowWhenSupported(...)` and `requireReflow(...)` in any order.
      * `sourceAnchored()` and `replaceWithImage(...)` are rejected at `build()`.
      *
@@ -481,7 +492,7 @@ export class TextReplaceRequestBuilder extends SelectorLayoutBuilder<TextReplace
     protected builtLayout(): TextLayoutRequest | undefined {
         const layout = super.builtLayout();
         if (this.pendingAlignment === undefined) return layout;
-        const base = layout ?? TextLayoutRequest.reflowWhenSupported(TextLayoutProfile.NO_REFLOW);
+        const base = layout ?? TextLayoutRequest.reflowWhenSupported(TextLayoutProfile.KEEP_LINE_BREAKS);
         return base.withAlignment(this.pendingAlignment).validated();
     }
     replaceWith(value: string): this { this.replacement = value; this.image = undefined; return this; }
