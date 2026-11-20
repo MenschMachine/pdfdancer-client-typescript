@@ -419,6 +419,20 @@ export class PathObjectRef extends ObjectRef {
 }
 
 /**
+ * Reference to a text line, carrying the text content reported by the server.
+ */
+export class TextObjectRef extends ObjectRef {
+    constructor(
+        internalId: string,
+        position: Position,
+        type: ObjectType,
+        public text?: string
+    ) {
+        super(internalId, position, type);
+    }
+}
+
+/**
  * Represents an RGB color with optional alpha channel, values from 0-255.
  */
 export class Color {

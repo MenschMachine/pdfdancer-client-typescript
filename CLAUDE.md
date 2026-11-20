@@ -43,7 +43,7 @@ Test timeout is 120s per test. E2E helpers are in `src/__tests__/e2e/test-helper
 
 ### Core Files
 - `src/pdfdancer_v2.ts` — Main client class (`PDFDancer`). Session-based: opens a PDF, performs operations, saves/downloads.
-- `src/types.ts` — Object classes returned by selectors (`ParagraphObject`, `TextLineObject`, `ImageObject`, etc.)
+- `src/types.ts` — Object classes returned by selectors (`TextLineObject`, `ImageObject`, `PathObject`, etc.)
 - `src/models.ts` — Data models (`Position`, `Color`, `Font`, `BoundingRect`, `ObjectRef`, `TextObjectRef`, enums)
 - `src/exceptions.ts` — Exception hierarchy: `PdfDancerException` → `HttpClientException`, `SessionException`, `ValidationException`, `FontNotFoundException`
 
@@ -57,7 +57,7 @@ Test timeout is 120s per test. E2E helpers are in `src/__tests__/e2e/test-helper
 ### Key Patterns
 - **Session-based**: `PDFDancer.open()` creates an HTTP session; all operations happen within it
 - **Builder pattern**: All builders are chainable, finalized with a terminal method
-- **Typed object references**: Selectors return strongly-typed objects (`ParagraphObject`, `TextLineObject`, etc.) with `.edit()`, `.delete()`, `.moveTo()`, `.redact()` methods
+- **Typed object references**: Selectors return strongly-typed objects (`TextLineObject`, `ImageObject`, `PathObject`, etc.) with `.delete()`, `.moveTo(x, y)`, `.moveX(dx)` and `.moveY(dy)` (relative offsets in PDF points), plus type-specific methods such as `PathObject.edit()`
 - **Position system**: `Position.atPageCoordinates()`, `Position.atPage()`, `Position.byName()` with tolerance for fuzzy matching
 - **Retry mechanism**: Configurable via `RetryConfig` — exponential backoff, retries on 429/502/503/504, respects `Retry-After` header
 

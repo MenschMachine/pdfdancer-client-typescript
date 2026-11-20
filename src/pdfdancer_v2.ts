@@ -52,7 +52,8 @@ import {
     PositionMode,
     ShapeType,
     PathGroupInfo,
-    PathGroupTransformType
+    PathGroupTransformType,
+    TextObjectRef
 } from './models';
 import {PageBuilder} from './page-builder';
 import {
@@ -60,7 +61,8 @@ import {
     FormXObject,
     ImageObject,
     PathObject,
-    PathGroupObject
+    PathGroupObject,
+    TextLineObject
 } from "./types";
 import {ImageBuilder} from "./image-builder";
 import {BezierBuilder, LineBuilder, PathBuilder, RectangleBuilder} from "./path-builder";
@@ -415,6 +417,8 @@ interface PDFDancerInternals {
 
     toImageObjects(objectRefs: ObjectRef[]): ImageObject[];
 
+    toTextLineObjects(objectRefs: ObjectRef[]): TextLineObject[];
+
     toPathObjects(objectRefs: ObjectRef[]): PathObject[];
 
     toFormXObjects(objectRefs: ObjectRef[]): FormXObject[];
@@ -428,6 +432,8 @@ interface PDFDancerInternals {
     findFormXObjects(position?: Position): Promise<ObjectRef[]>;
 
     _findImages(position?: Position): Promise<ObjectRef[]>;
+
+    _findTextLines(position?: Position): Promise<ObjectRef[]>;
 
     createPathGroup(pageIndex: number, pathIds: string[]): Promise<PathGroupObject>;
     createPathGroupInRegion(pageIndex: number, region: BoundingRect): Promise<PathGroupObject>;
@@ -488,6 +494,16 @@ export class PageClient {
 
     async selectImagesAt(x: number, y: number, tolerance: number = 0.01) {
         return this._internals.toImageObjects(await this._internals._findImages(Position.atPageCoordinates(this._pageNumber, x, y, tolerance)));
+    }
+
+    /** Selects the text lines on this page. */
+    async selectTextLines(): Promise<TextLineObject[]> {
+        return this._internals.toTextLineObjects(await this._internals._findTextLines(Position.atPage(this._pageNumber)));
+    }
+
+    /** Selects the text lines at the given page coordinates. */
+    async selectTextLinesAt(x: number, y: number, tolerance: number = 0.01): Promise<TextLineObject[]> {
+        return this._internals.toTextLineObjects(await this._internals._findTextLines(Position.atPageCoordinates(this._pageNumber, x, y, tolerance)));
     }
 
     async delete(): Promise<boolean> {
@@ -1207,6 +1223,21 @@ export class PDFDancer {
 
     async selectImages(): Promise<ImageObject[]> {
         return this.toImageObjects(await this.find(ObjectType.IMAGE));
+    }
+
+    /**
+     * Searches for text lines at the specified position.
+     */
+    private async _findTextLines(position?: Position): Promise<ObjectRef[]> {
+        return this.find(ObjectType.TEXT_LINE, position);
+    }
+
+    /**
+     * Selects all text lines in the document. Lines can be moved with
+     * `moveTo`, `moveX` and `moveY`.
+     */
+    async selectTextLines(): Promise<TextLineObject[]> {
+        return this.toTextLineObjects(await this.find(ObjectType.TEXT_LINE));
     }
 
     /**
@@ -2014,6 +2045,16 @@ export class PDFDancer {
             );
         }
 
+        // Text lines keep their text content
+        if (objectType === ObjectType.TEXT_LINE) {
+            return new TextObjectRef(
+                objData.internalId,
+                position,
+                objectType,
+                typeof objData.text === 'string' ? objData.text : undefined
+            );
+        }
+
         return new ObjectRef(
             objData.internalId,
             position,
@@ -2206,6 +2247,10 @@ export class PDFDancer {
 
     private toImageObjects(objectRefs: ObjectRef[]) {
         return objectRefs.map(ref => ImageObject.fromRef(this, ref));
+    }
+
+    private toTextLineObjects(objectRefs: ObjectRef[]) {
+        return objectRefs.map(ref => TextLineObject.fromRef(this, ref));
     }
 
     newImage(pageNumber?: number) {
