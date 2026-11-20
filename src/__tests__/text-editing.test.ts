@@ -78,7 +78,7 @@ describe('v2 text editing requests', () => {
 
     test('serializes delete and anchor insertion requests', () => {
         expect(json(TextDeleteRequest.regex('\\bDRAFT\\b')
-            .reflowWhenSupported(TextLayoutProfile.NO_REFLOW).build())).toEqual({
+            .reflowWhenSupported(TextLayoutProfile.KEEP_LINE_BREAKS).build())).toEqual({
             select: {regex: '\\bDRAFT\\b'},
             layout: {mode: 'reflowWhenSupported', profile: 'noReflow'}
         });
@@ -201,8 +201,8 @@ describe('v2 text editing validation', () => {
     });
 });
 
-const NO_REFLOW_RIGHT = {mode: 'reflowWhenSupported', profile: 'noReflow', alignment: 'right'};
-const NO_REFLOW_PLAIN = TextLayoutRequest.reflowWhenSupported(TextLayoutProfile.NO_REFLOW);
+const KEEP_LINE_BREAKS_RIGHT = {mode: 'reflowWhenSupported', profile: 'noReflow', alignment: 'right'};
+const KEEP_LINE_BREAKS_PLAIN = TextLayoutRequest.reflowWhenSupported(TextLayoutProfile.KEEP_LINE_BREAKS);
 const imageRequest = (layout?: TextLayoutRequest): TextReplaceRequest => new TextReplaceRequest(
     undefined,
     new TextSelectorRequest('{{logo}}'),
@@ -217,7 +217,7 @@ describe('v2 text replace alignment', () => {
         expect(Object.values(TextAlignment)).toEqual(['left', 'right', 'centered', 'justified']);
     });
 
-    test.each(Object.values(TextAlignment))('alignment alone implies reflowWhenSupported with the noReflow profile (%s)', alignment => {
+    test.each(Object.values(TextAlignment))('alignment alone implies reflowWhenSupported with the KEEP_LINE_BREAKS profile (%s)', alignment => {
         const request = TextReplaceRequest.literal('a', 'b').alignment(alignment).build();
         expect(json(request).layout).toEqual({mode: 'reflowWhenSupported', profile: 'noReflow', alignment});
     });
@@ -225,9 +225,9 @@ describe('v2 text replace alignment', () => {
     test.each([true, false])('alignment combines with an explicit layout in any order (alignment first: %s)', alignmentFirst => {
         let builder = TextReplaceRequest.literal('a', 'b');
         if (alignmentFirst) builder = builder.alignment(TextAlignment.RIGHT);
-        builder = builder.reflowWhenSupported(TextLayoutProfile.NO_REFLOW);
+        builder = builder.reflowWhenSupported(TextLayoutProfile.KEEP_LINE_BREAKS);
         if (!alignmentFirst) builder = builder.alignment(TextAlignment.RIGHT);
-        expect(json(builder.build()).layout).toEqual(NO_REFLOW_RIGHT);
+        expect(json(builder.build()).layout).toEqual(KEEP_LINE_BREAKS_RIGHT);
     });
 
     test('alignment combines with hyphenation and requireReflow', () => {
@@ -249,7 +249,7 @@ describe('v2 text replace alignment', () => {
     });
 
     test('a request without alignment has no alignment key', () => {
-        const request = TextReplaceRequest.literal('a', 'b').reflowWhenSupported(TextLayoutProfile.NO_REFLOW).build();
+        const request = TextReplaceRequest.literal('a', 'b').reflowWhenSupported(TextLayoutProfile.KEEP_LINE_BREAKS).build();
         expect(json(request).layout).not.toHaveProperty('alignment');
     });
 
@@ -269,26 +269,26 @@ describe('v2 text replace alignment', () => {
     });
 
     test('layout() carries alignment and keeps an alignment set by alignment()', () => {
-        const withAlignment = NO_REFLOW_PLAIN.withAlignment(TextAlignment.RIGHT);
-        expect(json(TextReplaceRequest.literal('a', 'b').layout(withAlignment).build()).layout).toEqual(NO_REFLOW_RIGHT);
+        const withAlignment = KEEP_LINE_BREAKS_PLAIN.withAlignment(TextAlignment.RIGHT);
+        expect(json(TextReplaceRequest.literal('a', 'b').layout(withAlignment).build()).layout).toEqual(KEEP_LINE_BREAKS_RIGHT);
 
-        const alignmentFirst = TextReplaceRequest.literal('a', 'b').alignment(TextAlignment.RIGHT).layout(NO_REFLOW_PLAIN).build();
-        const layoutFirst = TextReplaceRequest.literal('a', 'b').layout(NO_REFLOW_PLAIN).alignment(TextAlignment.RIGHT).build();
-        expect(json(alignmentFirst).layout).toEqual(NO_REFLOW_RIGHT);
-        expect(json(layoutFirst).layout).toEqual(NO_REFLOW_RIGHT);
+        const alignmentFirst = TextReplaceRequest.literal('a', 'b').alignment(TextAlignment.RIGHT).layout(KEEP_LINE_BREAKS_PLAIN).build();
+        const layoutFirst = TextReplaceRequest.literal('a', 'b').layout(KEEP_LINE_BREAKS_PLAIN).alignment(TextAlignment.RIGHT).build();
+        expect(json(alignmentFirst).layout).toEqual(KEEP_LINE_BREAKS_RIGHT);
+        expect(json(layoutFirst).layout).toEqual(KEEP_LINE_BREAKS_RIGHT);
 
         // A layout with its own alignment replaces the earlier alignment.
         const replaced = TextReplaceRequest.literal('a', 'b')
             .alignment(TextAlignment.LEFT)
-            .layout(NO_REFLOW_PLAIN.withAlignment(TextAlignment.CENTERED))
+            .layout(KEEP_LINE_BREAKS_PLAIN.withAlignment(TextAlignment.CENTERED))
             .build();
         expect(json(replaced).layout.alignment).toBe('centered');
     });
 
     test('layout request serializes and validates alignment', () => {
-        const layout = NO_REFLOW_PLAIN.withAlignment(TextAlignment.RIGHT);
+        const layout = KEEP_LINE_BREAKS_PLAIN.withAlignment(TextAlignment.RIGHT);
         expect(layout.alignment).toBe(TextAlignment.RIGHT);
-        expect(json(layout)).toEqual(NO_REFLOW_RIGHT);
+        expect(json(layout)).toEqual(KEEP_LINE_BREAKS_RIGHT);
         expect(() => TextLayoutRequest.sourceAnchored().withAlignment(TextAlignment.RIGHT).validated())
             .toThrow('layout.alignment is not valid');
         expect(() => new TextLayoutRequest(undefined, undefined, undefined, 'diagonal' as TextAlignment).validated())
@@ -296,15 +296,15 @@ describe('v2 text replace alignment', () => {
     });
 
     test('withHyphenationEnabled keeps the alignment', () => {
-        const layout = NO_REFLOW_PLAIN.withAlignment(TextAlignment.RIGHT).withHyphenationEnabled(true);
+        const layout = KEEP_LINE_BREAKS_PLAIN.withAlignment(TextAlignment.RIGHT).withHyphenationEnabled(true);
         expect(layout.alignment).toBe(TextAlignment.RIGHT);
         expect(layout.hyphenationEnabled).toBe(true);
     });
 
     test.each([
-        ['delete', () => new TextDeleteRequest(undefined, new TextSelectorRequest('x'), NO_REFLOW_PLAIN.withAlignment(TextAlignment.RIGHT)).validated()],
-        ['insert', () => TextInsertRequest.after('x', 'y').layout(NO_REFLOW_PLAIN.withAlignment(TextAlignment.RIGHT)).build()],
-        ['style', () => TextStyleRequest.literal('x').font('Helvetica').layout(NO_REFLOW_PLAIN.withAlignment(TextAlignment.RIGHT)).build()]
+        ['delete', () => new TextDeleteRequest(undefined, new TextSelectorRequest('x'), KEEP_LINE_BREAKS_PLAIN.withAlignment(TextAlignment.RIGHT)).validated()],
+        ['insert', () => TextInsertRequest.after('x', 'y').layout(KEEP_LINE_BREAKS_PLAIN.withAlignment(TextAlignment.RIGHT)).build()],
+        ['style', () => TextStyleRequest.literal('x').font('Helvetica').layout(KEEP_LINE_BREAKS_PLAIN.withAlignment(TextAlignment.RIGHT)).build()]
     ])('%s rejects a layout that has an alignment', (_name, build) => {
         expect(build).toThrow('layout.alignment is valid only for text replace');
     });
