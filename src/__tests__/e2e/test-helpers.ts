@@ -5,6 +5,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import os from "os";
+import {randomUUID} from 'crypto';
 
 /**
  * Get the base URL from environment variable or default
@@ -109,7 +110,9 @@ export async function requireEnvAndFixture(pdfFilename: string): Promise<[string
 }
 
 /**
- * Helper to open temporary file path (for Node.js environment)
+ * Helper to get a unique temporary file path (for Node.js environment).
+ * The name is made unique so a file left behind by another run or user in the shared
+ * temp directory can never collide with (or block writing to) this one.
  */
 export function createTempPath(filename: string): string {
     const tmpDir =
@@ -118,7 +121,7 @@ export function createTempPath(filename: string): string {
         process.env.TMP ||
         os.tmpdir(); // reliable built-in fallback
 
-    return path.join(tmpDir, filename);
+    return path.join(tmpDir, `pdfdancer-${randomUUID()}-${filename}`);
 }
 
 /**
