@@ -2237,8 +2237,8 @@ export class PDFDancer {
         operation: TextOperation,
         request: TextReplaceRequest | TextDeleteRequest | TextInsertRequest | TextStyleRequest
     ): Promise<TextEditResponse> {
-        request.validated();
-        const response = await this._makeRequest('POST', `/pdf/text/${operation}`, request);
+        const validated = request.validated();
+        const response = await this._makeRequest('POST', `/pdf/text/${operation}`, validated);
         const result = await response.json() as TextEditResponse;
         if (result.change) {
             result.change = result.change.map(change => ({

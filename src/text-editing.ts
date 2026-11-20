@@ -14,6 +14,7 @@ function compact(value: object): Record<string, unknown> {
 
 function normalizedPages(values: Array<number | number[]>): number[] {
     const pages = values.flatMap(value => Array.isArray(value) ? value : [value]);
+    if (pages.length === 0) fail('pages must not be empty');
     for (const page of pages) {
         if (!Number.isInteger(page) || page < 1) fail('pages must contain only page numbers >= 1');
     }
@@ -153,12 +154,36 @@ export enum TextLayoutProfile {
     NO_REFLOW = 'noReflow'
 }
 
-/** Layout settings attached to a text-editing request. */
+/**
+ * Explicit alignment of each edited line. Valid only for text replace.
+ *
+ * Each edited line keeps its original visible text extent as the reference: `LEFT` keeps the left edge, `RIGHT`
+ * keeps the right edge, `CENTERED` keeps the midpoint, and `JUSTIFIED` keeps both edges by changing the word gaps
+ * (the last line of a paragraph stays left-aligned).
+ */
+export enum TextAlignment {
+    LEFT = 'left',
+    RIGHT = 'right',
+    CENTERED = 'centered',
+    JUSTIFIED = 'justified'
+}
+
+function rejectAlignment(layout?: TextLayoutRequest): void {
+    if (layout?.alignment !== undefined) fail('layout.alignment is valid only for text replace');
+}
+
+/**
+ * Layout settings attached to a text-editing request.
+ *
+ * An omitted `mode` means `reflowWhenSupported`, as in the API. That mode needs a `profile`. When `mode` and
+ * `profile` are both omitted, the SDK uses the `noReflow` profile.
+ */
 export class TextLayoutRequest {
     constructor(
         public readonly mode?: TextLayoutMode,
         public readonly profile?: TextLayoutProfile,
-        public readonly hyphenationEnabled?: boolean
+        public readonly hyphenationEnabled?: boolean,
+        public readonly alignment?: TextAlignment
     ) {}
 
     static sourceAnchored(): TextLayoutRequest {
@@ -174,25 +199,53 @@ export class TextLayoutRequest {
     }
 
     withHyphenationEnabled(enabled: boolean): TextLayoutRequest {
-        return new TextLayoutRequest(this.mode, this.profile, enabled);
+        return new TextLayoutRequest(this.mode, this.profile, enabled, this.alignment);
+    }
+
+    /** Sets the explicit alignment. Valid only for text replace. */
+    withAlignment(alignment: TextAlignment): TextLayoutRequest {
+        return new TextLayoutRequest(this.mode, this.profile, this.hyphenationEnabled, alignment);
+    }
+
+    /** Returns the profile to send. A layout with no mode and no profile gets `noReflow`. */
+    private effectiveProfile(): TextLayoutProfile | undefined {
+        return this.profile === undefined && this.mode === undefined ? TextLayoutProfile.NO_REFLOW : this.profile;
     }
 
     validated(): this {
-        const mode = this.mode ?? TextLayoutMode.SOURCE_ANCHORED;
+        // The API treats an omitted mode as reflowWhenSupported.
+        const mode = this.mode ?? TextLayoutMode.REFLOW_WHEN_SUPPORTED;
+        if (this.mode !== undefined && !Object.values(TextLayoutMode).includes(this.mode)) {
+            fail('layout.mode must be a TextLayoutMode');
+        }
+        if (this.profile !== undefined && !Object.values(TextLayoutProfile).includes(this.profile)) {
+            fail('layout.profile must be a TextLayoutProfile');
+        }
+        if (this.alignment !== undefined && !Object.values(TextAlignment).includes(this.alignment)) {
+            fail('layout.alignment must be a TextAlignment');
+        }
         if (mode === TextLayoutMode.SOURCE_ANCHORED && this.profile !== undefined) {
             fail('sourceAnchored layout must not specify profile');
         }
         if (mode === TextLayoutMode.SOURCE_ANCHORED && this.hyphenationEnabled !== undefined) {
             fail('layout.hyphenationEnabled is not valid when layout.mode is sourceAnchored');
         }
-        if (mode !== TextLayoutMode.SOURCE_ANCHORED && this.profile === undefined) {
+        if (mode === TextLayoutMode.SOURCE_ANCHORED && this.alignment !== undefined) {
+            fail('layout.alignment is not valid when layout.mode is sourceAnchored');
+        }
+        if (mode !== TextLayoutMode.SOURCE_ANCHORED && this.effectiveProfile() === undefined) {
             fail(`${mode} profile must be one of default, bodyText, noReflow`);
         }
         return this;
     }
 
     toJSON(): Record<string, unknown> {
-        return compact({mode: this.mode, profile: this.profile, hyphenationEnabled: this.hyphenationEnabled});
+        return compact({
+            mode: this.mode,
+            profile: this.effectiveProfile(),
+            hyphenationEnabled: this.hyphenationEnabled,
+            alignment: this.alignment
+        });
     }
 }
 
@@ -339,7 +392,7 @@ abstract class SelectorLayoutBuilder<T> {
 
     protected builtLayout(): TextLayoutRequest | undefined {
         if (!this.layoutValue && this.pendingHyphenation === undefined) return undefined;
-        const layout = this.layoutValue ?? TextLayoutRequest.sourceAnchored();
+        const layout = this.layoutValue ?? new TextLayoutRequest();
         return (this.pendingHyphenation === undefined ? layout : layout.withHyphenationEnabled(this.pendingHyphenation)).validated();
     }
 
@@ -370,21 +423,31 @@ export class TextReplaceRequest {
     static builder(): TextReplaceRequestBuilder { return new TextReplaceRequestBuilder(); }
     withPages(pages: number[]): TextReplaceRequest { return new TextReplaceRequest([...pages], this.select, this.replaceWith, this.replaceWithImage, this.style, this.layout).validated(); }
 
-    validated(): this {
+    /**
+     * Validates the request. `replaceWithImage` needs a `sourceAnchored` layout. When `layout` is omitted, the
+     * returned request has `TextLayoutRequest.sourceAnchored()`. In that case it is a new object, not `this`.
+     */
+    validated(): TextReplaceRequest {
         if (this.pages) normalizedPages([this.pages]);
         this.select.validated();
         if ((this.replaceWith === undefined) === (this.replaceWithImage === undefined)) fail('Exactly one of replaceWith or replaceWithImage is required');
+        let request: TextReplaceRequest = this;
         if (this.replaceWithImage) {
             if (this.replaceWithImage.data.length === 0) fail('replaceWithImage image data is required and must not be empty');
             if (this.style) fail('style is not valid with replaceWithImage');
-            if (this.layout?.mode && this.layout.mode !== TextLayoutMode.SOURCE_ANCHORED) fail('replaceWithImage supports only sourceAnchored layout');
+            if (this.layout?.alignment !== undefined) fail('layout.alignment is not valid with replaceWithImage');
+            if (!this.layout) {
+                request = new TextReplaceRequest(this.pages, this.select, this.replaceWith, this.replaceWithImage, this.style, TextLayoutRequest.sourceAnchored());
+            } else if (this.layout.mode !== TextLayoutMode.SOURCE_ANCHORED) {
+                fail('replaceWithImage supports only sourceAnchored layout');
+            }
         }
         this.style?.validated();
-        this.layout?.validated();
-        return this;
+        request.layout?.validated();
+        return request;
     }
 
-    toJSON(): Record<string, unknown> { return compact({...this}); }
+    toJSON(): Record<string, unknown> { return compact({...this.validated()}); }
 }
 
 /** Builds a validated text-replacement request. */
@@ -393,6 +456,34 @@ export class TextReplaceRequestBuilder extends SelectorLayoutBuilder<TextReplace
     private image?: TextReplacementImageRequest;
     private styleValue?: TextStyleSetRequest;
     private styleBuilder?: TextStyleSetBuilder;
+    private pendingAlignment?: TextAlignment;
+
+    /**
+     * Aligns each edited line explicitly. Valid only for text replace.
+     *
+     * Without a layout, this selects `reflowWhenSupported` with the `noReflow` profile, the API default for an
+     * omitted layout. It can be combined with `reflowWhenSupported(...)` and `requireReflow(...)` in any order.
+     * `sourceAnchored()` and `replaceWithImage(...)` are rejected at `build()`.
+     *
+     * `layout(...)` keeps this alignment, unless the layout that it gets has its own alignment.
+     *
+     * The API reports an alignment that it cannot apply as an error with the code
+     * `TextOperationDiagnostic.ALIGNMENT_NOT_HONORED`. The API then does not change the text of the unit named in
+     * the error. Other matches can still change. The response is returned without an exception. Check
+     * `response.errors` together with `response.changed`.
+     */
+    alignment(value: TextAlignment): this { this.pendingAlignment = value; return this; }
+    layout(value: TextLayoutRequest): this {
+        super.layout(value);
+        if (value.alignment !== undefined) this.pendingAlignment = value.alignment;
+        return this;
+    }
+    protected builtLayout(): TextLayoutRequest | undefined {
+        const layout = super.builtLayout();
+        if (this.pendingAlignment === undefined) return layout;
+        const base = layout ?? TextLayoutRequest.reflowWhenSupported(TextLayoutProfile.NO_REFLOW);
+        return base.withAlignment(this.pendingAlignment).validated();
+    }
     replaceWith(value: string): this { this.replacement = value; this.image = undefined; return this; }
     replaceWithImage(data: Uint8Array, transformation: PdfAffineTransform): this { this.image = new TextReplacementImageRequest(data, transformation); this.replacement = undefined; return this; }
     style(value: TextStyleSetRequest): this { this.styleValue = value; this.styleBuilder = undefined; return this; }
@@ -406,10 +497,7 @@ export class TextReplaceRequestBuilder extends SelectorLayoutBuilder<TextReplace
     resetSpacingOverrides(): this { this.styles().resetSpacingOverrides(); return this; }
     build(): TextReplaceRequest {
         const style = this.styleBuilder ? this.styleBuilder.build() : this.styleValue;
-        const layout = this.image && !this.layoutValue && this.pendingHyphenation === undefined
-            ? TextLayoutRequest.sourceAnchored()
-            : this.builtLayout();
-        return new TextReplaceRequest(this.pageValues, this.builtSelector(), this.replacement, this.image, style, layout).validated();
+        return new TextReplaceRequest(this.pageValues, this.builtSelector(), this.replacement, this.image, style, this.builtLayout()).validated();
     }
 }
 
@@ -420,7 +508,7 @@ export class TextDeleteRequest {
     static regex(regex: string): TextDeleteRequestBuilder { return new TextDeleteRequestBuilder().regex(regex); }
     static builder(): TextDeleteRequestBuilder { return new TextDeleteRequestBuilder(); }
     withPages(pages: number[]): TextDeleteRequest { return new TextDeleteRequest([...pages], this.select, this.layout).validated(); }
-    validated(): this { if (this.pages) normalizedPages([this.pages]); this.select.validated(); this.layout?.validated(); return this; }
+    validated(): this { if (this.pages) normalizedPages([this.pages]); this.select.validated(); rejectAlignment(this.layout); this.layout?.validated(); return this; }
     toJSON(): Record<string, unknown> { return compact({...this}); }
 }
 
@@ -484,6 +572,7 @@ export class TextInsertRequest {
             this.style.patch.validated();
         }
         if (this.insert === undefined || this.insert === '') fail('insert must not be null or empty');
+        rejectAlignment(this.layout);
         this.layout?.validated();
         return this;
     }
@@ -595,6 +684,7 @@ export class TextStyleRequest {
         if (hasRuns) validateRunFilter(this.select.runs!);
         validateStyleFields(this.style, this.style.resetSpacingOverrides === undefined);
         if (this.style.resetSpacingOverrides && (this.style.characterSpacing !== undefined || this.style.wordSpacing !== undefined)) fail('resetSpacingOverrides cannot be combined with characterSpacing or wordSpacing');
+        rejectAlignment(this.layout);
         this.layout?.validated();
         return this;
     }
@@ -662,7 +752,19 @@ export interface TextEditChangeDiagnostic {
     reflowUnitIds?: string[];
 }
 
+/** Error codes of text operation diagnostics. */
+export const TextOperationDiagnostic = {
+    /**
+     * Error code of a requested `layout.alignment` that the API could not apply. The API does not change the text
+     * of the unit named in the error. Other matches can still change. No exception is raised; check
+     * `TextEditResponse.errors` together with `TextEditResponse.changed`.
+     */
+    ALIGNMENT_NOT_HONORED: 'TEXT_ALIGNMENT_NOT_HONORED'
+} as const;
+
 /** Diagnostic information about the complete text operation. */
+// The constant and the interface share one name on purpose (declaration merging).
+// eslint-disable-next-line no-redeclare
 export interface TextOperationDiagnostic {
     page?: number;
     code?: string;

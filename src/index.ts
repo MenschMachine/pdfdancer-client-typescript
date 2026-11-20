@@ -83,6 +83,7 @@ export {
   PdfAffineTransformBuilder,
   PdfColorRequest,
   PdfColorSpace,
+  TextAlignment,
   TextClient,
   TextDeleteRequest,
   TextDeleteRequestBuilder,

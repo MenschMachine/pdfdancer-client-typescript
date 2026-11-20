@@ -213,6 +213,38 @@ Document-scoped `pdf.text()` honors pages supplied by the request builder. Page-
 
 Each mutation returns a `TextEditResponse` containing match and change counts, changed page numbers, per-change diagnostics, warnings, and errors.
 
+### Explicit alignment
+
+Text replace can align each edited line explicitly with `TextAlignment`. Each edited line keeps its original visible
+text extent as the reference: `LEFT` keeps the left edge, `RIGHT` keeps the right edge, `CENTERED` keeps the midpoint,
+and `JUSTIFIED` keeps both edges by changing the word gaps. Without an alignment, the API detects the alignment from
+the source PDF.
+
+```ts
+import {TextAlignment, TextOperationDiagnostic, TextReplaceRequest} from 'pdfdancer-client-typescript';
+
+const response = await pdf.text().replace(
+  TextReplaceRequest.literal('<<account_number>>', 'BC5502731')
+    .alignment(TextAlignment.RIGHT)
+    .build()
+);
+if (response.errors?.some(error => error.code === TextOperationDiagnostic.ALIGNMENT_NOT_HONORED)) {
+  // The text of the unit named in the error was not changed; other matches can have changed.
+}
+```
+
+- `alignment()` alone uses `reflowWhenSupported` with the `noReflow` profile. You can combine it with
+  `reflowWhenSupported(profile)` or `requireReflow(profile)` in any order. `layout(...)` keeps an alignment that you set
+  with `alignment()`, unless the layout that you pass has its own alignment.
+- A layout with no mode and no profile (for example, `hyphenationEnabled(false)` alone) uses the `noReflow` profile.
+- `replaceWithImage(...)` uses a `sourceAnchored` layout. If you do not set a layout, the SDK sets it.
+- `alignment()` is valid only for replace. With `sourceAnchored()` or `replaceWithImage(...)`, `build()` throws
+  `ValidationException`. The delete, insert, and style requests reject a layout that has an alignment.
+- If the API cannot apply the alignment (for example, the replacement adds or removes a line, or the profile re-wraps
+  the lines), the response has the error code `TextOperationDiagnostic.ALIGNMENT_NOT_HONORED`. The API does not change
+  the text of the unit named in the error. Other matches can still change. The SDK does not throw an exception for this
+  error. Check `response.errors` together with `response.changed`.
+
 ## Shared Models
 
 `Color` requires integral RGBA components in the inclusive range 0–255. Alpha defaults to 255; `BLACK`, `WHITE`, and

@@ -1,10 +1,15 @@
 import {PDFDancer} from '../pdfdancer_v2';
 /* global RequestInit */
 import {
+    PdfAffineTransform,
     PdfColorRequest,
+    TextAlignment,
     TextDeleteRequest,
     TextInsertRequest,
+    TextOperationDiagnostic,
     TextReplaceRequest,
+    TextReplacementImageRequest,
+    TextSelectorRequest,
     TextStyleRequest
 } from '../text-editing';
 
@@ -86,6 +91,40 @@ describe('v2 text editing HTTP API', () => {
         const coordinateBody = JSON.parse((global.fetch as jest.Mock).mock.calls[2][1].body as string);
         expect(anchorBody.target.anchor.pages).toEqual([2]);
         expect(coordinateBody.target.coordinate.page).toBe(3);
+    });
+
+    test('replace sends the alignment in the layout and returns the not-honored error without throwing', async () => {
+        const pdf = await openClient();
+        const notHonored = {
+            ...editResponse,
+            changed: 0,
+            errors: [{page: 1, code: TextOperationDiagnostic.ALIGNMENT_NOT_HONORED, message: 'not honored'}]
+        };
+        (global.fetch as jest.Mock).mockResolvedValueOnce(response(200, notHonored));
+
+        const result = await pdf.text().replace(
+            TextReplaceRequest.literal('Acme', 'Globex').alignment(TextAlignment.RIGHT).build());
+
+        const [, options] = (global.fetch as jest.Mock).mock.calls[1] as [string, RequestInit];
+        expect(JSON.parse(options.body as string).layout).toEqual(
+            {mode: 'reflowWhenSupported', profile: 'noReflow', alignment: 'right'});
+        expect(result.errors?.map(error => error.code)).toEqual(['TEXT_ALIGNMENT_NOT_HONORED']);
+    });
+
+    test('image replacement without a layout is sent with a sourceAnchored layout', async () => {
+        const pdf = await openClient();
+        (global.fetch as jest.Mock).mockResolvedValueOnce(response(200, editResponse));
+        const request = new TextReplaceRequest(
+            undefined,
+            new TextSelectorRequest('{{logo}}'),
+            undefined,
+            new TextReplacementImageRequest(new Uint8Array([1]), PdfAffineTransform.builder().build())
+        );
+
+        await pdf.text().replace(request);
+
+        const [, options] = (global.fetch as jest.Mock).mock.calls[1] as [string, RequestInit];
+        expect(JSON.parse(options.body as string).layout).toEqual({mode: 'sourceAnchored'});
     });
 
     test('session creation also sends the v2 API header', async () => {

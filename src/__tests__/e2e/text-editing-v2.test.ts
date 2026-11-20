@@ -2,9 +2,11 @@ import {
     PDFDancer,
     PdfAffineTransform,
     PdfColorRequest,
+    TextAlignment,
     TextDeleteRequest,
     TextInsertRequest,
     TextLayoutProfile,
+    TextOperationDiagnostic,
     TextReplaceRequest,
     TextStyleRequest
 } from '../../index';
@@ -370,5 +372,73 @@ describe('v2 selector-based text editing', () => {
         const assertions = await PDFAssertions.create(pdf);
         await assertions.assertPdfTextOccurrenceCount('Assumptions', 0);
         await assertions.assertPdfTextOccurrenceCount('Operating Context', 2);
+    });
+});
+
+describe('v2 text replace alignment', () => {
+    const SOURCE_LINE = 'This line will be replaced.';
+    let baseUrl: string;
+    let token: string;
+    let source: Uint8Array;
+
+    beforeAll(async () => {
+        [baseUrl, token, source] = await requireEnvAndFixture('Showcase.pdf');
+    });
+
+    const open = (): Promise<PDFDancer> => PDFDancer.open(source, token, baseUrl);
+
+    /** Returns the left and right edge of the one line with exactly this text. */
+    async function lineExtent(pdf: PDFDancer, text: string, page = 1): Promise<[number, number]> {
+        const units = (await pdf.page(page).analyzeReadingUnits()).units.filter(unit => unit.text.trim() === text);
+        expect(units).toHaveLength(1);
+        const {x, width} = units[0].provenance.bounds;
+        return [x, x + width];
+    }
+
+    // LEFT is not tested here. Without an alignment, the API also keeps the left edge,
+    // so the test could not detect a dropped alignment field.
+    test.each([TextAlignment.RIGHT, TextAlignment.CENTERED])('%s alignment keeps the reference of the edited line', async alignment => {
+        const pdf = await open();
+        const [sourceLeft, sourceRight] = await lineExtent(pdf, SOURCE_LINE);
+
+        const response = await pdf.text().replace(
+            TextReplaceRequest.literal(SOURCE_LINE, 'Short text.').maxMatches(1).alignment(alignment).build());
+
+        expect(response.matched).toBe(1);
+        expect(response.changed).toBe(1);
+        expect(response.errors ?? []).toHaveLength(0);
+
+        const saved = (await PDFAssertions.create(pdf)).getPdf();
+        const [left, right] = await lineExtent(saved, 'Short text.');
+        expect(right - left).toBeLessThan(sourceRight - sourceLeft);
+        if (alignment === TextAlignment.RIGHT) {
+            expect(Math.abs(right - sourceRight)).toBeLessThan(0.5);
+        } else {
+            expect(Math.abs((left + right) / 2 - (sourceLeft + sourceRight) / 2)).toBeLessThan(0.5);
+        }
+    });
+
+    test('an alignment that cannot be honored is reported without throwing', async () => {
+        const pdf = await open();
+        const response = await pdf.text().replace(
+            TextReplaceRequest.literal(SOURCE_LINE, 'Replacement with reflow.')
+                .requireReflow(TextLayoutProfile.BODY_TEXT)
+                .alignment(TextAlignment.RIGHT)
+                .build());
+
+        expect(response.matched).toBe(1);
+        expect(response.changed).toBe(0);
+        expect(response.errors?.map(error => error.code)).toEqual([TextOperationDiagnostic.ALIGNMENT_NOT_HONORED]);
+        await (await PDFAssertions.create(pdf)).assertPdfTextOccurrenceCount(SOURCE_LINE, 1, 1);
+    });
+
+    test('an alignment cannot add a line', async () => {
+        const pdf = await open();
+        const response = await pdf.text().replace(
+            TextReplaceRequest.literal(SOURCE_LINE, 'Line one.\nLine two.').alignment(TextAlignment.RIGHT).build());
+
+        expect(response.changed).toBe(0);
+        expect(response.errors?.map(error => error.code)).toEqual([TextOperationDiagnostic.ALIGNMENT_NOT_HONORED]);
+        await (await PDFAssertions.create(pdf)).assertPdfTextOccurrenceCount(SOURCE_LINE, 1, 1);
     });
 });
