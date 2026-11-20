@@ -24,6 +24,7 @@ export {
   PathObject,
   PathGroupObject,
   ImageObject,
+  TextLineObject,
   FormXObject,
   FormFieldObject,
   PathEditSession
@@ -35,6 +36,7 @@ export {
   PageRef,
   PageSize,
   PathObjectRef,
+  TextObjectRef,
   Position,
   ObjectType,
   Font,

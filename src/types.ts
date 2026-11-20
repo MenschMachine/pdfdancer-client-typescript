@@ -1,4 +1,5 @@
 import {
+    BoundingRect,
     Color,
     CommandResult,
     FlipDirection,
@@ -11,6 +12,7 @@ import {
     PathGroupInfo,
     PathObjectRef,
     Position,
+    TextObjectRef,
 } from "./models";
 import {PDFDancer} from "./pdfdancer_v2";
 import {ValidationException} from "./exceptions";
@@ -64,8 +66,46 @@ export class BaseObject<TRef extends ObjectRef = ObjectRef> {
         return this.ref();
     }
 
-    async moveTo(x: number, y: number) {
-        return this._internals.move(this.ref(), Position.atPageCoordinates(this.position.pageNumber!, x, y));
+    /** Moves this object to absolute page coordinates. */
+    async moveTo(x: number, y: number): Promise<boolean> {
+        const moved = await this._internals.move(this.ref(), Position.atPageCoordinates(this.position.pageNumber!, x, y));
+        if (moved) {
+            this.recordPosition(x, y);
+        }
+        return moved;
+    }
+
+    /** Moves this object horizontally by `xOffset` PDF points. */
+    async moveX(xOffset: number): Promise<boolean> {
+        const {x, y} = this.currentXY();
+        return this.moveTo(x + xOffset, y);
+    }
+
+    /** Moves this object vertically by `yOffset` PDF points. */
+    async moveY(yOffset: number): Promise<boolean> {
+        const {x, y} = this.currentXY();
+        return this.moveTo(x, y + yOffset);
+    }
+
+    private currentXY(): { x: number, y: number } {
+        const x = this.position?.getX();
+        const y = this.position?.getY();
+        if (x === undefined || y === undefined) {
+            throw new ValidationException("Cannot move: object has no position");
+        }
+        return {x, y};
+    }
+
+    /**
+     * Keeps the local position in sync after a move so relative moves compose.
+     * Replaces `this.position` with an updated copy instead of mutating it, so positions
+     * already handed out (or shared with the snapshot cache) are untouched.
+     */
+    private recordPosition(x: number, y: number): void {
+        const rect = this.position.boundingRect;
+        this.position = Object.assign(new Position(), this.position, {
+            boundingRect: new BoundingRect(x, y, rect?.width ?? 0, rect?.height ?? 0)
+        });
     }
 
     async clearClipping(): Promise<boolean> {
@@ -159,7 +199,22 @@ export class PathGroupObject {
     get y(): number { return this._info.y; }
 
     async moveTo(x: number, y: number): Promise<boolean> {
-        return this._internals.movePathGroup(this._pageIndex, this._info.groupId, x, y);
+        const moved = await this._internals.movePathGroup(this._pageIndex, this._info.groupId, x, y);
+        if (moved) {
+            this._info.x = x;
+            this._info.y = y;
+        }
+        return moved;
+    }
+
+    /** Moves this group horizontally by `xOffset` PDF points. */
+    async moveX(xOffset: number): Promise<boolean> {
+        return this.moveTo(this.x + xOffset, this.y);
+    }
+
+    /** Moves this group vertically by `yOffset` PDF points. */
+    async moveY(yOffset: number): Promise<boolean> {
+        return this.moveTo(this.x, this.y + yOffset);
     }
 
     async scale(factor: number): Promise<boolean> {
@@ -419,6 +474,27 @@ export class ImageObject extends BaseObject {
             fillColor
         );
         return this._internals.transformImage(request);
+    }
+}
+
+/**
+ * A selected line of text. Lines can be moved (`moveTo`, `moveX`, `moveY`) and
+ * deleted; editing the text itself goes through `PDFDancer.text()`.
+ */
+export class TextLineObject extends BaseObject {
+
+    constructor(client: PDFDancer, internalId: string, type: ObjectType, position: Position, private readonly _text?: string) {
+        super(client, internalId, type, position);
+    }
+
+    static fromRef(_client: PDFDancer, objectRef: ObjectRef) {
+        const text = objectRef instanceof TextObjectRef ? objectRef.text : undefined;
+        return new TextLineObject(_client, objectRef.internalId, objectRef.type, objectRef.position, text);
+    }
+
+    /** The text content of this line, when the server provided it. */
+    get text(): string | undefined {
+        return this._text;
     }
 }
 

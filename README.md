@@ -107,6 +107,25 @@ const pagePaths = await pdf.page(1).selectPaths();
 Use document or page snapshots when you need read-only inspection of the complete object vocabulary, including text-line
 data.
 
+### Moving Objects and Text Lines
+
+Selected images, paths, form XObjects, form fields, path groups, and text lines share the same movement helpers.
+`moveTo(x, y)` uses absolute page coordinates; `moveX(dx)` and `moveY(dy)` are relative offsets in PDF points. Each
+returns `true` when the object was moved, and successive relative moves compose.
+
+```ts
+const [line] = await pdf.page(1).selectTextLines();
+console.log(line.text);
+
+await line.moveTo(100, 500);
+await line.moveX(20);
+await line.moveY(-15);
+```
+
+Text-line moves apply to whole lines. Use `pdf.text()` to edit the text itself. Lines are detected from the page
+content, so a line moved onto another line's baseline may be read back as one merged line, and text moved outside its
+clipping region is no longer detected.
+
 ## Builders and Vector Paths
 
 All five dedicated builders are available at document and page scope: image, path, line, Bezier, and rectangle.
